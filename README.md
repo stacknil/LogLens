@@ -3,6 +3,30 @@
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](./.github/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-code_scanning-blue)](./.github/workflows/codeql.yml)
 
+LogLens is a C++20 defensive log analysis CLI for Linux authentication logs.
+
+It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports.
+
+## Why this project exists
+
+Many small security tools can detect a handful of known log patterns. Fewer tools make their parsing limits visible.
+
+LogLens is designed around three ideas:
+
+- detection engineering over offensive functionality
+- parser observability over silent failure
+- repository discipline over throwaway scripts
+
+The project reports suspicious login activity while also surfacing parser coverage, unknown-line buckets, CI status, and code scanning hygiene.
+
+## Scope
+
+LogLens is a defensive, public-safe repository.
+It is intended for log parsing, detection experiments, and engineering practice.
+It does not provide exploitation, persistence, credential attack automation, or live offensive capability.
+
+---
+
 LogLens is a defensive C++20 CLI that parses Linux authentication logs and produces concise Markdown and JSON reports for suspicious authentication activity. The project is intended for portfolio-grade detection engineering work, not offensive security or attack automation.
 
 These badges are local workflow markers in this working copy because the repository does not currently have a configured GitHub remote. After publishing the repository, replace them with repository-specific GitHub status badge URLs.
