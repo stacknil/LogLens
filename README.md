@@ -1,0 +1,199 @@
+# LogLens
+
+[![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](./.github/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/badge/CodeQL-code_scanning-blue)](./.github/workflows/codeql.yml)
+
+LogLens is a defensive C++20 CLI that parses Linux authentication logs and produces concise Markdown and JSON reports for suspicious authentication activity. The project is intended for portfolio-grade detection engineering work, not offensive security or attack automation.
+
+These badges are local workflow markers in this working copy because the repository does not currently have a configured GitHub remote. After publishing the repository, replace them with repository-specific GitHub status badge URLs.
+
+## Repository Checks
+
+LogLens includes two minimal GitHub Actions workflows:
+
+- `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
+- `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
+
+Both workflows are intended to stay stable enough to require on pull requests to `main`. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md).
+
+## Threat Model
+
+LogLens is designed for offline review of `auth.log` and `secure` style text logs collected from systems you own or administer. The MVP focuses on common, high-signal patterns that often appear during credential guessing, username enumeration, or bursty privileged command use.
+
+The current tool helps answer:
+
+- Is one source IP generating repeated SSH failures in a short window?
+- Is one source IP trying several usernames in a short window?
+- Is one account running sudo unusually often in a short window?
+
+It does not attempt to replace a SIEM, correlate across hosts, enrich IPs, or decide whether a finding is malicious on its own.
+
+## Detections
+
+LogLens currently detects:
+
+- Repeated SSH failed password attempts from the same IP within 10 minutes
+- One IP trying multiple usernames within 15 minutes
+- Bursty sudo activity from the same user within 5 minutes
+
+LogLens currently parses and reports these additional auth patterns:
+
+- `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
+- `pam_unix(...:auth): authentication failure`
+- `pam_unix(...:session): session opened`
+
+LogLens also tracks parser coverage telemetry for unsupported or malformed lines, including:
+
+- `total_lines`
+- `parsed_lines`
+- `unparsed_lines`
+- `parse_success_rate`
+- `top_unknown_patterns`
+
+LogLens does not currently detect:
+
+- Lateral movement
+- MFA abuse
+- SSH key misuse
+- PAM-specific failures beyond the parsed sample patterns
+- Cross-file or cross-host correlation
+
+## Build
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+## Run
+
+```bash
+./build/loglens --mode syslog --year 2026 ./assets/sample_auth.log ./out
+./build/loglens --mode journalctl-short-full ./assets/sample_journalctl_short_full.log ./out-journal
+./build/loglens --config ./assets/sample_config.json ./assets/sample_auth.log ./out-config
+```
+
+The CLI writes:
+
+- `report.md`
+- `report.json`
+
+into the output directory you provide. If you omit the output directory, the files are written into the current working directory.
+
+The config file schema is intentionally small and strict:
+
+```json
+{
+  "input_mode": "syslog_legacy",
+  "timestamp": {
+    "assume_year": 2026
+  },
+  "brute_force": { "threshold": 5, "window_minutes": 10 },
+  "multi_user_probing": { "threshold": 3, "window_minutes": 15 },
+  "sudo_burst": { "threshold": 3, "window_minutes": 5 },
+  "auth_signal_mappings": {
+    "ssh_failed_password": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "ssh_invalid_user": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "ssh_failed_publickey": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "pam_auth_failure": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": false
+    }
+  }
+}
+```
+
+This mapping lets LogLens normalize parsed events into detection signals before applying brute-force or multi-user rules. By default, `pam_auth_failure` is treated as lower-confidence attempt evidence and does not count as a terminal authentication failure unless the config explicitly upgrades it.
+
+Timestamp handling is now explicit:
+
+- `--mode syslog` or `input_mode: syslog_legacy` requires `--year` or `timestamp.assume_year`
+- `--mode journalctl-short-full` or `input_mode: journalctl_short_full` parses the embedded year and timezone and ignores `assume_year`
+
+## Example Input
+
+```text
+Mar 10 08:11:22 example-host sshd[1234]: Failed password for invalid user admin from 203.0.113.10 port 51022 ssh2
+Mar 10 08:12:10 example-host sshd[1235]: Accepted password for alice from 203.0.113.20 port 51111 ssh2
+Mar 10 08:15:00 example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/systemctl restart ssh
+Mar 10 08:27:10 example-host sshd[1243]: Failed publickey for invalid user svc-backup from 203.0.113.40 port 51240 ssh2
+Mar 10 08:28:33 example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.41  user=alice
+Mar 10 08:29:50 example-host pam_unix(sudo:session): session opened for user root by alice(uid=0)
+Mar 10 08:30:12 example-host sshd[1244]: Connection closed by authenticating user alice 203.0.113.50 port 51290 [preauth]
+Mar 10 08:31:18 example-host sshd[1245]: Timeout, client not responding from 203.0.113.51 port 51291
+```
+
+`journalctl --output short-full` style example:
+
+```text
+Tue 2026-03-10 08:11:22 UTC example-host sshd[2234]: Failed password for invalid user admin from 203.0.113.10 port 51022 ssh2
+Tue 2026-03-10 08:13:10 UTC example-host sshd[2236]: Failed password for test from 203.0.113.10 port 51040 ssh
+Tue 2026-03-10 08:18:05 UTC example-host sshd[2238]: Failed publickey for invalid user deploy from 203.0.113.10 port 51060 ssh2
+Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authenticating user alice 203.0.113.51 port 51291 [preauth]
+```
+
+## Example Output
+
+`report.md` excerpt:
+
+```markdown
+# LogLens Report
+
+## Summary
+- Input mode: syslog_legacy
+- Assume year: 2026
+- Timezone present: false
+- Total lines: 16
+- Parsed lines: 14
+- Unparsed lines: 2
+- Parse success rate: 87.50%
+- Parsed events: 14
+- Findings: 3
+- Parser warnings: 2
+```
+
+`report.json` excerpt:
+
+```json
+{
+  "tool": "LogLens",
+  "input_mode": "syslog_legacy",
+  "assume_year": 2026,
+  "timezone_present": false,
+  "parser_quality": {
+    "total_lines": 16,
+    "parsed_lines": 14,
+    "unparsed_lines": 2,
+    "parse_success_rate": 0.8750
+  },
+  "parsed_event_count": 14,
+  "finding_count": 3
+}
+```
+
+## Known Limitations
+
+- `syslog_legacy` mode requires an explicit year; LogLens no longer guesses one implicitly.
+- `journalctl_short_full` parsing currently supports `UTC`, `GMT`, `Z`, and numeric timezone offsets such as `+0000` or `+00:00`, not arbitrary timezone abbreviations.
+- The parser supports a small set of common `sshd`, `sudo`, and `pam_unix` patterns from `auth.log` or `secure`, not every distro-specific variant.
+- Unsupported lines are surfaced as parser telemetry and warnings only; they do not generate detector findings on their own.
+- `pam_unix` auth failures remain lower-confidence by default; they influence detectors only if `auth_signal_mappings` explicitly upgrades them.
+- Detector thresholds and auth signal mappings are configurable only through the fixed `config.json` schema shown above; partial overrides and alternative config formats are not supported.
+- Findings are intentionally rule-based and conservative; they are not attribution or incident verdicts.
+
+## Future Roadmap
+
+- Additional auth patterns and PAM coverage
+- Better host-level summaries
+- Optional CSV export
+- Larger sanitized test corpus

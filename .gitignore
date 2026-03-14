@@ -1,0 +1,6 @@
+build/
+build_manual*/
+out/
+report.md
+report.json
+*.exe

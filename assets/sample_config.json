@@ -1,0 +1,27 @@
+{
+  "input_mode": "syslog_legacy",
+  "timestamp": {
+    "assume_year": 2026
+  },
+  "brute_force": { "threshold": 5, "window_minutes": 10 },
+  "multi_user_probing": { "threshold": 3, "window_minutes": 15 },
+  "sudo_burst": { "threshold": 3, "window_minutes": 5 },
+  "auth_signal_mappings": {
+    "ssh_failed_password": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "ssh_invalid_user": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "ssh_failed_publickey": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "pam_auth_failure": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": false
+    }
+  }
+}
