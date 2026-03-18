@@ -7,27 +7,11 @@ C++20 defensive log analysis CLI for Linux authentication logs, with parser cove
 
 It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports.
 
-## Why this project exists
+## Overview
 
-Many small security tools can detect a handful of known log patterns. Fewer tools make their parsing limits visible.
+LogLens is a defensive, public-safe repository for log parsing and detection engineering. It focuses on parser observability as well as detections: unsupported lines are surfaced as telemetry instead of being silently ignored.
 
-LogLens is designed around three ideas:
-
-- detection engineering over offensive functionality
-- parser observability over silent failure
-- repository discipline over throwaway scripts
-
-The project reports suspicious login activity while also surfacing parser coverage, unknown-line buckets, CI status, and code scanning hygiene.
-
-## Scope
-
-LogLens is a defensive, public-safe repository.
-It is intended for log parsing, detection experiments, and engineering practice.
-It does not provide exploitation, persistence, credential attack automation, or live offensive capability.
-
----
-
-LogLens is a defensive C++20 CLI that parses Linux authentication logs and produces concise Markdown and JSON reports for suspicious authentication activity. The project is intended for portfolio-grade detection engineering work, not offensive security or attack automation.
+The project does not provide exploitation, persistence, credential attack automation, or live offensive capability.
 
 ## Repository Checks
 
@@ -36,7 +20,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md).
+Both workflows are intended to stay stable enough to require on pull requests to `main`. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
