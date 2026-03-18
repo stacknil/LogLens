@@ -23,9 +23,10 @@ LogLens is built around three ideas:
 
 ## Scope
 
-LogLens is a defensive, public-safe repository for log parsing and detection engineering. Unsupported lines are surfaced as telemetry instead of being silently ignored.
+LogLens is a defensive, public-safe repository.
+It is intended for log parsing, detection experiments, and engineering practice.
+It does not provide exploitation, persistence, credential attack automation, or live offensive capability.
 
-The project does not provide exploitation, persistence, credential attack automation, or live offensive capability.
 
 ## Repository Checks
 
