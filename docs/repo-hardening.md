@@ -30,3 +30,10 @@ When updating a pinned action:
 2. replace the full SHA in the workflow
 3. keep the inline version comment in sync
 4. verify CI and CodeQL still run cleanly
+
+## Security Workflow
+
+- CI and CodeQL gate merges into `main`
+- GitHub Actions are pinned by full SHA
+- Updates for workflow dependencies are managed with Dependabot
+- Vulnerabilities should be reported through private vulnerability reporting

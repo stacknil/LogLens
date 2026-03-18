@@ -1,9 +1,9 @@
 # LogLens
 
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](./.github/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/badge/CodeQL-code_scanning-blue)](./.github/workflows/codeql.yml)
+[![CI](https://github.com/stacknil/LogLens/actions/workflows/ci.yml/badge.svg)](https://github.com/stacknil/LogLens/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/stacknil/LogLens/actions/workflows/codeql.yml/badge.svg)](https://github.com/stacknil/LogLens/actions/workflows/codeql.yml)
 
-LogLens is a C++20 defensive log analysis CLI for Linux authentication logs.
+C++20 defensive log analysis CLI for Linux authentication logs, with parser coverage telemetry, configurable detection rules, CI, and CodeQL.
 
 It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports.
 
@@ -28,8 +28,6 @@ It does not provide exploitation, persistence, credential attack automation, or 
 ---
 
 LogLens is a defensive C++20 CLI that parses Linux authentication logs and produces concise Markdown and JSON reports for suspicious authentication activity. The project is intended for portfolio-grade detection engineering work, not offensive security or attack automation.
-
-These badges are local workflow markers in this working copy because the repository does not currently have a configured GitHub remote. After publishing the repository, replace them with repository-specific GitHub status badge URLs.
 
 ## Repository Checks
 
