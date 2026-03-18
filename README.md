@@ -7,9 +7,23 @@ C++20 defensive log analysis CLI for Linux authentication logs, with parser cove
 
 It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports.
 
-## Overview
+## Project Status
 
-LogLens is a defensive, public-safe repository for log parsing and detection engineering. It focuses on parser observability as well as detections: unsupported lines are surfaced as telemetry instead of being silently ignored.
+LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
+
+## Why This Project Exists
+
+Many small security tools can detect a handful of known log patterns. Fewer tools make their parsing limits visible.
+
+LogLens is built around three ideas:
+
+- detection engineering over offensive functionality
+- parser observability over silent failure
+- repository discipline over throwaway scripts
+
+## Scope
+
+LogLens is a defensive, public-safe repository for log parsing and detection engineering. Unsupported lines are surfaced as telemetry instead of being silently ignored.
 
 The project does not provide exploitation, persistence, credential attack automation, or live offensive capability.
 
