@@ -25,9 +25,6 @@ LogLens is a defensive, public-safe repository.
 It is intended for log parsing, detection experiments, and engineering practice.
 It does not provide exploitation, persistence, credential attack automation, or live offensive capability.
 
----
-
-LogLens is a defensive C++20 CLI that parses Linux authentication logs and produces concise Markdown and JSON reports for suspicious authentication activity. The project is intended for portfolio-grade detection engineering work, not offensive security or attack automation.
 
 ## Repository Checks
 
