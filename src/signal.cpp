@@ -1,43 +1,62 @@
 #include "signal.hpp"
 
+#include <optional>
+
 namespace loglens {
 namespace {
 
-AuthSignalKind signal_kind_for_event_type(EventType type) {
-    switch (type) {
-    case EventType::SshFailedPassword:
-        return AuthSignalKind::SshFailedPassword;
-    case EventType::SshInvalidUser:
-        return AuthSignalKind::SshInvalidUser;
-    case EventType::SshFailedPublicKey:
-        return AuthSignalKind::SshFailedPublicKey;
-    case EventType::PamAuthFailure:
-        return AuthSignalKind::PamAuthFailure;
-    case EventType::Unknown:
-    case EventType::SshAcceptedPassword:
-    case EventType::SessionOpened:
-    case EventType::SudoCommand:
-    default:
-        return AuthSignalKind::Unknown;
-    }
-}
+struct SignalMapping {
+    AuthSignalKind signal_kind = AuthSignalKind::Unknown;
+    bool counts_as_attempt_evidence = false;
+    bool counts_as_terminal_auth_failure = false;
+    bool counts_as_sudo_burst_evidence = false;
+};
 
-const AuthSignalBehavior* behavior_for_event_type(EventType type, const AuthSignalConfig& config) {
-    switch (type) {
+std::optional<SignalMapping> signal_mapping_for_event(const Event& event, const AuthSignalConfig& config) {
+    switch (event.event_type) {
     case EventType::SshFailedPassword:
-        return &config.ssh_failed_password;
+        return SignalMapping{
+            AuthSignalKind::SshFailedPassword,
+            config.ssh_failed_password.counts_as_attempt_evidence,
+            config.ssh_failed_password.counts_as_terminal_auth_failure,
+            false};
     case EventType::SshInvalidUser:
-        return &config.ssh_invalid_user;
+        return SignalMapping{
+            AuthSignalKind::SshInvalidUser,
+            config.ssh_invalid_user.counts_as_attempt_evidence,
+            config.ssh_invalid_user.counts_as_terminal_auth_failure,
+            false};
     case EventType::SshFailedPublicKey:
-        return &config.ssh_failed_publickey;
+        return SignalMapping{
+            AuthSignalKind::SshFailedPublicKey,
+            config.ssh_failed_publickey.counts_as_attempt_evidence,
+            config.ssh_failed_publickey.counts_as_terminal_auth_failure,
+            false};
     case EventType::PamAuthFailure:
-        return &config.pam_auth_failure;
+        return SignalMapping{
+            AuthSignalKind::PamAuthFailure,
+            config.pam_auth_failure.counts_as_attempt_evidence,
+            config.pam_auth_failure.counts_as_terminal_auth_failure,
+            false};
+    case EventType::SudoCommand:
+        return SignalMapping{
+            AuthSignalKind::SudoCommand,
+            false,
+            false,
+            true};
+    case EventType::SessionOpened:
+        if (event.program == "pam_unix(sudo:session)") {
+            return SignalMapping{
+                AuthSignalKind::SudoSessionOpened,
+                false,
+                false,
+                false};
+        }
+        return std::nullopt;
     case EventType::Unknown:
     case EventType::SshAcceptedPassword:
-    case EventType::SessionOpened:
-    case EventType::SudoCommand:
     default:
-        return nullptr;
+        return std::nullopt;
     }
 }
 
@@ -48,8 +67,8 @@ std::vector<AuthSignal> build_auth_signals(const std::vector<Event>& events, con
     signals.reserve(events.size());
 
     for (const auto& event : events) {
-        const auto* behavior = behavior_for_event_type(event.event_type, config);
-        if (behavior == nullptr) {
+        const auto mapping = signal_mapping_for_event(event, config);
+        if (!mapping.has_value()) {
             continue;
         }
 
@@ -57,9 +76,10 @@ std::vector<AuthSignal> build_auth_signals(const std::vector<Event>& events, con
             event.timestamp,
             event.source_ip,
             event.username,
-            signal_kind_for_event_type(event.event_type),
-            behavior->counts_as_attempt_evidence,
-            behavior->counts_as_terminal_auth_failure,
+            mapping->signal_kind,
+            mapping->counts_as_attempt_evidence,
+            mapping->counts_as_terminal_auth_failure,
+            mapping->counts_as_sudo_burst_evidence,
             event.line_number});
     }
 

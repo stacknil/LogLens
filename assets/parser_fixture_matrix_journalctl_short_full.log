@@ -1,0 +1,12 @@
+Tue 2026-03-10 09:00:01 UTC example-host sshd[3000]: Failed password for invalid user admin from 203.0.113.10 port 52000 ssh2
+Tue 2026-03-10 09:00:40 UTC example-host sshd[3001]: Failed publickey for alice from 203.0.113.11 port 52001 ssh2
+Tue 2026-03-10 09:01:15 UTC example-host sshd[3002]: Invalid user backup from 203.0.113.12 port 52002
+Tue 2026-03-10 09:01:52 UTC example-host pam_unix(sshd:auth): authentication failure; user=alice euid=0 tty=ssh rhost=203.0.113.40
+Tue 2026-03-10 09:02:30 UTC example-host pam_unix(sudo:session): session opened for user root(uid=0) by alice(uid=1000)
+Tue 2026-03-10 09:03:05 UTC example-host pam_unix(su-l:session): session opened for user root by bob(uid=1001)
+Tue 2026-03-10 09:03:40 UTC example-host sshd[3003]: Connection closed by user alice 203.0.113.50 port 52010 [preauth]
+Tue 2026-03-10 09:04:05 UTC example-host sshd[3004]: Connection closed by authenticating user carol 203.0.113.51 port 52011 [preauth]
+Tue 2026-03-10 09:04:28 UTC example-host sshd[3005]: Connection closed by invalid user deploy 203.0.113.52 port 52012 [preauth]
+Tue 2026-03-10 09:05:02 UTC example-host sshd[3006]: Disconnected from authenticating user dave 203.0.113.53 port 52013 [preauth]
+Tue 2026-03-10 09:05:34 UTC example-host sshd[3007]: Timeout, client not responding from 203.0.113.54 port 52014
+Tue 2026-03-10 09:06:10 UTC example-host pam_unix(sshd:session): session closed for user alice
