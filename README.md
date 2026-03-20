@@ -9,13 +9,13 @@ It parses `auth.log` / `secure`-style syslog input and `journalctl --output=shor
 
 ## Project Status
 
-LogLens is an MVP / early release. The repository is suitable for public review, local experimentation, and extension, but parser coverage and rule coverage are intentionally narrow.
+LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
 
-## Why this project exists
+## Why This Project Exists
 
 Many small security tools can detect a handful of known log patterns. Fewer tools make their parsing limits visible.
 
-LogLens is designed around three ideas:
+LogLens is built around three ideas:
 
 - detection engineering over offensive functionality
 - parser observability over silent failure
@@ -36,7 +36,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), and the repository's GitHub release notes.
+Both workflows are intended to stay stable enough to require on pull requests to `main`. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
