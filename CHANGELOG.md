@@ -20,6 +20,26 @@ All notable user-visible changes should be recorded here.
 
 - None yet.
 
+## v0.2.0
+
+### Added
+
+- Added dedicated sanitized parser fixture matrices for both `syslog_legacy` and `journalctl_short_full`, expanding `sshd` and `pam_unix` coverage.
+- Added deterministic unknown-line telemetry coverage for unsupported parser inputs and unknown-pattern buckets.
+
+### Changed
+
+- Moved sudo handling onto the signal layer so detectors consume one unified normalized input model.
+- Kept detector thresholds and the existing report schema stable while simplifying internal detector semantics.
+
+### Fixed
+
+- None.
+
+### Docs
+
+- Improved release-facing documentation in `README.md`, added `docs/release-process.md`, and formalized changelog discipline for future releases.
+
 ## v0.1.0
 
 ### Added
