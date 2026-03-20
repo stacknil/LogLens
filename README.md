@@ -7,17 +7,19 @@ C++20 defensive log analysis CLI for Linux authentication logs, with parser cove
 
 It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports.
 
-## Why this project exists
+## Project Status
+
+LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
+
+## Why This Project Exists
 
 Many small security tools can detect a handful of known log patterns. Fewer tools make their parsing limits visible.
 
-LogLens is designed around three ideas:
+LogLens is built around three ideas:
 
 - detection engineering over offensive functionality
 - parser observability over silent failure
 - repository discipline over throwaway scripts
-
-The project reports suspicious login activity while also surfacing parser coverage, unknown-line buckets, CI status, and code scanning hygiene.
 
 ## Scope
 
@@ -33,7 +35,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md).
+Both workflows are intended to stay stable enough to require on pull requests to `main`. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
