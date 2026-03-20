@@ -7,22 +7,10 @@ namespace loglens {
 namespace {
 
 using SignalGroup = std::unordered_map<std::string, std::vector<const AuthSignal*>>;
-using EventGroup = std::unordered_map<std::string, std::vector<const Event*>>;
 
 std::vector<const AuthSignal*> sort_signals_by_time(const std::vector<const AuthSignal*>& signals) {
     auto sorted = signals;
     std::sort(sorted.begin(), sorted.end(), [](const AuthSignal* left, const AuthSignal* right) {
-        if (left->timestamp != right->timestamp) {
-            return left->timestamp < right->timestamp;
-        }
-        return left->line_number < right->line_number;
-    });
-    return sorted;
-}
-
-std::vector<const Event*> sort_events_by_time(const std::vector<const Event*>& events) {
-    auto sorted = events;
-    std::sort(sorted.begin(), sorted.end(), [](const Event* left, const Event* right) {
         if (left->timestamp != right->timestamp) {
             return left->timestamp < right->timestamp;
         }
@@ -53,13 +41,13 @@ SignalGroup group_attempt_evidence_by_ip(const std::vector<AuthSignal>& signals)
     return grouped;
 }
 
-EventGroup group_sudo_by_user(const std::vector<Event>& events) {
-    EventGroup grouped;
-    for (const auto& event : events) {
-        if (event.username.empty() || event.event_type != EventType::SudoCommand) {
+SignalGroup group_sudo_burst_evidence_by_user(const std::vector<AuthSignal>& signals) {
+    SignalGroup grouped;
+    for (const auto& signal : signals) {
+        if (signal.username.empty() || !signal.counts_as_sudo_burst_evidence) {
             continue;
         }
-        grouped[event.username].push_back(&event);
+        grouped[signal.username].push_back(&signal);
     }
     return grouped;
 }
@@ -220,12 +208,12 @@ std::vector<Finding> detect_multi_user(const std::vector<AuthSignal>& signals, c
     return findings;
 }
 
-std::vector<Finding> detect_sudo_burst(const std::vector<Event>& events, const DetectorConfig& config) {
+std::vector<Finding> detect_sudo_burst(const std::vector<AuthSignal>& signals, const DetectorConfig& config) {
     std::vector<Finding> findings;
-    const auto grouped = group_sudo_by_user(events);
+    const auto grouped = group_sudo_burst_evidence_by_user(signals);
 
     for (const auto& [username, group] : grouped) {
-        const auto ordered = sort_events_by_time(group);
+        const auto ordered = sort_signals_by_time(group);
         std::size_t start = 0;
         std::size_t best_count = 0;
         std::size_t best_start = 0;
@@ -279,7 +267,7 @@ std::vector<Finding> Detector::analyze(const std::vector<Event>& events) const {
     const auto auth_signals = build_auth_signals(events, config_.auth_signal_mappings);
     auto findings = detect_brute_force(auth_signals, config_);
     auto multi_user = detect_multi_user(auth_signals, config_);
-    auto sudo = detect_sudo_burst(events, config_);
+    auto sudo = detect_sudo_burst(auth_signals, config_);
 
     findings.insert(findings.end(), multi_user.begin(), multi_user.end());
     findings.insert(findings.end(), sudo.begin(), sudo.end());

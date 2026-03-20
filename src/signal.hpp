@@ -13,7 +13,9 @@ enum class AuthSignalKind {
     SshFailedPassword,
     SshInvalidUser,
     SshFailedPublicKey,
-    PamAuthFailure
+    PamAuthFailure,
+    SudoCommand,
+    SudoSessionOpened
 };
 
 struct AuthSignalBehavior {
@@ -35,6 +37,7 @@ struct AuthSignal {
     AuthSignalKind signal_kind = AuthSignalKind::Unknown;
     bool counts_as_attempt_evidence = false;
     bool counts_as_terminal_auth_failure = false;
+    bool counts_as_sudo_burst_evidence = false;
     std::size_t line_number = 0;
 };
 
