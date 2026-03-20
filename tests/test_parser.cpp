@@ -1,8 +1,11 @@
 #include "parser.hpp"
 
+#include <cmath>
+#include <filesystem>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -16,6 +19,37 @@ loglens::AuthLogParser make_syslog_parser() {
     return loglens::AuthLogParser(loglens::ParserConfig{
         loglens::InputMode::SyslogLegacy,
         2026});
+}
+
+std::filesystem::path repo_root() {
+    const std::filesystem::path source_path{__FILE__};
+    std::vector<std::filesystem::path> candidates;
+
+    if (source_path.is_absolute()) {
+        candidates.push_back(source_path);
+    } else {
+        const auto cwd = std::filesystem::current_path();
+        candidates.push_back(cwd / source_path);
+        candidates.push_back(cwd.parent_path() / source_path);
+    }
+
+    for (const auto& candidate : candidates) {
+        if (std::filesystem::exists(candidate)) {
+            return candidate.parent_path().parent_path();
+        }
+    }
+
+    throw std::runtime_error("unable to resolve repository root from test source path");
+}
+
+std::filesystem::path asset_path(std::string_view filename) {
+    return repo_root() / "assets" / std::string(filename);
+}
+
+void expect_close(double actual, double expected, double tolerance, const std::string& message) {
+    if (std::fabs(actual - expected) > tolerance) {
+        throw std::runtime_error(message);
+    }
 }
 
 void test_invalid_user_failure() {
@@ -205,6 +239,70 @@ void test_journalctl_metadata() {
            "expected normalized journalctl failure pattern");
 }
 
+void test_syslog_fixture_matrix_file() {
+    const auto parser = make_syslog_parser();
+    const auto result = parser.parse_file(asset_path("parser_fixture_matrix_syslog.log"));
+
+    expect(result.events.size() == 6, "expected six recognized syslog fixture events");
+    expect(result.warnings.size() == 6, "expected six syslog fixture warnings");
+    expect(result.quality.total_lines == 12, "expected twelve syslog fixture lines");
+    expect(result.quality.parsed_lines == 6, "expected six parsed syslog fixture lines");
+    expect(result.quality.unparsed_lines == 6, "expected six unparsed syslog fixture lines");
+    expect_close(result.quality.parse_success_rate, 0.5, 1e-9, "expected syslog fixture parse success rate");
+
+    expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected invalid-user failed password");
+    expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected failed publickey variant");
+    expect(result.events[2].event_type == loglens::EventType::SshInvalidUser, "expected invalid user variant");
+    expect(result.events[3].event_type == loglens::EventType::PamAuthFailure, "expected pam auth failure variant");
+    expect(result.events[4].event_type == loglens::EventType::SessionOpened, "expected sudo session-opened variant");
+    expect(result.events[5].event_type == loglens::EventType::SessionOpened, "expected su-l session-opened variant");
+    expect(result.events[4].username == "alice", "expected sudo session actor username");
+    expect(result.events[5].username == "bob", "expected su-l session actor username");
+
+    expect(result.quality.top_unknown_patterns.size() == 3, "expected three unknown syslog buckets");
+    expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
+           "expected preauth connection-close syslog bucket");
+    expect(result.quality.top_unknown_patterns[0].count == 3, "expected three preauth connection-close syslog lines");
+    expect(result.quality.top_unknown_patterns[1].pattern == "sshd_timeout_or_disconnection",
+           "expected timeout/disconnection syslog bucket");
+    expect(result.quality.top_unknown_patterns[1].count == 2, "expected two timeout/disconnection syslog lines");
+    expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_other",
+           "expected unsupported pam_unix syslog bucket");
+    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one unsupported pam_unix syslog line");
+}
+
+void test_journalctl_fixture_matrix_file() {
+    const loglens::AuthLogParser parser(loglens::ParserConfig{
+        loglens::InputMode::JournalctlShortFull,
+        std::nullopt});
+    const auto result = parser.parse_file(asset_path("parser_fixture_matrix_journalctl_short_full.log"));
+
+    expect(result.events.size() == 6, "expected six recognized journalctl fixture events");
+    expect(result.warnings.size() == 6, "expected six journalctl fixture warnings");
+    expect(result.quality.total_lines == 12, "expected twelve journalctl fixture lines");
+    expect(result.quality.parsed_lines == 6, "expected six parsed journalctl fixture lines");
+    expect(result.quality.unparsed_lines == 6, "expected six unparsed journalctl fixture lines");
+    expect_close(result.quality.parse_success_rate, 0.5, 1e-9, "expected journalctl fixture parse success rate");
+
+    expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid-user failed password");
+    expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected journalctl failed publickey variant");
+    expect(result.events[2].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid user variant");
+    expect(result.events[3].event_type == loglens::EventType::PamAuthFailure, "expected journalctl pam auth failure variant");
+    expect(result.events[4].event_type == loglens::EventType::SessionOpened, "expected journalctl sudo session-opened variant");
+    expect(result.events[5].event_type == loglens::EventType::SessionOpened, "expected journalctl su-l session-opened variant");
+
+    expect(result.quality.top_unknown_patterns.size() == 3, "expected three unknown journalctl buckets");
+    expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
+           "expected preauth connection-close journalctl bucket");
+    expect(result.quality.top_unknown_patterns[0].count == 3, "expected three preauth connection-close journalctl lines");
+    expect(result.quality.top_unknown_patterns[1].pattern == "sshd_timeout_or_disconnection",
+           "expected timeout/disconnection journalctl bucket");
+    expect(result.quality.top_unknown_patterns[1].count == 2, "expected two timeout/disconnection journalctl lines");
+    expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_other",
+           "expected unsupported pam_unix journalctl bucket");
+    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one unsupported pam_unix journalctl line");
+}
+
 }  // namespace
 
 int main() {
@@ -220,5 +318,7 @@ int main() {
     test_unknown_auth_patterns_are_warnings_only();
     test_stream_warnings_and_metadata();
     test_journalctl_metadata();
+    test_syslog_fixture_matrix_file();
+    test_journalctl_fixture_matrix_file();
     return 0;
 }
