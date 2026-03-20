@@ -1,10 +1,42 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable user-visible changes should be recorded here.
+
+## Unreleased
+
+### Added
+
+- None yet.
+
+### Changed
+
+- None yet.
+
+### Fixed
+
+- None yet.
+
+### Docs
+
+- None yet.
 
 ## v0.1.0
 
-- Added parser support for `syslog_legacy` and `journalctl_short_full` authentication log input.
-- Added rule-based detections for SSH brute force, multi-user probing, and bursty sudo activity.
-- Added parser coverage telemetry, including parsed/unparsed counts and unknown-pattern buckets.
-- Added repository automation and hardening with CI, CodeQL, pinned GitHub Actions, security policy, and Dependabot for workflow updates.
+### Added
+
+- Parser support for `syslog_legacy` and `journalctl_short_full` authentication log input.
+- Rule-based detections for SSH brute force, multi-user probing, and sudo burst activity.
+- Parser coverage telemetry including parsed/unparsed counts and unknown-pattern buckets.
+- Repository automation and hardening with CI, CodeQL, pinned GitHub Actions, security policy, and Dependabot for workflow updates.
+
+### Changed
+
+- Established deterministic Markdown and JSON reporting for the MVP release.
+
+### Fixed
+
+- None.
+
+### Docs
+
+- Added CI, CodeQL, repository hardening guidance, and release-facing project documentation for the first public release.

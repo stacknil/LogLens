@@ -21,12 +21,13 @@ LogLens is built around three ideas:
 - parser observability over silent failure
 - repository discipline over throwaway scripts
 
+The project reports suspicious login activity while also surfacing parser coverage, unknown-line buckets, CI status, and code scanning hygiene.
+
 ## Scope
 
 LogLens is a defensive, public-safe repository.
 It is intended for log parsing, detection experiments, and engineering practice.
 It does not provide exploitation, persistence, credential attack automation, or live offensive capability.
-
 
 ## Repository Checks
 
@@ -35,7 +36,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
+Both workflows are intended to stay stable enough to require on pull requests to `main`. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
@@ -102,6 +103,31 @@ The CLI writes:
 
 into the output directory you provide. If you omit the output directory, the files are written into the current working directory.
 
+## Sample Output
+
+For sanitized sample input, see [`assets/sample_auth.log`](./assets/sample_auth.log) and [`assets/sample_journalctl_short_full.log`](./assets/sample_journalctl_short_full.log).
+
+`report.md` summary excerpt:
+
+```markdown
+## Summary
+- Input mode: syslog_legacy
+- Parsed events: 14
+- Findings: 3
+- Parser warnings: 2
+```
+
+`report.json` summary excerpt:
+
+```json
+{
+  "input_mode": "syslog_legacy",
+  "parsed_event_count": 14,
+  "finding_count": 3,
+  "warning_count": 2
+}
+```
+
 The config file schema is intentionally small and strict:
 
 ```json
@@ -163,54 +189,15 @@ Tue 2026-03-10 08:18:05 UTC example-host sshd[2238]: Failed publickey for invali
 Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authenticating user alice 203.0.113.51 port 51291 [preauth]
 ```
 
-## Example Output
-
-`report.md` excerpt:
-
-```markdown
-# LogLens Report
-
-## Summary
-- Input mode: syslog_legacy
-- Assume year: 2026
-- Timezone present: false
-- Total lines: 16
-- Parsed lines: 14
-- Unparsed lines: 2
-- Parse success rate: 87.50%
-- Parsed events: 14
-- Findings: 3
-- Parser warnings: 2
-```
-
-`report.json` excerpt:
-
-```json
-{
-  "tool": "LogLens",
-  "input_mode": "syslog_legacy",
-  "assume_year": 2026,
-  "timezone_present": false,
-  "parser_quality": {
-    "total_lines": 16,
-    "parsed_lines": 14,
-    "unparsed_lines": 2,
-    "parse_success_rate": 0.8750
-  },
-  "parsed_event_count": 14,
-  "finding_count": 3
-}
-```
-
 ## Known Limitations
 
-- `syslog_legacy` mode requires an explicit year; LogLens no longer guesses one implicitly.
-- `journalctl_short_full` parsing currently supports `UTC`, `GMT`, `Z`, and numeric timezone offsets such as `+0000` or `+00:00`, not arbitrary timezone abbreviations.
-- The parser supports a small set of common `sshd`, `sudo`, and `pam_unix` patterns from `auth.log` or `secure`, not every distro-specific variant.
-- Unsupported lines are surfaced as parser telemetry and warnings only; they do not generate detector findings on their own.
-- `pam_unix` auth failures remain lower-confidence by default; they influence detectors only if `auth_signal_mappings` explicitly upgrades them.
-- Detector thresholds and auth signal mappings are configurable only through the fixed `config.json` schema shown above; partial overrides and alternative config formats are not supported.
-- Findings are intentionally rule-based and conservative; they are not attribution or incident verdicts.
+- `syslog_legacy` requires an explicit year; LogLens does not guess one implicitly.
+- `journalctl_short_full` currently supports `UTC`, `GMT`, `Z`, and numeric timezone offsets, not arbitrary timezone abbreviations.
+- Parser coverage is intentionally narrow and focused on common `sshd`, `sudo`, and `pam_unix` variants.
+- Unsupported lines are surfaced as parser telemetry and warnings, not as detector findings.
+- `pam_unix` auth failures remain lower-confidence by default unless signal mappings explicitly upgrade them.
+- Detector configuration uses a fixed `config.json` schema rather than partial overrides or alternate config formats.
+- Findings are rule-based triage aids, not incident verdicts or attribution.
 
 ## Future Roadmap
 
