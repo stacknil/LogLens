@@ -27,6 +27,7 @@ All notable user-visible changes should be recorded here.
 - Parser support for `syslog_legacy` and `journalctl_short_full` authentication log input.
 - Rule-based detections for SSH brute force, multi-user probing, and sudo burst activity.
 - Parser coverage telemetry including parsed/unparsed counts and unknown-pattern buckets.
+- Repository automation and hardening with CI, CodeQL, pinned GitHub Actions, security policy, and Dependabot for workflow updates.
 
 ### Changed
 
