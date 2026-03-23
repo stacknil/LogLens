@@ -58,7 +58,7 @@ LogLens currently detects:
 - One IP trying multiple usernames within 15 minutes
 - Bursty sudo activity from the same user within 5 minutes
 
-LogLens currently parses and reports these additional auth patterns:
+LogLens currently parses and reports these additional auth patterns beyond the core detector inputs:
 
 - `Accepted publickey` SSH successes
 - `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
@@ -200,7 +200,7 @@ Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authen
 
 - `syslog_legacy` requires an explicit year; LogLens does not guess one implicitly.
 - `journalctl_short_full` currently supports `UTC`, `GMT`, `Z`, and numeric timezone offsets, not arbitrary timezone abbreviations.
-- Parser coverage is intentionally narrow and focused on common `sshd`, `sudo`, `pam_unix`, and selected `pam_faillock` / `pam_sss` variants.
+- Parser coverage is still selective: it covers common `sshd`, `sudo`, `pam_unix`, and selected `pam_faillock` / `pam_sss` variants rather than broad Linux auth-family support.
 - Unsupported lines are surfaced as parser telemetry and warnings, not as detector findings.
 - `pam_unix` auth failures remain lower-confidence by default unless signal mappings explicitly upgrade them.
 - Detector configuration uses a fixed `config.json` schema rather than partial overrides or alternate config formats.
@@ -209,6 +209,5 @@ Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authen
 ## Future Roadmap
 
 - Additional auth patterns and PAM coverage
-- Better host-level summaries
 - Optional CSV export
 - Larger sanitized test corpus
