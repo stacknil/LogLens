@@ -4,9 +4,13 @@ Tue 2026-03-10 09:01:15 UTC example-host sshd[3002]: Invalid user backup from 20
 Tue 2026-03-10 09:01:52 UTC example-host pam_unix(sshd:auth): authentication failure; user=alice euid=0 tty=ssh rhost=203.0.113.40
 Tue 2026-03-10 09:02:30 UTC example-host pam_unix(sudo:session): session opened for user root(uid=0) by alice(uid=1000)
 Tue 2026-03-10 09:03:05 UTC example-host pam_unix(su-l:session): session opened for user root by bob(uid=1001)
+Tue 2026-03-10 09:03:28 UTC example-host sshd[3008]: Accepted password for alice from 203.0.113.41 port 52003 ssh2
+Tue 2026-03-10 09:03:34 UTC example-host sshd[3009]: Accepted publickey for carol from 203.0.113.42 port 52004 ssh2: ED25519 SHA256:SANITIZEDKEY2
 Tue 2026-03-10 09:03:40 UTC example-host sshd[3003]: Connection closed by user alice 203.0.113.50 port 52010 [preauth]
 Tue 2026-03-10 09:04:05 UTC example-host sshd[3004]: Connection closed by authenticating user carol 203.0.113.51 port 52011 [preauth]
 Tue 2026-03-10 09:04:28 UTC example-host sshd[3005]: Connection closed by invalid user deploy 203.0.113.52 port 52012 [preauth]
 Tue 2026-03-10 09:05:02 UTC example-host sshd[3006]: Disconnected from authenticating user dave 203.0.113.53 port 52013 [preauth]
 Tue 2026-03-10 09:05:34 UTC example-host sshd[3007]: Timeout, client not responding from 203.0.113.54 port 52014
+Tue 2026-03-10 09:05:46 UTC example-host sshd[3010]: Received disconnect from 203.0.113.55 port 52015:11: disconnected by user
+Tue 2026-03-10 09:05:58 UTC example-host sshd[3011]: Unable to negotiate with 203.0.113.56 port 52016: no matching host key type found. Their offer: ssh-rsa
 Tue 2026-03-10 09:06:10 UTC example-host pam_unix(sshd:session): session closed for user alice

@@ -5,42 +5,48 @@
   "assume_year": 2026,
   "timezone_present": false,
   "parser_quality": {
-    "total_lines": 11,
-    "parsed_lines": 9,
-    "unparsed_lines": 2,
-    "parse_success_rate": 0.8182,
+    "total_lines": 15,
+    "parsed_lines": 12,
+    "unparsed_lines": 3,
+    "parse_success_rate": 0.8000,
     "top_unknown_patterns": [
+      {"pattern": "pam_sss_unknown_user", "count": 1},
       {"pattern": "sshd_connection_closed_preauth", "count": 1},
       {"pattern": "sshd_timeout_or_disconnection", "count": 1}
     ]
   },
-  "parsed_event_count": 9,
-  "warning_count": 2,
+  "parsed_event_count": 12,
+  "warning_count": 3,
   "finding_count": 3,
   "event_counts": [
     {"event_type": "ssh_failed_password", "count": 3},
+    {"event_type": "ssh_accepted_password", "count": 1},
     {"event_type": "ssh_accepted_publickey", "count": 1},
     {"event_type": "ssh_invalid_user", "count": 2},
+    {"event_type": "pam_auth_failure", "count": 2},
     {"event_type": "sudo_command", "count": 3}
   ],
   "host_summaries": [
     {
       "hostname": "alpha-host",
-      "parsed_event_count": 5,
+      "parsed_event_count": 7,
       "finding_count": 2,
       "warning_count": 1,
       "event_counts": [
         {"event_type": "ssh_failed_password", "count": 3},
-        {"event_type": "ssh_invalid_user", "count": 2}
+        {"event_type": "ssh_accepted_password", "count": 1},
+        {"event_type": "ssh_invalid_user", "count": 2},
+        {"event_type": "pam_auth_failure", "count": 1}
       ]
     },
     {
       "hostname": "beta-host",
-      "parsed_event_count": 4,
+      "parsed_event_count": 5,
       "finding_count": 1,
-      "warning_count": 1,
+      "warning_count": 2,
       "event_counts": [
         {"event_type": "ssh_accepted_publickey", "count": 1},
+        {"event_type": "pam_auth_failure", "count": 1},
         {"event_type": "sudo_command", "count": 3}
       ]
     }
@@ -78,7 +84,8 @@
     }
   ],
   "warnings": [
-    {"line_number": 10, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
-    {"line_number": 11, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"}
+    {"line_number": 12, "reason": "unrecognized auth pattern: pam_sss_unknown_user"},
+    {"line_number": 14, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
+    {"line_number": 15, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"}
   ]
 }
