@@ -88,6 +88,8 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+For fresh-machine setup and repeatable local presets, see [`docs/dev-setup.md`](./docs/dev-setup.md).
+
 ## Run
 
 ```bash
