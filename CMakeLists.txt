@@ -42,4 +42,12 @@ if(BUILD_TESTING)
             ${CMAKE_CURRENT_SOURCE_DIR}/assets/sample_config.json
             ${CMAKE_CURRENT_BINARY_DIR}/cli_test_output
     )
+
+    add_executable(test_report_contracts tests/test_report_contracts.cpp)
+    add_test(
+        NAME report_contracts
+        COMMAND test_report_contracts
+            $<TARGET_FILE:loglens>
+            ${CMAKE_CURRENT_BINARY_DIR}/report_contract_output
+    )
 endif()

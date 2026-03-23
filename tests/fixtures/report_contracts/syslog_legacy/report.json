@@ -1,0 +1,65 @@
+{
+  "tool": "LogLens",
+  "input": "tests/fixtures/report_contracts/syslog_legacy/input.log",
+  "input_mode": "syslog_legacy",
+  "assume_year": 2026,
+  "timezone_present": false,
+  "parser_quality": {
+    "total_lines": 16,
+    "parsed_lines": 14,
+    "unparsed_lines": 2,
+    "parse_success_rate": 0.8750,
+    "top_unknown_patterns": [
+      {"pattern": "sshd_connection_closed_preauth", "count": 1},
+      {"pattern": "sshd_timeout_or_disconnection", "count": 1}
+    ]
+  },
+  "parsed_event_count": 14,
+  "warning_count": 2,
+  "finding_count": 3,
+  "event_counts": [
+    {"event_type": "ssh_failed_password", "count": 4},
+    {"event_type": "ssh_accepted_password", "count": 1},
+    {"event_type": "ssh_invalid_user", "count": 3},
+    {"event_type": "ssh_failed_publickey", "count": 1},
+    {"event_type": "pam_auth_failure", "count": 1},
+    {"event_type": "session_opened", "count": 1},
+    {"event_type": "sudo_command", "count": 3}
+  ],
+  "findings": [
+    {
+      "rule": "brute_force",
+      "subject_kind": "source_ip",
+      "subject": "203.0.113.10",
+      "event_count": 5,
+      "window_start": "2026-03-10 08:11:22",
+      "window_end": "2026-03-10 08:18:05",
+      "usernames": [],
+      "summary": "5 failed SSH attempts from 203.0.113.10 within 10 minutes."
+    },
+    {
+      "rule": "multi_user_probing",
+      "subject_kind": "source_ip",
+      "subject": "203.0.113.10",
+      "event_count": 5,
+      "window_start": "2026-03-10 08:11:22",
+      "window_end": "2026-03-10 08:18:05",
+      "usernames": ["admin", "deploy", "guest", "root", "test"],
+      "summary": "203.0.113.10 targeted 5 usernames within 15 minutes."
+    },
+    {
+      "rule": "sudo_burst",
+      "subject_kind": "username",
+      "subject": "alice",
+      "event_count": 3,
+      "window_start": "2026-03-10 08:21:00",
+      "window_end": "2026-03-10 08:24:15",
+      "usernames": [],
+      "summary": "alice ran 3 sudo commands within 5 minutes."
+    }
+  ],
+  "warnings": [
+    {"line_number": 15, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
+    {"line_number": 16, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"}
+  ]
+}
