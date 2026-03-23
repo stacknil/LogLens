@@ -1,0 +1,7 @@
+Wed 2026-03-11 10:00:01 UTC example-host sshd[3100]: Accepted publickey for alice from 203.0.113.70 port 53000 ssh2: ED25519 SHA256:SANITIZEDKEY
+Wed 2026-03-11 10:00:42 UTC example-host pam_faillock(sshd:auth): Consecutive login failures for user alice account temporarily locked from 203.0.113.71
+Wed 2026-03-11 10:01:13 UTC example-host pam_faillock(sshd:auth): Authentication failure for user bob from 203.0.113.72
+Wed 2026-03-11 10:01:54 UTC example-host pam_faillock(sshd:auth): User carol successfully authenticated
+Wed 2026-03-11 10:02:25 UTC example-host pam_sss(sshd:auth): received for user dave: 7 (Authentication failure)
+Wed 2026-03-11 10:02:56 UTC example-host pam_sss(sshd:auth): received for user erin: 10 (User not known to the underlying authentication module)
+Wed 2026-03-11 10:03:27 UTC example-host pam_sss(sshd:auth): received for user frank: 9 (Authentication service cannot retrieve authentication info)

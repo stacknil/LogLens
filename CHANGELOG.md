@@ -7,6 +7,7 @@ All notable user-visible changes should be recorded here.
 ### Added
 
 - Added sanitized golden `report.md` / `report.json` regression fixtures to lock report contracts.
+- Added conservative parser coverage for `Accepted publickey` plus selected `pam_faillock` / `pam_sss` variants.
 
 ### Changed
 

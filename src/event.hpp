@@ -12,6 +12,7 @@ enum class EventType {
     Unknown,
     SshFailedPassword,
     SshAcceptedPassword,
+    SshAcceptedPublicKey,
     SshInvalidUser,
     SshFailedPublicKey,
     PamAuthFailure,
@@ -37,6 +38,8 @@ inline std::string to_string(EventType type) {
         return "ssh_failed_password";
     case EventType::SshAcceptedPassword:
         return "ssh_accepted_password";
+    case EventType::SshAcceptedPublicKey:
+        return "ssh_accepted_publickey";
     case EventType::SshInvalidUser:
         return "ssh_invalid_user";
     case EventType::SshFailedPublicKey:

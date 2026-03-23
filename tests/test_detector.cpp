@@ -84,6 +84,16 @@ std::vector<loglens::Event> build_publickey_bruteforce_candidate_events() {
         "Mar 10 08:18:05 example-host sshd[1238]: Failed publickey for root from 203.0.113.10 port 51060 ssh2\n");
 }
 
+std::vector<loglens::Event> build_publickey_success_candidate_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 08:11:22 example-host sshd[1234]: Failed password for root from 203.0.113.10 port 51022 ssh2\n"
+        "Mar 10 08:12:05 example-host sshd[1235]: Failed password for root from 203.0.113.10 port 51030 ssh2\n"
+        "Mar 10 08:13:10 example-host sshd[1236]: Failed password for root from 203.0.113.10 port 51040 ssh2\n"
+        "Mar 10 08:14:44 example-host sshd[1237]: Failed password for root from 203.0.113.10 port 51050 ssh2\n"
+        "Mar 10 08:18:05 example-host sshd[1238]: Accepted publickey for alice from 203.0.113.10 port 51060 ssh2: ED25519 SHA256:SANITIZEDKEY\n");
+}
+
 std::vector<loglens::Event> build_pam_bruteforce_candidate_events() {
     return parse_events(
         make_syslog_config(),
@@ -171,6 +181,19 @@ void test_failed_publickey_contributes_to_bruteforce_by_default() {
     const auto* brute_force = find_finding(findings, loglens::FindingType::BruteForce, "203.0.113.10");
     expect(brute_force != nullptr, "expected publickey evidence to contribute to brute force");
     expect(brute_force->event_count == 5, "expected publickey evidence to raise brute force count to five");
+}
+
+void test_accepted_publickey_success_stays_out_of_failure_signals() {
+    const auto events = build_publickey_success_candidate_events();
+    const auto signals = loglens::build_auth_signals(events, loglens::DetectorConfig{}.auth_signal_mappings);
+
+    expect(signals.size() == 4, "expected accepted publickey success to stay out of the signal layer");
+
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(events);
+    const auto* brute_force = find_finding(findings, loglens::FindingType::BruteForce, "203.0.113.10");
+    expect(brute_force == nullptr,
+           "expected accepted publickey success to stay out of brute-force counting");
 }
 
 void test_sudo_signals_include_command_and_session_opened() {
@@ -343,6 +366,7 @@ int main() {
     test_custom_thresholds();
     test_auth_signal_defaults();
     test_failed_publickey_contributes_to_bruteforce_by_default();
+    test_accepted_publickey_success_stays_out_of_failure_signals();
     test_sudo_signals_include_command_and_session_opened();
     test_sudo_burst_behavior_is_preserved_with_signal_layer();
     test_unsupported_pam_session_close_remains_telemetry_only();

@@ -55,6 +55,7 @@ std::optional<SignalMapping> signal_mapping_for_event(const Event& event, const 
         return std::nullopt;
     case EventType::Unknown:
     case EventType::SshAcceptedPassword:
+    case EventType::SshAcceptedPublicKey:
     default:
         return std::nullopt;
     }
