@@ -1,7 +1,13 @@
 Mar 11 10:00:01 example-host sshd[2100]: Accepted publickey for alice from 203.0.113.70 port 53000 ssh2: ED25519 SHA256:SANITIZEDKEY
+Mar 11 10:00:20 example-host sshd[2101]: Accepted password for bob from 203.0.113.73 port 53001 ssh2
+Mar 11 10:00:36 example-host sshd[2102]: Failed publickey for invalid user svc-deploy from 203.0.113.74 port 53002 ssh2
 Mar 11 10:00:42 example-host pam_faillock(sshd:auth): Consecutive login failures for user alice account temporarily locked from 203.0.113.71
 Mar 11 10:01:13 example-host pam_faillock(sshd:auth): Authentication failure for user bob from 203.0.113.72
+Mar 11 10:01:40 example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.75  user=carol
 Mar 11 10:01:54 example-host pam_faillock(sshd:auth): User carol successfully authenticated
 Mar 11 10:02:25 example-host pam_sss(sshd:auth): received for user dave: 7 (Authentication failure)
-Mar 11 10:02:56 example-host pam_sss(sshd:auth): received for user erin: 10 (User not known to the underlying authentication module)
-Mar 11 10:03:27 example-host pam_sss(sshd:auth): received for user frank: 9 (Authentication service cannot retrieve authentication info)
+Mar 11 10:02:44 example-host pam_unix(sudo:session): session opened for user root by erin(uid=0)
+Mar 11 10:03:05 example-host pam_faillock(sshd:auth): Account temporarily locked for user frank
+Mar 11 10:03:24 example-host pam_sss(sshd:auth): received for user grace: 10 (User not known to the underlying authentication module)
+Mar 11 10:03:43 example-host pam_sss(sshd:auth): received for user heidi: 9 (Authentication service cannot retrieve authentication info)
+Mar 11 10:04:02 example-host pam_unix(sshd:session): session closed for user alice
