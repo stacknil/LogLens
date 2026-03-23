@@ -153,7 +153,8 @@ int main(int argc, char* argv[]) {
             parsed.quality,
             parsed.events,
             findings,
-            parsed.warnings};
+            parsed.warnings,
+            app_config.detector.auth_signal_mappings};
 
         loglens::write_reports(report_data, options.output_directory);
 

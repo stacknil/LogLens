@@ -1,0 +1,11 @@
+Mar 11 09:00:00 alpha-host sshd[1301]: Failed password for invalid user admin from 203.0.113.10 port 52022 ssh2
+Mar 11 09:01:05 alpha-host sshd[1302]: Failed password for root from 203.0.113.10 port 52030 ssh2
+Mar 11 09:02:10 alpha-host sshd[1303]: Failed password for test from 203.0.113.10 port 52040 ssh2
+Mar 11 09:03:44 alpha-host sshd[1304]: Failed password for guest from 203.0.113.10 port 52050 ssh2
+Mar 11 09:04:05 alpha-host sshd[1305]: Failed password for invalid user deploy from 203.0.113.10 port 52060 ssh2
+Mar 11 09:10:10 beta-host sshd[1401]: Accepted publickey for alice from 203.0.113.20 port 52111 ssh2
+Mar 11 09:11:00 beta-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/systemctl restart ssh
+Mar 11 09:12:10 beta-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/journalctl -xe
+Mar 11 09:14:15 beta-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/vi /etc/ssh/sshd_config
+Mar 11 09:15:12 alpha-host sshd[1306]: Connection closed by authenticating user alice 203.0.113.50 port 52290 [preauth]
+Mar 11 09:16:18 beta-host sshd[1402]: Timeout, client not responding from 203.0.113.51 port 52291
