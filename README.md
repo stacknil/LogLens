@@ -60,9 +60,12 @@ LogLens currently detects:
 
 LogLens currently parses and reports these additional auth patterns:
 
+- `Accepted publickey` SSH successes
 - `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
 - `pam_unix(...:auth): authentication failure`
 - `pam_unix(...:session): session opened`
+- selected `pam_faillock(...:auth)` failure variants
+- selected `pam_sss(...:auth)` failure variants
 
 LogLens also tracks parser coverage telemetry for unsupported or malformed lines, including:
 
@@ -77,7 +80,7 @@ LogLens does not currently detect:
 - Lateral movement
 - MFA abuse
 - SSH key misuse
-- PAM-specific failures beyond the parsed sample patterns
+- Many PAM-specific failures beyond the parsed `pam_unix`, `pam_faillock`, and `pam_sss` sample patterns
 - Cross-file or cross-host correlation
 
 ## Build
@@ -195,7 +198,7 @@ Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authen
 
 - `syslog_legacy` requires an explicit year; LogLens does not guess one implicitly.
 - `journalctl_short_full` currently supports `UTC`, `GMT`, `Z`, and numeric timezone offsets, not arbitrary timezone abbreviations.
-- Parser coverage is intentionally narrow and focused on common `sshd`, `sudo`, and `pam_unix` variants.
+- Parser coverage is intentionally narrow and focused on common `sshd`, `sudo`, `pam_unix`, and selected `pam_faillock` / `pam_sss` variants.
 - Unsupported lines are surfaced as parser telemetry and warnings, not as detector findings.
 - `pam_unix` auth failures remain lower-confidence by default unless signal mappings explicitly upgrade them.
 - Detector configuration uses a fixed `config.json` schema rather than partial overrides or alternate config formats.

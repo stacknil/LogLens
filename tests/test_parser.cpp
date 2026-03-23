@@ -21,6 +21,12 @@ loglens::AuthLogParser make_syslog_parser() {
         2026});
 }
 
+loglens::AuthLogParser make_journalctl_parser() {
+    return loglens::AuthLogParser(loglens::ParserConfig{
+        loglens::InputMode::JournalctlShortFull,
+        std::nullopt});
+}
+
 std::filesystem::path repo_root() {
     const std::filesystem::path source_path{__FILE__};
     std::vector<std::filesystem::path> candidates;
@@ -95,6 +101,19 @@ void test_success_event() {
     expect(event->event_type == loglens::EventType::SshAcceptedPassword, "expected ssh success type");
 }
 
+void test_accepted_publickey_success_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 11 10:00:01 example-host sshd[2100]: Accepted publickey for alice from 203.0.113.70 port 53000 ssh2: ED25519 SHA256:SANITIZEDKEY",
+        4);
+
+    expect(event.has_value(), "expected accepted publickey event");
+    expect(event->username == "alice", "expected accepted publickey username");
+    expect(event->source_ip == "203.0.113.70", "expected accepted publickey source ip");
+    expect(event->event_type == loglens::EventType::SshAcceptedPublicKey,
+           "expected accepted publickey event type");
+}
+
 void test_sudo_event() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -132,6 +151,19 @@ void test_pam_auth_failure_event() {
     expect(event->event_type == loglens::EventType::PamAuthFailure, "expected pam auth failure type");
 }
 
+void test_pam_sss_received_failure_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 11 10:02:25 example-host pam_sss(sshd:auth): received for user dave: 7 (Authentication failure)",
+        7);
+
+    expect(event.has_value(), "expected pam_sss received failure event");
+    expect(event->program == "pam_sss(sshd:auth)", "expected pam_sss auth program");
+    expect(event->username == "dave", "expected pam_sss username");
+    expect(event->source_ip.empty(), "expected pam_sss received failure to stay source-less");
+    expect(event->event_type == loglens::EventType::PamAuthFailure, "expected pam_sss failure type");
+}
+
 void test_session_opened_event() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -159,6 +191,81 @@ void test_journalctl_short_full_event() {
     expect(event->event_type == loglens::EventType::SshInvalidUser, "expected journalctl event classification");
     expect(loglens::format_timestamp(event->timestamp) == "2026-03-10 08:11:22",
            "expected journalctl timestamp to preserve embedded year and timezone");
+}
+
+void test_syslog_auth_family_fixture_file() {
+    const auto parser = make_syslog_parser();
+    const auto result = parser.parse_file(asset_path("parser_auth_families_syslog.log"));
+
+    expect(result.events.size() == 4, "expected four recognized syslog auth-family events");
+    expect(result.warnings.size() == 3, "expected three syslog auth-family warnings");
+    expect(result.quality.total_lines == 7, "expected seven syslog auth-family lines");
+    expect(result.quality.parsed_lines == 4, "expected four parsed syslog auth-family lines");
+    expect(result.quality.unparsed_lines == 3, "expected three unparsed syslog auth-family lines");
+    expect_close(result.quality.parse_success_rate, 4.0 / 7.0, 1e-9,
+                 "expected syslog auth-family parse success rate");
+
+    expect(result.events[0].event_type == loglens::EventType::SshAcceptedPublicKey,
+           "expected accepted publickey auth-family event");
+    expect(result.events[0].source_ip == "203.0.113.70", "expected accepted publickey source ip");
+    expect(result.events[1].event_type == loglens::EventType::PamAuthFailure,
+           "expected pam_faillock preauth auth-family event");
+    expect(result.events[1].username == "alice", "expected pam_faillock preauth username");
+    expect(result.events[1].source_ip == "203.0.113.71", "expected pam_faillock preauth source ip");
+    expect(result.events[2].event_type == loglens::EventType::PamAuthFailure,
+           "expected pam_faillock authfail auth-family event");
+    expect(result.events[2].username == "bob", "expected pam_faillock authfail username");
+    expect(result.events[2].source_ip == "203.0.113.72", "expected pam_faillock authfail source ip");
+    expect(result.events[3].event_type == loglens::EventType::PamAuthFailure,
+           "expected pam_sss failure auth-family event");
+    expect(result.events[3].username == "dave", "expected pam_sss failure username");
+    expect(result.events[3].source_ip.empty(), "expected pam_sss failure fixture to stay source-less");
+
+    expect(result.quality.top_unknown_patterns.size() == 3, "expected three syslog auth-family buckets");
+    expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_authsucc",
+           "expected pam_faillock authsucc telemetry bucket");
+    expect(result.quality.top_unknown_patterns[0].count == 1, "expected one pam_faillock authsucc line");
+    expect(result.quality.top_unknown_patterns[1].pattern == "pam_sss_authinfo_unavail",
+           "expected pam_sss authinfo-unavail telemetry bucket");
+    expect(result.quality.top_unknown_patterns[1].count == 1, "expected one pam_sss authinfo-unavail line");
+    expect(result.quality.top_unknown_patterns[2].pattern == "pam_sss_unknown_user",
+           "expected pam_sss unknown-user telemetry bucket");
+    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one pam_sss unknown-user line");
+}
+
+void test_journalctl_auth_family_fixture_file() {
+    const auto parser = make_journalctl_parser();
+    const auto result = parser.parse_file(asset_path("parser_auth_families_journalctl_short_full.log"));
+
+    expect(result.events.size() == 4, "expected four recognized journalctl auth-family events");
+    expect(result.warnings.size() == 3, "expected three journalctl auth-family warnings");
+    expect(result.quality.total_lines == 7, "expected seven journalctl auth-family lines");
+    expect(result.quality.parsed_lines == 4, "expected four parsed journalctl auth-family lines");
+    expect(result.quality.unparsed_lines == 3, "expected three unparsed journalctl auth-family lines");
+    expect_close(result.quality.parse_success_rate, 4.0 / 7.0, 1e-9,
+                 "expected journalctl auth-family parse success rate");
+
+    expect(result.events[0].event_type == loglens::EventType::SshAcceptedPublicKey,
+           "expected journalctl accepted publickey auth-family event");
+    expect(result.events[0].source_ip == "203.0.113.70", "expected journalctl accepted publickey source ip");
+    expect(result.events[1].event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl pam_faillock preauth auth-family event");
+    expect(result.events[2].event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl pam_faillock authfail auth-family event");
+    expect(result.events[3].event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl pam_sss failure auth-family event");
+    expect(result.events[3].source_ip.empty(), "expected journalctl pam_sss failure fixture to stay source-less");
+
+    expect(result.quality.top_unknown_patterns.size() == 3, "expected three journalctl auth-family buckets");
+    expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_authsucc",
+           "expected journalctl pam_faillock authsucc telemetry bucket");
+    expect(result.quality.top_unknown_patterns[0].count == 1, "expected one journalctl pam_faillock authsucc line");
+    expect(result.quality.top_unknown_patterns[1].pattern == "pam_sss_authinfo_unavail",
+           "expected journalctl pam_sss authinfo-unavail telemetry bucket");
+    expect(result.quality.top_unknown_patterns[1].count == 1, "expected one journalctl pam_sss authinfo-unavail line");
+    expect(result.quality.top_unknown_patterns[2].pattern == "pam_sss_unknown_user",
+           "expected journalctl pam_sss unknown-user telemetry bucket");
+    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one journalctl pam_sss unknown-user line");
 }
 
 void test_malformed_line() {
@@ -309,11 +416,15 @@ int main() {
     test_invalid_user_failure();
     test_standard_failure();
     test_success_event();
+    test_accepted_publickey_success_event();
     test_sudo_event();
     test_failed_publickey_event();
     test_pam_auth_failure_event();
+    test_pam_sss_received_failure_event();
     test_session_opened_event();
     test_journalctl_short_full_event();
+    test_syslog_auth_family_fixture_file();
+    test_journalctl_auth_family_fixture_file();
     test_malformed_line();
     test_unknown_auth_patterns_are_warnings_only();
     test_stream_warnings_and_metadata();

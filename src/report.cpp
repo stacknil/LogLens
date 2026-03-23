@@ -71,6 +71,7 @@ std::vector<std::pair<EventType, std::size_t>> build_event_counts(const std::vec
     std::vector<std::pair<EventType, std::size_t>> counts = {
         {EventType::SshFailedPassword, 0},
         {EventType::SshAcceptedPassword, 0},
+        {EventType::SshAcceptedPublicKey, 0},
         {EventType::SshInvalidUser, 0},
         {EventType::SshFailedPublicKey, 0},
         {EventType::PamAuthFailure, 0},

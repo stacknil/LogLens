@@ -327,6 +327,24 @@ bool parse_ssh_accepted_message(std::string_view message, Event& event) {
     return true;
 }
 
+bool parse_ssh_accepted_publickey_message(std::string_view message, Event& event) {
+    static constexpr std::string_view accepted_prefix = "Accepted publickey for ";
+    if (!message.starts_with(accepted_prefix)) {
+        return false;
+    }
+
+    auto remaining = message.substr(accepted_prefix.size());
+    const auto username = consume_token(remaining);
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
+    event.source_ip = extract_token_after(message, " from ");
+    event.event_type = EventType::SshAcceptedPublicKey;
+    return true;
+}
+
 bool parse_ssh_failed_publickey_message(std::string_view message, Event& event) {
     static constexpr std::string_view publickey_prefix = "Failed publickey for ";
     if (!message.starts_with(publickey_prefix)) {
@@ -367,6 +385,25 @@ bool parse_ssh_invalid_user_message(std::string_view message, Event& event) {
     return true;
 }
 
+bool parse_pam_named_user_failure_message(std::string_view message,
+                                          std::string_view prefix,
+                                          Event& event) {
+    if (!message.starts_with(prefix)) {
+        return false;
+    }
+
+    auto remaining = message.substr(prefix.size());
+    const auto username = consume_token(remaining);
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
+    event.source_ip = extract_token_after(message, " from ");
+    event.event_type = EventType::PamAuthFailure;
+    return true;
+}
+
 bool parse_pam_auth_failure_message(std::string_view message, Event& event) {
     static constexpr std::string_view auth_failure_prefix = "authentication failure;";
     if (!message.starts_with(auth_failure_prefix)) {
@@ -375,6 +412,30 @@ bool parse_pam_auth_failure_message(std::string_view message, Event& event) {
 
     event.username = extract_kv_value(message, "user=");
     event.source_ip = extract_kv_value(message, "rhost=");
+    event.event_type = EventType::PamAuthFailure;
+    return true;
+}
+
+bool parse_pam_sss_received_failure_message(std::string_view message, Event& event) {
+    static constexpr std::string_view received_prefix = "received for user ";
+    static constexpr std::string_view failure_marker = "(Authentication failure)";
+
+    if (!message.starts_with(received_prefix) || message.find(failure_marker) == std::string_view::npos) {
+        return false;
+    }
+
+    auto remaining = message.substr(received_prefix.size());
+    const auto separator = remaining.find(':');
+    if (separator == std::string_view::npos) {
+        return false;
+    }
+
+    const auto username = trim(remaining.substr(0, separator));
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
     event.event_type = EventType::PamAuthFailure;
     return true;
 }
@@ -423,6 +484,38 @@ bool parse_sudo_message(std::string_view message, Event& event) {
     return true;
 }
 
+bool parse_pam_faillock_message(std::string_view message, Event& event) {
+    if (parse_pam_named_user_failure_message(message, "Consecutive login failures for user ", event)) {
+        return true;
+    }
+
+    if (parse_pam_named_user_failure_message(message, "Authentication failure for user ", event)) {
+        return true;
+    }
+
+    return false;
+}
+
+std::string classify_unknown_pam_faillock_pattern(std::string_view message) {
+    if (message.starts_with("User ") && message.find("successfully authenticated") != std::string_view::npos) {
+        return "pam_faillock_authsucc";
+    }
+
+    return "pam_faillock_other";
+}
+
+std::string classify_unknown_pam_sss_pattern(std::string_view message) {
+    if (message.find("User not known to the underlying authentication module") != std::string_view::npos) {
+        return "pam_sss_unknown_user";
+    }
+
+    if (message.find("Authentication service cannot retrieve authentication info") != std::string_view::npos) {
+        return "pam_sss_authinfo_unavail";
+    }
+
+    return "pam_sss_other";
+}
+
 std::string classify_unknown_auth_pattern(const Event& event) {
     const auto message = std::string_view{event.message};
     if (event.program == "sshd") {
@@ -444,6 +537,14 @@ std::string classify_unknown_auth_pattern(const Event& event) {
         return "pam_unix_other";
     }
 
+    if (event.program.starts_with("pam_faillock(")) {
+        return classify_unknown_pam_faillock_pattern(message);
+    }
+
+    if (event.program.starts_with("pam_sss(")) {
+        return classify_unknown_pam_sss_pattern(message);
+    }
+
     if (event.program == "sudo") {
         return "sudo_other";
     }
@@ -460,6 +561,9 @@ bool classify_event(Event& event) {
         if (parse_ssh_accepted_message(message, event)) {
             return true;
         }
+        if (parse_ssh_accepted_publickey_message(message, event)) {
+            return true;
+        }
         if (parse_ssh_failed_publickey_message(message, event)) {
             return true;
         }
@@ -474,6 +578,20 @@ bool classify_event(Event& event) {
             return true;
         }
         if (parse_session_opened_message(message, event)) {
+            return true;
+        }
+        return false;
+    }
+
+    if (event.program.starts_with("pam_faillock(")) {
+        return parse_pam_faillock_message(message, event);
+    }
+
+    if (event.program.starts_with("pam_sss(")) {
+        if (parse_pam_auth_failure_message(message, event)) {
+            return true;
+        }
+        if (parse_pam_sss_received_failure_message(message, event)) {
             return true;
         }
         return false;
