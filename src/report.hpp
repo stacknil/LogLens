@@ -1,5 +1,6 @@
 #pragma once
 
+#include "signal.hpp"
 #include "detector.hpp"
 #include "parser.hpp"
 
@@ -16,6 +17,7 @@ struct ReportData {
     std::vector<Event> events;
     std::vector<Finding> findings;
     std::vector<ParseWarning> warnings;
+    AuthSignalConfig auth_signal_mappings;
 };
 
 std::string render_markdown_report(const ReportData& data);

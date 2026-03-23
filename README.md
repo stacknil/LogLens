@@ -108,6 +108,8 @@ The CLI writes:
 
 into the output directory you provide. If you omit the output directory, the files are written into the current working directory.
 
+When an input spans multiple hostnames, both reports add compact host-level summaries without changing detector thresholds or introducing cross-host correlation logic.
+
 ## Sample Output
 
 For sanitized sample input, see [`assets/sample_auth.log`](./assets/sample_auth.log) and [`assets/sample_journalctl_short_full.log`](./assets/sample_journalctl_short_full.log).

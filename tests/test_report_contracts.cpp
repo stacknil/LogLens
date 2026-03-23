@@ -147,6 +147,8 @@ std::vector<std::string> extract_json_contract_lines(const std::string& json) {
             || starts_with(line, "\"parsed_event_count\": ")
             || starts_with(line, "\"warning_count\": ")
             || starts_with(line, "\"finding_count\": ")
+            || starts_with(line, "\"host_summaries\": ")
+            || starts_with(line, "\"hostname\": ")
             || starts_with(line, "{\"pattern\": ")
             || starts_with(line, "{\"event_type\": ")
             || starts_with(line, "\"rule\": ")
@@ -259,6 +261,17 @@ int main(int argc, char* argv[]) {
         run_report_contract_case(
             loglens_exe,
             fixture_root / "journalctl_short_full",
+            output_root,
+            "journalctl-short-full");
+        run_report_contract_case(
+            loglens_exe,
+            fixture_root / "multi_host_syslog_legacy",
+            output_root,
+            "syslog",
+            "--year 2026");
+        run_report_contract_case(
+            loglens_exe,
+            fixture_root / "multi_host_journalctl_short_full",
             output_root,
             "journalctl-short-full");
     } catch (...) {

@@ -4,13 +4,24 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace loglens {
 namespace {
+
+struct HostSummary {
+    std::string hostname;
+    std::size_t parsed_event_count = 0;
+    std::size_t finding_count = 0;
+    std::size_t warning_count = 0;
+    std::vector<std::pair<EventType, std::size_t>> event_counts;
+};
 
 std::string escape_json(std::string_view value) {
     std::string escaped;
@@ -125,6 +136,190 @@ std::string format_parse_success_percent(double rate) {
     return output.str();
 }
 
+std::string_view trim_left(std::string_view value) {
+    while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) {
+        value.remove_prefix(1);
+    }
+    return value;
+}
+
+std::string_view consume_token(std::string_view& input) {
+    input = trim_left(input);
+    if (input.empty()) {
+        return {};
+    }
+
+    const auto separator = input.find(' ');
+    if (separator == std::string_view::npos) {
+        const auto token = input;
+        input = {};
+        return token;
+    }
+
+    const auto token = input.substr(0, separator);
+    input.remove_prefix(separator + 1);
+    return token;
+}
+
+std::optional<std::string> extract_hostname_from_input_line(std::string_view line, InputMode input_mode) {
+    auto remaining = line;
+    switch (input_mode) {
+    case InputMode::SyslogLegacy:
+        if (consume_token(remaining).empty()
+            || consume_token(remaining).empty()
+            || consume_token(remaining).empty()) {
+            return std::nullopt;
+        }
+        break;
+    case InputMode::JournalctlShortFull:
+        if (consume_token(remaining).empty()
+            || consume_token(remaining).empty()
+            || consume_token(remaining).empty()
+            || consume_token(remaining).empty()) {
+            return std::nullopt;
+        }
+        break;
+    default:
+        return std::nullopt;
+    }
+
+    const auto hostname = consume_token(remaining);
+    if (hostname.empty()) {
+        return std::nullopt;
+    }
+
+    return std::string(hostname);
+}
+
+std::unordered_map<std::size_t, std::string> load_hostnames_by_line(const ReportData& data) {
+    std::unordered_map<std::size_t, std::string> hostnames_by_line;
+    if (data.warnings.empty()) {
+        return hostnames_by_line;
+    }
+
+    std::ifstream input(data.input_path);
+    if (!input) {
+        return hostnames_by_line;
+    }
+
+    std::string line;
+    std::size_t line_number = 0;
+    while (std::getline(input, line)) {
+        ++line_number;
+        const auto hostname = extract_hostname_from_input_line(line, data.parse_metadata.input_mode);
+        if (hostname.has_value()) {
+            hostnames_by_line.emplace(line_number, *hostname);
+        }
+    }
+
+    return hostnames_by_line;
+}
+
+bool is_matching_finding_signal(const Finding& finding, const AuthSignal& signal) {
+    if (signal.timestamp < finding.first_seen || signal.timestamp > finding.last_seen) {
+        return false;
+    }
+
+    switch (finding.type) {
+    case FindingType::BruteForce:
+        return signal.counts_as_terminal_auth_failure
+            && signal.source_ip == finding.subject;
+    case FindingType::MultiUserProbing:
+        if (!signal.counts_as_attempt_evidence || signal.source_ip != finding.subject) {
+            return false;
+        }
+        if (finding.usernames.empty()) {
+            return true;
+        }
+        return std::find(
+                   finding.usernames.begin(),
+                   finding.usernames.end(),
+                   signal.username)
+            != finding.usernames.end();
+    case FindingType::SudoBurst:
+        return signal.counts_as_sudo_burst_evidence
+            && signal.username == finding.subject;
+    default:
+        return false;
+    }
+}
+
+std::vector<HostSummary> build_host_summaries(const ReportData& data) {
+    std::unordered_map<std::string, HostSummary> summaries_by_host;
+
+    for (const auto& event : data.events) {
+        if (event.hostname.empty()) {
+            continue;
+        }
+
+        auto& summary = summaries_by_host[event.hostname];
+        summary.hostname = event.hostname;
+        ++summary.parsed_event_count;
+    }
+
+    const auto hostnames_by_line = load_hostnames_by_line(data);
+    for (const auto& warning : data.warnings) {
+        const auto hostname_it = hostnames_by_line.find(warning.line_number);
+        if (hostname_it == hostnames_by_line.end() || hostname_it->second.empty()) {
+            continue;
+        }
+
+        auto& summary = summaries_by_host[hostname_it->second];
+        summary.hostname = hostname_it->second;
+        ++summary.warning_count;
+    }
+
+    if (summaries_by_host.size() <= 1) {
+        return {};
+    }
+
+    std::unordered_map<std::size_t, std::string> hostname_by_event_line;
+    hostname_by_event_line.reserve(data.events.size());
+    std::unordered_map<std::string, std::vector<Event>> events_by_host;
+    events_by_host.reserve(summaries_by_host.size());
+
+    for (const auto& event : data.events) {
+        hostname_by_event_line.emplace(event.line_number, event.hostname);
+        events_by_host[event.hostname].push_back(event);
+    }
+
+    const auto signals = build_auth_signals(data.events, data.auth_signal_mappings);
+    for (const auto& finding : data.findings) {
+        std::unordered_set<std::string> matching_hosts;
+        for (const auto& signal : signals) {
+            if (!is_matching_finding_signal(finding, signal)) {
+                continue;
+            }
+
+            const auto hostname_it = hostname_by_event_line.find(signal.line_number);
+            if (hostname_it == hostname_by_event_line.end() || hostname_it->second.empty()) {
+                continue;
+            }
+            matching_hosts.insert(hostname_it->second);
+        }
+
+        for (const auto& hostname : matching_hosts) {
+            ++summaries_by_host[hostname].finding_count;
+        }
+    }
+
+    std::vector<HostSummary> summaries;
+    summaries.reserve(summaries_by_host.size());
+    for (auto& [hostname, summary] : summaries_by_host) {
+        const auto events_it = events_by_host.find(hostname);
+        if (events_it != events_by_host.end()) {
+            summary.event_counts = build_event_counts(events_it->second);
+        }
+        summaries.push_back(std::move(summary));
+    }
+
+    std::sort(summaries.begin(), summaries.end(), [](const HostSummary& left, const HostSummary& right) {
+        return left.hostname < right.hostname;
+    });
+
+    return summaries;
+}
+
 }  // namespace
 
 std::string render_markdown_report(const ReportData& data) {
@@ -132,6 +327,7 @@ std::string render_markdown_report(const ReportData& data) {
     const auto findings = sorted_findings(data.findings);
     const auto warnings = sorted_warnings(data.warnings);
     const auto event_counts = build_event_counts(data.events);
+    const auto host_summaries = build_host_summaries(data);
 
     output << "# LogLens Report\n\n";
     output << "## Summary\n\n";
@@ -148,6 +344,19 @@ std::string render_markdown_report(const ReportData& data) {
     output << "- Parsed events: " << data.events.size() << '\n';
     output << "- Findings: " << findings.size() << '\n';
     output << "- Parser warnings: " << warnings.size() << "\n\n";
+
+    if (!host_summaries.empty()) {
+        output << "## Host Summary\n\n";
+        output << "| Host | Parsed Events | Findings | Warnings |\n";
+        output << "| --- | ---: | ---: | ---: |\n";
+        for (const auto& summary : host_summaries) {
+            output << "| " << summary.hostname
+                   << " | " << summary.parsed_event_count
+                   << " | " << summary.finding_count
+                   << " | " << summary.warning_count << " |\n";
+        }
+        output << '\n';
+    }
 
     output << "## Findings\n\n";
     if (findings.empty()) {
@@ -205,6 +414,7 @@ std::string render_json_report(const ReportData& data) {
     const auto findings = sorted_findings(data.findings);
     const auto warnings = sorted_warnings(data.warnings);
     const auto event_counts = build_event_counts(data.events);
+    const auto host_summaries = build_host_summaries(data);
 
     output << "{\n";
     output << "  \"tool\": \"LogLens\",\n";
@@ -236,7 +446,31 @@ std::string render_json_report(const ReportData& data) {
         output << "    {\"event_type\": \"" << to_string(type) << "\", \"count\": " << count << "}";
         output << (index + 1 == event_counts.size() ? "\n" : ",\n");
     }
-    output << "  ],\n";
+    output << "  ]";
+    if (!host_summaries.empty()) {
+        output << ",\n";
+        output << "  \"host_summaries\": [\n";
+        for (std::size_t host_index = 0; host_index < host_summaries.size(); ++host_index) {
+            const auto& summary = host_summaries[host_index];
+            output << "    {\n";
+            output << "      \"hostname\": \"" << escape_json(summary.hostname) << "\",\n";
+            output << "      \"parsed_event_count\": " << summary.parsed_event_count << ",\n";
+            output << "      \"finding_count\": " << summary.finding_count << ",\n";
+            output << "      \"warning_count\": " << summary.warning_count << ",\n";
+            output << "      \"event_counts\": [\n";
+            for (std::size_t event_index = 0; event_index < summary.event_counts.size(); ++event_index) {
+                const auto& [type, count] = summary.event_counts[event_index];
+                output << "        {\"event_type\": \"" << to_string(type) << "\", \"count\": " << count << "}";
+                output << (event_index + 1 == summary.event_counts.size() ? "\n" : ",\n");
+            }
+            output << "      ]\n";
+            output << "    }";
+            output << (host_index + 1 == host_summaries.size() ? "\n" : ",\n");
+        }
+        output << "  ],\n";
+    } else {
+        output << ",\n";
+    }
     output << "  \"findings\": [\n";
     for (std::size_t index = 0; index < findings.size(); ++index) {
         const auto& finding = findings[index];
