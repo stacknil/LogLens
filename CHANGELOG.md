@@ -6,7 +6,7 @@ All notable user-visible changes should be recorded here.
 
 ### Added
 
-- None yet.
+- Added sanitized golden `report.md` / `report.json` regression fixtures to lock report contracts.
 
 ### Changed
 
