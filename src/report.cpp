@@ -53,6 +53,30 @@ std::string escape_json(std::string_view value) {
     return escaped;
 }
 
+std::string escape_csv(std::string_view value) {
+    bool needs_quotes = value.find_first_of(",\"\n\r") != std::string_view::npos;
+    std::string escaped;
+    escaped.reserve(value.size() + 2);
+
+    if (needs_quotes) {
+        escaped.push_back('"');
+    }
+
+    for (const char character : value) {
+        if (character == '"') {
+            escaped += "\"\"";
+        } else {
+            escaped.push_back(character);
+        }
+    }
+
+    if (needs_quotes) {
+        escaped.push_back('"');
+    }
+
+    return escaped;
+}
+
 std::vector<Finding> sorted_findings(const std::vector<Finding>& findings) {
     auto ordered = findings;
     std::sort(ordered.begin(), ordered.end(), [](const Finding& left, const Finding& right) {
@@ -122,6 +146,17 @@ std::string usernames_note(const Finding& finding) {
         note << finding.usernames[index];
     }
     return note.str();
+}
+
+std::string usernames_csv_field(const Finding& finding) {
+    std::ostringstream usernames;
+    for (std::size_t index = 0; index < finding.usernames.size(); ++index) {
+        if (index != 0) {
+            usernames << ';';
+        }
+        usernames << finding.usernames[index];
+    }
+    return usernames.str();
 }
 
 std::string format_parse_success_rate(double rate) {
@@ -506,7 +541,39 @@ std::string render_json_report(const ReportData& data) {
     return output.str();
 }
 
-void write_reports(const ReportData& data, const std::filesystem::path& output_directory) {
+std::string render_findings_csv(const ReportData& data) {
+    std::ostringstream output;
+    const auto findings = sorted_findings(data.findings);
+
+    output << "rule,subject_kind,subject,event_count,window_start,window_end,usernames,summary\n";
+    for (const auto& finding : findings) {
+        output << escape_csv(to_string(finding.type)) << ','
+               << escape_csv(finding.subject_kind) << ','
+               << escape_csv(finding.subject) << ','
+               << finding.event_count << ','
+               << escape_csv(format_timestamp(finding.first_seen)) << ','
+               << escape_csv(format_timestamp(finding.last_seen)) << ','
+               << escape_csv(usernames_csv_field(finding)) << ','
+               << escape_csv(finding.summary) << '\n';
+    }
+
+    return output.str();
+}
+
+std::string render_warnings_csv(const ReportData& data) {
+    std::ostringstream output;
+    const auto warnings = sorted_warnings(data.warnings);
+
+    output << "kind,message\n";
+    for (const auto& warning : warnings) {
+        output << "parse_warning,"
+               << escape_csv(warning.reason) << '\n';
+    }
+
+    return output.str();
+}
+
+void write_reports(const ReportData& data, const std::filesystem::path& output_directory, bool emit_csv) {
     std::filesystem::create_directories(output_directory);
 
     std::ofstream markdown_output(output_directory / "report.md");
@@ -514,6 +581,20 @@ void write_reports(const ReportData& data, const std::filesystem::path& output_d
 
     std::ofstream json_output(output_directory / "report.json");
     json_output << render_json_report(data);
+
+    const auto findings_csv_path = output_directory / "findings.csv";
+    const auto warnings_csv_path = output_directory / "warnings.csv";
+    if (!emit_csv) {
+        std::filesystem::remove(findings_csv_path);
+        std::filesystem::remove(warnings_csv_path);
+        return;
+    }
+
+    std::ofstream findings_csv_output(findings_csv_path);
+    findings_csv_output << render_findings_csv(data);
+
+    std::ofstream warnings_csv_output(warnings_csv_path);
+    warnings_csv_output << render_warnings_csv(data);
 }
 
 }  // namespace loglens

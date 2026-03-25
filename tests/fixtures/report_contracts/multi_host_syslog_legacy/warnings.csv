@@ -1,0 +1,4 @@
+kind,message
+parse_warning,unrecognized auth pattern: pam_sss_unknown_user
+parse_warning,unrecognized auth pattern: sshd_connection_closed_preauth
+parse_warning,unrecognized auth pattern: sshd_timeout_or_disconnection

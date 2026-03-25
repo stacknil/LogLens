@@ -16,12 +16,13 @@ struct CliOptions {
     std::optional<std::filesystem::path> config_path;
     std::optional<loglens::InputMode> input_mode;
     std::optional<int> assumed_year;
+    bool emit_csv = false;
     std::filesystem::path input_path;
     std::filesystem::path output_directory;
 };
 
 void print_usage() {
-    std::cerr << "Usage: loglens [--config <config.json>] [--mode <syslog|journalctl-short-full>] [--year <YYYY>] <input_log> [output_dir]\n";
+    std::cerr << "Usage: loglens [--config <config.json>] [--mode <syslog|journalctl-short-full>] [--year <YYYY>] [--csv] <input_log> [output_dir]\n";
 }
 
 int parse_year_argument(std::string_view value) {
@@ -78,6 +79,12 @@ CliOptions parse_cli_options(int argc, char* argv[]) {
 
             options.assumed_year = parse_year_argument(argv[index + 1]);
             index += 2;
+            continue;
+        }
+
+        if (argument == "--csv") {
+            options.emit_csv = true;
+            ++index;
             continue;
         }
 
@@ -156,13 +163,17 @@ int main(int argc, char* argv[]) {
             parsed.warnings,
             app_config.detector.auth_signal_mappings};
 
-        loglens::write_reports(report_data, options.output_directory);
+        loglens::write_reports(report_data, options.output_directory, options.emit_csv);
 
         std::cout << "Parsed events: " << parsed.events.size() << '\n';
         std::cout << "Findings: " << findings.size() << '\n';
         std::cout << "Warnings: " << parsed.warnings.size() << '\n';
         std::cout << "Markdown report: " << (options.output_directory / "report.md").string() << '\n';
         std::cout << "JSON report: " << (options.output_directory / "report.json").string() << '\n';
+        if (options.emit_csv) {
+            std::cout << "Findings CSV: " << (options.output_directory / "findings.csv").string() << '\n';
+            std::cout << "Warnings CSV: " << (options.output_directory / "warnings.csv").string() << '\n';
+        }
     } catch (const std::exception& error) {
         std::cerr << "LogLens failed: " << error.what() << '\n';
         return 1;

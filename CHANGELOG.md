@@ -9,6 +9,7 @@ All notable user-visible changes should be recorded here.
 - Added sanitized golden `report.md` / `report.json` regression fixtures to lock report contracts.
 - Expanded parser coverage for `Accepted publickey` and selected `pam_faillock` / `pam_sss` variants.
 - Added compact host-level summaries for multi-host reports.
+- Added optional CSV export for findings and warnings when explicitly requested.
 
 ### Changed
 
