@@ -114,6 +114,8 @@ When you add `--csv`, LogLens also writes:
 - `findings.csv`
 - `warnings.csv`
 
+Without `--csv`, LogLens does not create, overwrite, or delete any existing CSV files in the output directory.
+
 The CSV schema is intentionally small and stable:
 
 - `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
