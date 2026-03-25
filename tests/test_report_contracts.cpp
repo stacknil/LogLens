@@ -167,6 +167,16 @@ std::vector<std::string> extract_json_contract_lines(const std::string& json) {
     return contract_lines;
 }
 
+std::vector<std::string> extract_csv_contract_lines(const std::string& csv) {
+    std::vector<std::string> lines;
+    for (const auto& raw_line : split_lines(csv)) {
+        if (!raw_line.empty()) {
+            lines.push_back(raw_line);
+        }
+    }
+    return lines;
+}
+
 std::string quote_argument(std::string_view value) {
     return "\"" + std::string(value) + "\"";
 }
@@ -202,7 +212,8 @@ void run_report_contract_case(const std::filesystem::path& loglens_exe,
                               const std::filesystem::path& fixture_directory,
                               const std::filesystem::path& output_root,
                               const std::string& mode_argument,
-                              const std::string& extra_arguments = {}) {
+                              const std::string& extra_arguments = {},
+                              bool expect_csv = false) {
     const auto repo = repo_root();
     const auto relative_input = std::filesystem::relative(fixture_directory / "input.log", repo).generic_string();
     const auto case_output = output_root / fixture_directory.filename();
@@ -234,6 +245,36 @@ void run_report_contract_case(const std::filesystem::path& loglens_exe,
         extract_json_contract_lines(actual_json),
         extract_json_contract_lines(golden_json),
         "json contract mismatch for " + fixture_directory.filename().string());
+
+    const auto golden_findings_csv = fixture_directory / "findings.csv";
+    const auto golden_warnings_csv = fixture_directory / "warnings.csv";
+    if (expect_csv) {
+        expect(std::filesystem::exists(golden_findings_csv),
+               "expected golden findings.csv for " + fixture_directory.filename().string());
+        expect(std::filesystem::exists(case_output / "findings.csv"),
+               "expected findings.csv for " + fixture_directory.filename().string());
+        expect_equal_lines(
+            extract_csv_contract_lines(read_file(case_output / "findings.csv")),
+            extract_csv_contract_lines(read_file(golden_findings_csv)),
+            "findings csv contract mismatch for " + fixture_directory.filename().string());
+    } else {
+        expect(!std::filesystem::exists(case_output / "findings.csv"),
+               "did not expect findings.csv for " + fixture_directory.filename().string());
+    }
+
+    if (expect_csv) {
+        expect(std::filesystem::exists(golden_warnings_csv),
+               "expected golden warnings.csv for " + fixture_directory.filename().string());
+        expect(std::filesystem::exists(case_output / "warnings.csv"),
+               "expected warnings.csv for " + fixture_directory.filename().string());
+        expect_equal_lines(
+            extract_csv_contract_lines(read_file(case_output / "warnings.csv")),
+            extract_csv_contract_lines(read_file(golden_warnings_csv)),
+            "warnings csv contract mismatch for " + fixture_directory.filename().string());
+    } else {
+        expect(!std::filesystem::exists(case_output / "warnings.csv"),
+               "did not expect warnings.csv for " + fixture_directory.filename().string());
+    }
 }
 
 }  // namespace
@@ -274,6 +315,20 @@ int main(int argc, char* argv[]) {
             fixture_root / "multi_host_journalctl_short_full",
             output_root,
             "journalctl-short-full");
+        run_report_contract_case(
+            loglens_exe,
+            fixture_root / "syslog_legacy",
+            output_root,
+            "syslog",
+            "--year 2026 --csv",
+            true);
+        run_report_contract_case(
+            loglens_exe,
+            fixture_root / "multi_host_syslog_legacy",
+            output_root,
+            "syslog",
+            "--year 2026 --csv",
+            true);
     } catch (...) {
         std::filesystem::current_path(original_cwd);
         throw;

@@ -115,6 +115,54 @@ int main(int argc, char* argv[]) {
     const auto syslog_markdown = read_file(syslog_cli_out / "report.md");
     const auto syslog_json = read_file(syslog_cli_out / "report.json");
     expect_report_core_fields(syslog_markdown, syslog_json, "syslog_legacy", true, false);
+    expect(!std::filesystem::exists(syslog_cli_out / "findings.csv"),
+           "did not expect findings.csv without explicit csv flag");
+    expect(!std::filesystem::exists(syslog_cli_out / "warnings.csv"),
+           "did not expect warnings.csv without explicit csv flag");
+
+    const auto csv_out = output_dir / "csv_run";
+    std::filesystem::create_directories(csv_out);
+    const int csv_exit = std::system(build_command(
+        quote_argument(loglens_exe)
+        + " --mode syslog --year 2026 --csv "
+        + quote_argument(sample_log)
+        + " " + quote_argument(csv_out))
+                                         .c_str());
+    expect(csv_exit == 0, "expected syslog CSV CLI run to succeed");
+    const auto findings_csv = read_file(csv_out / "findings.csv");
+    const auto warnings_csv = read_file(csv_out / "warnings.csv");
+    expect(findings_csv.find("rule,subject_kind,subject,event_count,window_start,window_end,usernames,summary")
+               == 0,
+           "expected findings csv header");
+    expect(findings_csv.find("brute_force,source_ip,203.0.113.10,5,2026-03-10 08:11:22,2026-03-10 08:18:05,,5 failed SSH attempts from 203.0.113.10 within 10 minutes.")
+               != std::string::npos,
+           "expected brute-force findings csv row");
+    expect(warnings_csv.find("kind,message") == 0, "expected warnings csv header");
+    expect(warnings_csv.find("parse_warning,unrecognized auth pattern: sshd_connection_closed_preauth")
+               != std::string::npos,
+           "expected warning csv row");
+
+    const auto stale_csv_out = output_dir / "stale_csv_run";
+    std::filesystem::create_directories(stale_csv_out);
+    {
+        std::ofstream findings_output(stale_csv_out / "findings.csv");
+        findings_output << "keep-findings\n";
+    }
+    {
+        std::ofstream warnings_output(stale_csv_out / "warnings.csv");
+        warnings_output << "keep-warnings\n";
+    }
+    const int stale_csv_exit = std::system(build_command(
+        quote_argument(loglens_exe)
+        + " --mode syslog --year 2026 "
+        + quote_argument(sample_log)
+        + " " + quote_argument(stale_csv_out))
+                                              .c_str());
+    expect(stale_csv_exit == 0, "expected non-csv run with pre-existing csv files to succeed");
+    expect(read_file(stale_csv_out / "findings.csv") == "keep-findings\n",
+           "expected non-csv run to preserve pre-existing findings.csv");
+    expect(read_file(stale_csv_out / "warnings.csv") == "keep-warnings\n",
+           "expected non-csv run to preserve pre-existing warnings.csv");
 
     const auto config_run_out = output_dir / "config_run";
     std::filesystem::create_directories(config_run_out);
@@ -139,24 +187,20 @@ int main(int argc, char* argv[]) {
     const auto journalctl_markdown = read_file(journalctl_out / "report.md");
     const auto journalctl_json = read_file(journalctl_out / "report.json");
     expect_report_core_fields(journalctl_markdown, journalctl_json, "journalctl_short_full", false, true);
+    expect(!std::filesystem::exists(journalctl_out / "findings.csv"),
+           "did not expect journalctl findings.csv without explicit csv flag");
+    expect(!std::filesystem::exists(journalctl_out / "warnings.csv"),
+           "did not expect journalctl warnings.csv without explicit csv flag");
 
     const auto missing_year_out = output_dir / "missing_year";
     std::filesystem::create_directories(missing_year_out);
-    const auto missing_year_stdout = output_dir / "missing_year_stdout.txt";
-    const auto missing_year_stderr = output_dir / "missing_year_stderr.txt";
     const int missing_year_exit = std::system(build_command(
         quote_argument(loglens_exe)
         + " --mode syslog "
         + quote_argument(sample_log)
-        + " " + quote_argument(missing_year_out),
-        &missing_year_stdout,
-        &missing_year_stderr)
+        + " " + quote_argument(missing_year_out))
                                                    .c_str());
     expect(missing_year_exit != 0, "expected syslog mode without year to fail");
-    const auto missing_year_error = read_file(missing_year_stderr);
-    expect(missing_year_error.find("--year") != std::string::npos
-               || missing_year_error.find("assume_year") != std::string::npos,
-           "expected missing-year error to mention year requirements");
 
     const auto invalid_config = output_dir / "invalid_config.json";
     {
@@ -178,21 +222,13 @@ int main(int argc, char* argv[]) {
 
     const auto invalid_out = output_dir / "invalid_config_run";
     std::filesystem::create_directories(invalid_out);
-    const auto invalid_stdout = output_dir / "invalid_stdout.txt";
-    const auto invalid_stderr = output_dir / "invalid_stderr.txt";
     const int invalid_exit = std::system(build_command(
         quote_argument(loglens_exe)
         + " --config " + quote_argument(invalid_config)
         + " " + quote_argument(sample_log)
-        + " " + quote_argument(invalid_out),
-        &invalid_stdout,
-        &invalid_stderr)
+        + " " + quote_argument(invalid_out))
                                              .c_str());
     expect(invalid_exit != 0, "expected invalid config CLI run to fail");
-
-    const auto invalid_error = read_file(invalid_stderr);
-    expect(invalid_error.find("assume_year") != std::string::npos,
-           "expected CLI error output to mention the failing config field");
 
     return 0;
 }

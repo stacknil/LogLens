@@ -5,7 +5,7 @@
 
 C++20 defensive log analysis CLI for Linux authentication logs, with parser coverage telemetry, configurable detection rules, CI, and CodeQL.
 
-It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports.
+It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports, with optional CSV exports for findings and warnings.
 
 ## Project Status
 
@@ -99,6 +99,7 @@ For fresh-machine setup and repeatable local presets, see [`docs/dev-setup.md`](
 ./build/loglens --mode syslog --year 2026 ./assets/sample_auth.log ./out
 ./build/loglens --mode journalctl-short-full ./assets/sample_journalctl_short_full.log ./out-journal
 ./build/loglens --config ./assets/sample_config.json ./assets/sample_auth.log ./out-config
+./build/loglens --mode syslog --year 2026 --csv ./assets/sample_auth.log ./out-csv
 ```
 
 The CLI writes:
@@ -107,6 +108,18 @@ The CLI writes:
 - `report.json`
 
 into the output directory you provide. If you omit the output directory, the files are written into the current working directory.
+
+When you add `--csv`, LogLens also writes:
+
+- `findings.csv`
+- `warnings.csv`
+
+Without `--csv`, LogLens does not create, overwrite, or delete any existing CSV files in the output directory.
+
+The CSV schema is intentionally small and stable:
+
+- `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
+- `warnings.csv`: `kind`, `message`
 
 When an input spans multiple hostnames, both reports add compact host-level summaries without changing detector thresholds or introducing cross-host correlation logic.
 
@@ -209,5 +222,4 @@ Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authen
 ## Future Roadmap
 
 - Additional auth patterns and PAM coverage
-- Optional CSV export
 - Larger sanitized test corpus
