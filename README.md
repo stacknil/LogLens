@@ -36,7 +36,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
+Both workflows are intended to stay stable enough to require on pull requests to `main`. Regression coverage is backed by sanitized parser fixture matrices plus golden report-contract fixtures for `report.md`, `report.json`, and optional CSV outputs. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), [`docs/release-v0.3.0.md`](./docs/release-v0.3.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
@@ -58,7 +58,7 @@ LogLens currently detects:
 - One IP trying multiple usernames within 15 minutes
 - Bursty sudo activity from the same user within 5 minutes
 
-LogLens currently parses and reports these additional auth patterns beyond the core detector inputs:
+LogLens currently parses and reports these additional auth patterns beyond the core detector inputs, broadening coverage across common Linux auth families:
 
 - `Accepted publickey` SSH successes
 - `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
@@ -121,7 +121,7 @@ The CSV schema is intentionally small and stable:
 - `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
 - `warnings.csv`: `kind`, `message`
 
-When an input spans multiple hostnames, both reports add compact host-level summaries without changing detector thresholds or introducing cross-host correlation logic.
+When an input spans multiple hostnames, both reports add compact host-level summaries without changing detector thresholds or introducing cross-host correlation logic. In `report.md` this appears as a host summary table, and in `report.json` it appears as a `host_summaries` array.
 
 ## Sample Output
 

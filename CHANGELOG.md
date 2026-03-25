@@ -6,10 +6,7 @@ All notable user-visible changes should be recorded here.
 
 ### Added
 
-- Added sanitized golden `report.md` / `report.json` regression fixtures to lock report contracts.
-- Expanded parser coverage for `Accepted publickey` and selected `pam_faillock` / `pam_sss` variants.
-- Added compact host-level summaries for multi-host reports.
-- Added optional CSV export for findings and warnings when explicitly requested.
+- None yet.
 
 ### Changed
 
@@ -22,6 +19,27 @@ All notable user-visible changes should be recorded here.
 ### Docs
 
 - None yet.
+
+## v0.3.0
+
+### Added
+
+- Broadened parser support for common Linux auth families by adding `Accepted publickey` handling plus selected `pam_faillock` and `pam_sss` auth failure variants.
+- Added compact host-level summaries to `report.md` and `report.json` for multi-host inputs.
+- Added optional CSV export for findings and warnings behind an explicit `--csv` flag.
+- Added sanitized golden report-contract fixtures to lock deterministic Markdown, JSON, and CSV outputs.
+
+### Changed
+
+- Strengthened sanitized regression coverage with expanded parser fixture corpora and golden report-contract checks.
+
+### Fixed
+
+- Non-CSV runs now preserve pre-existing `findings.csv` and `warnings.csv` files instead of deleting them by default.
+
+### Docs
+
+- Synced release-facing documentation in `README.md` and added `docs/release-v0.3.0.md` for GitHub Release copy.
 
 ## v0.2.0
 
