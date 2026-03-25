@@ -142,6 +142,28 @@ int main(int argc, char* argv[]) {
                != std::string::npos,
            "expected warning csv row");
 
+    const auto stale_csv_out = output_dir / "stale_csv_run";
+    std::filesystem::create_directories(stale_csv_out);
+    {
+        std::ofstream findings_output(stale_csv_out / "findings.csv");
+        findings_output << "keep-findings\n";
+    }
+    {
+        std::ofstream warnings_output(stale_csv_out / "warnings.csv");
+        warnings_output << "keep-warnings\n";
+    }
+    const int stale_csv_exit = std::system(build_command(
+        quote_argument(loglens_exe)
+        + " --mode syslog --year 2026 "
+        + quote_argument(sample_log)
+        + " " + quote_argument(stale_csv_out))
+                                              .c_str());
+    expect(stale_csv_exit == 0, "expected non-csv run with pre-existing csv files to succeed");
+    expect(read_file(stale_csv_out / "findings.csv") == "keep-findings\n",
+           "expected non-csv run to preserve pre-existing findings.csv");
+    expect(read_file(stale_csv_out / "warnings.csv") == "keep-warnings\n",
+           "expected non-csv run to preserve pre-existing warnings.csv");
+
     const auto config_run_out = output_dir / "config_run";
     std::filesystem::create_directories(config_run_out);
     const int config_run_exit = std::system(build_command(

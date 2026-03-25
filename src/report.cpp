@@ -582,13 +582,12 @@ void write_reports(const ReportData& data, const std::filesystem::path& output_d
     std::ofstream json_output(output_directory / "report.json");
     json_output << render_json_report(data);
 
-    const auto findings_csv_path = output_directory / "findings.csv";
-    const auto warnings_csv_path = output_directory / "warnings.csv";
     if (!emit_csv) {
-        std::filesystem::remove(findings_csv_path);
-        std::filesystem::remove(warnings_csv_path);
         return;
     }
+
+    const auto findings_csv_path = output_directory / "findings.csv";
+    const auto warnings_csv_path = output_directory / "warnings.csv";
 
     std::ofstream findings_csv_output(findings_csv_path);
     findings_csv_output << render_findings_csv(data);
