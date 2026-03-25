@@ -20,6 +20,26 @@ All notable user-visible changes should be recorded here.
 
 - None yet.
 
+## v0.4.0
+
+### Added
+
+- Added optional CSV export for `findings.csv` and `warnings.csv`.
+- Added single-host and multi-host CSV regression coverage.
+- Added `.gitattributes` guardrails to reduce future line-ending drift.
+
+### Changed
+
+- None.
+
+### Fixed
+
+- Preserved default Markdown and JSON behavior when `--csv` is not requested.
+
+### Docs
+
+- None.
+
 ## v0.3.0
 
 ### Added
