@@ -32,6 +32,18 @@ std::optional<SignalMapping> signal_mapping_for_event(const Event& event, const 
             config.ssh_failed_publickey.counts_as_attempt_evidence,
             config.ssh_failed_publickey.counts_as_terminal_auth_failure,
             false};
+    case EventType::SshFailedKeyboardInteractive:
+        return SignalMapping{
+            AuthSignalKind::SshFailedKeyboardInteractive,
+            config.ssh_failed_keyboard_interactive.counts_as_attempt_evidence,
+            config.ssh_failed_keyboard_interactive.counts_as_terminal_auth_failure,
+            false};
+    case EventType::SshMaxAuthTries:
+        return SignalMapping{
+            AuthSignalKind::SshMaxAuthTries,
+            config.ssh_max_auth_tries.counts_as_attempt_evidence,
+            config.ssh_max_auth_tries.counts_as_terminal_auth_failure,
+            false};
     case EventType::PamAuthFailure:
         return SignalMapping{
             AuthSignalKind::PamAuthFailure,
@@ -55,6 +67,11 @@ std::optional<SignalMapping> signal_mapping_for_event(const Event& event, const 
         return std::nullopt;
     case EventType::Unknown:
     case EventType::SshAcceptedPassword:
+    case EventType::SshAcceptedPublicKey:
+    case EventType::SshAcceptedKeyboardInteractive:
+    case EventType::SudoAuthFailure:
+    case EventType::SudoPolicyDenied:
+    case EventType::SuAuthFailure:
     default:
         return std::nullopt;
     }

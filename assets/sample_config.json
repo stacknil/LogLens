@@ -19,6 +19,14 @@
       "counts_as_attempt_evidence": true,
       "counts_as_terminal_auth_failure": true
     },
+    "ssh_failed_keyboard_interactive": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "ssh_max_auth_tries": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
     "pam_auth_failure": {
       "counts_as_attempt_evidence": true,
       "counts_as_terminal_auth_failure": false

@@ -102,11 +102,46 @@ int main(int argc, char* argv[]) {
     std::filesystem::remove_all(output_dir);
     std::filesystem::create_directories(output_dir);
 
+    const auto help_stdout = output_dir / "help_stdout.txt";
+    const auto help_stderr = output_dir / "help_stderr.txt";
+    const int help_exit = std::system(build_command(
+        quote_argument(loglens_exe) + " --help",
+        &help_stdout,
+        &help_stderr)
+                                          .c_str());
+    const auto help_output = read_file(help_stdout);
+    expect(help_exit == 0, "expected --help to succeed");
+    expect(help_output.find("Usage:") != std::string::npos,
+           "expected --help to print usage to stdout");
+    expect(help_output.find("loglens --help") != std::string::npos,
+           "expected --help usage to mention help command");
+    expect(help_output.find("loglens --version") != std::string::npos,
+           "expected --help usage to mention version command");
+    expect(help_output.find("syslog|syslog-legacy|journalctl|journalctl-short-full") != std::string::npos,
+           "expected --help usage to mention supported mode aliases");
+    expect(help_output.find("[--config <config.json>]") != std::string::npos,
+           "expected --help usage to mention analysis options");
+    expect(help_output.find("--option=value") != std::string::npos,
+           "expected --help usage to mention equals-style option syntax");
+    expect(read_file(help_stderr).empty(), "expected --help to keep stderr empty");
+
+    const auto version_stdout = output_dir / "version_stdout.txt";
+    const auto version_stderr = output_dir / "version_stderr.txt";
+    const int version_exit = std::system(build_command(
+        quote_argument(loglens_exe) + " --version",
+        &version_stdout,
+        &version_stderr)
+                                             .c_str());
+    expect(version_exit == 0, "expected --version to succeed");
+    expect(read_file(version_stdout) == "LogLens 0.1.0\n",
+           "expected --version to print project version to stdout");
+    expect(read_file(version_stderr).empty(), "expected --version to keep stderr empty");
+
     const auto syslog_cli_out = output_dir / "syslog_cli";
     std::filesystem::create_directories(syslog_cli_out);
     const int syslog_cli_exit = std::system(build_command(
         quote_argument(loglens_exe)
-        + " --mode syslog --year 2026 "
+        + " --mode syslog-legacy --year 2026 "
         + quote_argument(sample_log)
         + " " + quote_argument(syslog_cli_out))
                                                 .c_str());
@@ -115,6 +150,47 @@ int main(int argc, char* argv[]) {
     const auto syslog_markdown = read_file(syslog_cli_out / "report.md");
     const auto syslog_json = read_file(syslog_cli_out / "report.json");
     expect_report_core_fields(syslog_markdown, syslog_json, "syslog_legacy", true, false);
+    expect(!std::filesystem::exists(syslog_cli_out / "findings.csv"),
+           "did not expect findings.csv without explicit csv flag");
+    expect(!std::filesystem::exists(syslog_cli_out / "warnings.csv"),
+           "did not expect warnings.csv without explicit csv flag");
+
+    const auto leading_dash_log = output_dir / "-leading-dash-auth.log";
+    std::filesystem::copy_file(sample_log, leading_dash_log, std::filesystem::copy_options::overwrite_existing);
+    const auto leading_dash_out = output_dir / "leading_dash_input";
+    std::filesystem::create_directories(leading_dash_out);
+    const int leading_dash_exit = std::system(build_command(
+        quote_argument(loglens_exe)
+        + " --mode syslog-legacy --year 2026 -- "
+        + quote_argument(leading_dash_log)
+        + " " + quote_argument(leading_dash_out))
+                                                  .c_str());
+    expect(leading_dash_exit == 0, "expected -- to allow input path beginning with dash");
+    expect(read_file(leading_dash_out / "report.json").find("\"input_mode\": \"syslog_legacy\"")
+               != std::string::npos,
+           "expected leading-dash input run to produce syslog report");
+
+    const auto csv_out = output_dir / "csv_run";
+    std::filesystem::create_directories(csv_out);
+    const int csv_exit = std::system(build_command(
+        quote_argument(loglens_exe)
+        + " --mode=syslog-legacy --year=2026 --csv "
+        + quote_argument(sample_log)
+        + " " + quote_argument(csv_out))
+                                         .c_str());
+    expect(csv_exit == 0, "expected syslog CSV CLI run to succeed");
+    const auto findings_csv = read_file(csv_out / "findings.csv");
+    const auto warnings_csv = read_file(csv_out / "warnings.csv");
+    expect(findings_csv.find("rule,subject_kind,subject,event_count,window_start,window_end,usernames,summary")
+               == 0,
+           "expected findings csv header");
+    expect(findings_csv.find("brute_force,source_ip,203.0.113.10,5,2026-03-10 08:11:22,2026-03-10 08:18:05,,5 failed SSH attempts from 203.0.113.10 within 10 minutes.")
+               != std::string::npos,
+           "expected brute-force findings csv row");
+    expect(warnings_csv.find("kind,line_number,message") == 0, "expected warnings csv header");
+    expect(warnings_csv.find("parse_warning,15,unrecognized auth pattern: sshd_connection_closed_preauth")
+               != std::string::npos,
+           "expected warning csv row");
 
     const auto config_run_out = output_dir / "config_run";
     std::filesystem::create_directories(config_run_out);
@@ -130,7 +206,7 @@ int main(int argc, char* argv[]) {
     std::filesystem::create_directories(journalctl_out);
     const int journalctl_exit = std::system(build_command(
         quote_argument(loglens_exe)
-        + " --mode journalctl-short-full "
+        + " --mode journalctl "
         + quote_argument(journalctl_log)
         + " " + quote_argument(journalctl_out))
                                                 .c_str());
@@ -139,31 +215,57 @@ int main(int argc, char* argv[]) {
     const auto journalctl_markdown = read_file(journalctl_out / "report.md");
     const auto journalctl_json = read_file(journalctl_out / "report.json");
     expect_report_core_fields(journalctl_markdown, journalctl_json, "journalctl_short_full", false, true);
+    expect(!std::filesystem::exists(journalctl_out / "findings.csv"),
+           "did not expect journalctl findings.csv without explicit csv flag");
+    expect(!std::filesystem::exists(journalctl_out / "warnings.csv"),
+           "did not expect journalctl warnings.csv without explicit csv flag");
 
     const auto missing_year_out = output_dir / "missing_year";
     std::filesystem::create_directories(missing_year_out);
-    const auto missing_year_stdout = output_dir / "missing_year_stdout.txt";
-    const auto missing_year_stderr = output_dir / "missing_year_stderr.txt";
     const int missing_year_exit = std::system(build_command(
         quote_argument(loglens_exe)
         + " --mode syslog "
         + quote_argument(sample_log)
-        + " " + quote_argument(missing_year_out),
-        &missing_year_stdout,
-        &missing_year_stderr)
+        + " " + quote_argument(missing_year_out))
                                                    .c_str());
     expect(missing_year_exit != 0, "expected syslog mode without year to fail");
-    const auto missing_year_error = read_file(missing_year_stderr);
-    expect(missing_year_error.find("--year") != std::string::npos
-               || missing_year_error.find("assume_year") != std::string::npos,
-           "expected missing-year error to mention year requirements");
+
+    const auto short_year_out = output_dir / "short_year";
+    const auto short_year_stderr = output_dir / "short_year_stderr.txt";
+    std::filesystem::create_directories(short_year_out);
+    const int short_year_exit = std::system(build_command(
+        quote_argument(loglens_exe)
+        + " --mode syslog --year 26 "
+        + quote_argument(sample_log)
+        + " " + quote_argument(short_year_out),
+        nullptr,
+        &short_year_stderr)
+                                                .c_str());
+    expect(short_year_exit != 0, "expected short --year value to fail");
+    expect(read_file(short_year_stderr).find("invalid year value: 26") != std::string::npos,
+           "expected short --year failure message");
+
+    const auto nondigit_year_out = output_dir / "nondigit_year";
+    const auto nondigit_year_stderr = output_dir / "nondigit_year_stderr.txt";
+    std::filesystem::create_directories(nondigit_year_out);
+    const int nondigit_year_exit = std::system(build_command(
+        quote_argument(loglens_exe)
+        + " --mode=syslog --year=20x6 "
+        + quote_argument(sample_log)
+        + " " + quote_argument(nondigit_year_out),
+        nullptr,
+        &nondigit_year_stderr)
+                                                   .c_str());
+    expect(nondigit_year_exit != 0, "expected non-digit --year value to fail");
+    expect(read_file(nondigit_year_stderr).find("invalid year value: 20x6") != std::string::npos,
+           "expected non-digit --year failure message");
 
     const auto invalid_config = output_dir / "invalid_config.json";
     {
         std::ofstream output(invalid_config);
         output << "{\n"
                << "  \"input_mode\": \"syslog_legacy\",\n"
-               << "  \"timestamp\": { \"assume_year\": \"bad\" },\n"
+               << "  \"timestamp\": { \"assume_year\": 26 },\n"
                << "  \"brute_force\": { \"threshold\": 5, \"window_minutes\": 10 },\n"
                << "  \"multi_user_probing\": { \"threshold\": 3, \"window_minutes\": 15 },\n"
                << "  \"sudo_burst\": { \"threshold\": 3, \"window_minutes\": 5 },\n"
@@ -177,22 +279,19 @@ int main(int argc, char* argv[]) {
     }
 
     const auto invalid_out = output_dir / "invalid_config_run";
+    const auto invalid_stderr = output_dir / "invalid_config_stderr.txt";
     std::filesystem::create_directories(invalid_out);
-    const auto invalid_stdout = output_dir / "invalid_stdout.txt";
-    const auto invalid_stderr = output_dir / "invalid_stderr.txt";
     const int invalid_exit = std::system(build_command(
         quote_argument(loglens_exe)
         + " --config " + quote_argument(invalid_config)
         + " " + quote_argument(sample_log)
         + " " + quote_argument(invalid_out),
-        &invalid_stdout,
+        nullptr,
         &invalid_stderr)
                                              .c_str());
     expect(invalid_exit != 0, "expected invalid config CLI run to fail");
-
-    const auto invalid_error = read_file(invalid_stderr);
-    expect(invalid_error.find("assume_year") != std::string::npos,
-           "expected CLI error output to mention the failing config field");
+    expect(read_file(invalid_stderr).find("timestamp.assume_year must be a four-digit year") != std::string::npos,
+           "expected invalid config year failure message");
 
     return 0;
 }

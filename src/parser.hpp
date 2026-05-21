@@ -42,6 +42,7 @@ struct UnknownPatternCount {
 
 struct ParserQualityMetrics {
     std::size_t total_lines = 0;
+    std::size_t skipped_blank_lines = 0;
     std::size_t parsed_lines = 0;
     std::size_t unparsed_lines = 0;
     double parse_success_rate = 0.0;

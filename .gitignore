@@ -4,3 +4,5 @@ out/
 report.md
 report.json
 *.exe
+!tests/fixtures/report_contracts/**/report.md
+!tests/fixtures/report_contracts/**/report.json

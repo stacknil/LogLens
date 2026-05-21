@@ -1,0 +1,4 @@
+rule,subject_kind,subject,event_count,window_start,window_end,usernames,summary
+brute_force,source_ip,203.0.113.10,5,2026-03-11 09:00:00,2026-03-11 09:04:05,,5 failed SSH attempts from 203.0.113.10 within 10 minutes.
+multi_user_probing,source_ip,203.0.113.10,5,2026-03-11 09:00:00,2026-03-11 09:04:05,admin;deploy;guest;root;test,203.0.113.10 targeted 5 usernames within 15 minutes.
+sudo_burst,username,alice,3,2026-03-11 09:11:00,2026-03-11 09:14:15,,alice ran 3 sudo commands within 5 minutes.

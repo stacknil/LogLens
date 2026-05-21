@@ -8,6 +8,14 @@ Linux auth logs are noisy, format-sensitive, and easy to parse incorrectly. Revi
 
 `LogLens` is a C++20 offline CLI for Linux authentication evidence. It parses `auth.log` / `secure` style syslog input and `journalctl --output=short-full` style input, normalizes the evidence, applies small rule-based detections, and emits deterministic Markdown and JSON reports with parser coverage telemetry.
 
+## Reviewer Evidence
+
+- Reproducible command: `./build/loglens --mode syslog --year 2026 ./assets/sample_auth.log ./out`
+- Deterministic outputs: `report.md`, `report.json`, optional `findings.csv`, optional `warnings.csv`, and parser coverage telemetry.
+- Tests / CI: CTest coverage plus GitHub Actions CI on Ubuntu and Windows; CodeQL is required on protected main.
+- Release evidence: changelog, release process docs, versioned release notes, and GitHub release artifacts.
+- Non-goals: live collection, SIEM replacement, cross-host correlation, exploitation, credential attack automation, or incident verdicts.
+
 ## Quick run
 
 ```bash

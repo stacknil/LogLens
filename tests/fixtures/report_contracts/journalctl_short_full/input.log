@@ -1,0 +1,16 @@
+Tue 2026-03-10 08:11:22 UTC example-host sshd[2234]: Failed password for invalid user admin from 203.0.113.10 port 51022 ssh2
+Tue 2026-03-10 08:12:05 UTC example-host sshd[2235]: Failed password for root from 203.0.113.10 port 51030 ssh2
+Tue 2026-03-10 08:13:10 UTC example-host sshd[2236]: Failed password for test from 203.0.113.10 port 51040 ssh
+Tue 2026-03-10 08:14:44 UTC example-host sshd[2237]: Failed password for guest from 203.0.113.10 port 51050 ssh2
+Tue 2026-03-10 08:18:05 UTC example-host sshd[2238]: Failed publickey for invalid user deploy from 203.0.113.10 port 51060 ssh2
+Tue 2026-03-10 08:20:10 UTC example-host sshd[2240]: Accepted password for alice from 203.0.113.20 port 51111 ssh2
+Tue 2026-03-10 08:21:00 UTC example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/systemctl restart ssh
+Tue 2026-03-10 08:22:10 UTC example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/journalctl -xe
+Tue 2026-03-10 08:24:15 UTC example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/vi /etc/ssh/sshd_config
+Tue 2026-03-10 08:25:30 UTC example-host sshd[2241]: Failed password for bob from 203.0.113.30 port 51234 ssh2
+Tue 2026-03-10 08:26:02 UTC example-host sshd[2242]: Invalid user backup from 203.0.113.31 port 51236
+Tue 2026-03-10 08:28:33 UTC example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.41  user=alice
+Tue 2026-03-10 08:29:50 UTC example-host pam_unix(sudo:session): session opened for user root by alice(uid=0)
+Tue 2026-03-10 08:30:12 UTC example-host sshd[2244]: Failed password for invalid user qauser from 203.0.113.50 port 51290 ssh2
+Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authenticating user alice 203.0.113.51 port 51291 [preauth]
+Tue 2026-03-10 08:32:26 UTC example-host sshd[2246]: Timeout, client not responding from 203.0.113.52 port 51292

@@ -84,6 +84,16 @@ std::vector<loglens::Event> build_publickey_bruteforce_candidate_events() {
         "Mar 10 08:18:05 example-host sshd[1238]: Failed publickey for root from 203.0.113.10 port 51060 ssh2\n");
 }
 
+std::vector<loglens::Event> build_publickey_success_candidate_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 08:11:22 example-host sshd[1234]: Failed password for root from 203.0.113.10 port 51022 ssh2\n"
+        "Mar 10 08:12:05 example-host sshd[1235]: Failed password for root from 203.0.113.10 port 51030 ssh2\n"
+        "Mar 10 08:13:10 example-host sshd[1236]: Failed password for root from 203.0.113.10 port 51040 ssh2\n"
+        "Mar 10 08:14:44 example-host sshd[1237]: Failed password for root from 203.0.113.10 port 51050 ssh2\n"
+        "Mar 10 08:18:05 example-host sshd[1238]: Accepted publickey for alice from 203.0.113.10 port 51060 ssh2: ED25519 SHA256:SANITIZEDKEY\n");
+}
+
 std::vector<loglens::Event> build_pam_bruteforce_candidate_events() {
     return parse_events(
         make_syslog_config(),
@@ -147,15 +157,31 @@ void test_auth_signal_defaults() {
     const auto events = parse_events(
         make_syslog_config(),
         "Mar 10 08:18:05 example-host sshd[1238]: Failed publickey for root from 203.0.113.10 port 51060 ssh2\n"
-        "Mar 10 08:18:06 example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.11  user=alice\n");
+        "Mar 10 08:18:06 example-host sshd[1239]: Failed keyboard-interactive/pam for root from 203.0.113.12 port 51061 ssh2\n"
+        "Mar 10 08:18:07 example-host sshd[1240]: maximum authentication attempts exceeded for root from 203.0.113.13 port 51062 ssh2 [preauth]\n"
+        "Mar 10 08:18:08 example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.11  user=alice\n");
 
     const auto signals = loglens::build_auth_signals(events, loglens::DetectorConfig{}.auth_signal_mappings);
-    expect(signals.size() == 2, "expected two auth signals");
+    expect(signals.size() == 4, "expected four auth signals");
 
     const auto* publickey = find_signal(signals, loglens::AuthSignalKind::SshFailedPublicKey);
     expect(publickey != nullptr, "expected publickey signal");
     expect(publickey->counts_as_attempt_evidence, "expected publickey to count as attempt evidence");
     expect(publickey->counts_as_terminal_auth_failure, "expected publickey to count as terminal auth failure");
+
+    const auto* keyboard_interactive = find_signal(signals, loglens::AuthSignalKind::SshFailedKeyboardInteractive);
+    expect(keyboard_interactive != nullptr, "expected keyboard-interactive signal");
+    expect(keyboard_interactive->counts_as_attempt_evidence,
+           "expected keyboard-interactive to count as attempt evidence");
+    expect(keyboard_interactive->counts_as_terminal_auth_failure,
+           "expected keyboard-interactive to count as terminal auth failure");
+
+    const auto* max_auth_tries = find_signal(signals, loglens::AuthSignalKind::SshMaxAuthTries);
+    expect(max_auth_tries != nullptr, "expected max-auth-tries signal");
+    expect(max_auth_tries->counts_as_attempt_evidence,
+           "expected max-auth-tries to count as attempt evidence");
+    expect(max_auth_tries->counts_as_terminal_auth_failure,
+           "expected max-auth-tries to count as terminal auth failure");
 
     const auto* pam = find_signal(signals, loglens::AuthSignalKind::PamAuthFailure);
     expect(pam != nullptr, "expected pam auth signal");
@@ -171,6 +197,19 @@ void test_failed_publickey_contributes_to_bruteforce_by_default() {
     const auto* brute_force = find_finding(findings, loglens::FindingType::BruteForce, "203.0.113.10");
     expect(brute_force != nullptr, "expected publickey evidence to contribute to brute force");
     expect(brute_force->event_count == 5, "expected publickey evidence to raise brute force count to five");
+}
+
+void test_accepted_publickey_success_stays_out_of_failure_signals() {
+    const auto events = build_publickey_success_candidate_events();
+    const auto signals = loglens::build_auth_signals(events, loglens::DetectorConfig{}.auth_signal_mappings);
+
+    expect(signals.size() == 4, "expected accepted publickey success to stay out of the signal layer");
+
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(events);
+    const auto* brute_force = find_finding(findings, loglens::FindingType::BruteForce, "203.0.113.10");
+    expect(brute_force == nullptr,
+           "expected accepted publickey success to stay out of brute-force counting");
 }
 
 void test_sudo_signals_include_command_and_session_opened() {
@@ -343,6 +382,7 @@ int main() {
     test_custom_thresholds();
     test_auth_signal_defaults();
     test_failed_publickey_contributes_to_bruteforce_by_default();
+    test_accepted_publickey_success_stays_out_of_failure_signals();
     test_sudo_signals_include_command_and_session_opened();
     test_sudo_burst_behavior_is_preserved_with_signal_layer();
     test_unsupported_pam_session_close_remains_telemetry_only();
