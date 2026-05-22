@@ -13,11 +13,17 @@ enum class EventType {
     SshFailedPassword,
     SshAcceptedPassword,
     SshAcceptedPublicKey,
+    SshAcceptedKeyboardInteractive,
     SshInvalidUser,
     SshFailedPublicKey,
+    SshFailedKeyboardInteractive,
+    SshMaxAuthTries,
     PamAuthFailure,
     SessionOpened,
-    SudoCommand
+    SudoCommand,
+    SudoAuthFailure,
+    SudoPolicyDenied,
+    SuAuthFailure
 };
 
 struct Event {
@@ -40,16 +46,28 @@ inline std::string to_string(EventType type) {
         return "ssh_accepted_password";
     case EventType::SshAcceptedPublicKey:
         return "ssh_accepted_publickey";
+    case EventType::SshAcceptedKeyboardInteractive:
+        return "ssh_accepted_keyboard_interactive";
     case EventType::SshInvalidUser:
         return "ssh_invalid_user";
     case EventType::SshFailedPublicKey:
         return "ssh_failed_publickey";
+    case EventType::SshFailedKeyboardInteractive:
+        return "ssh_failed_keyboard_interactive";
+    case EventType::SshMaxAuthTries:
+        return "ssh_max_auth_tries";
     case EventType::PamAuthFailure:
         return "pam_auth_failure";
     case EventType::SessionOpened:
         return "session_opened";
     case EventType::SudoCommand:
         return "sudo_command";
+    case EventType::SudoAuthFailure:
+        return "sudo_auth_failure";
+    case EventType::SudoPolicyDenied:
+        return "sudo_policy_denied";
+    case EventType::SuAuthFailure:
+        return "su_auth_failure";
     case EventType::Unknown:
     default:
         return "unknown";
