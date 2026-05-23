@@ -13,6 +13,8 @@ enum class AuthSignalKind {
     SshFailedPassword,
     SshInvalidUser,
     SshFailedPublicKey,
+    SshFailedKeyboardInteractive,
+    SshMaxAuthTries,
     PamAuthFailure,
     SudoCommand,
     SudoSessionOpened
@@ -27,6 +29,8 @@ struct AuthSignalConfig {
     AuthSignalBehavior ssh_failed_password{true, true};
     AuthSignalBehavior ssh_invalid_user{true, true};
     AuthSignalBehavior ssh_failed_publickey{true, true};
+    AuthSignalBehavior ssh_failed_keyboard_interactive{true, true};
+    AuthSignalBehavior ssh_max_auth_tries{true, true};
     AuthSignalBehavior pam_auth_failure{true, false};
 };
 

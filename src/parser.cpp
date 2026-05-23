@@ -93,7 +93,7 @@ bool parse_clock_token(std::string_view token, ClockTime& time) {
             && time.second >= 0 && time.second <= 59;
     }
 
-    if (token[8] != '.') {
+    if (token[8] != '.' || token.size() == 9) {
         return false;
     }
 
@@ -181,7 +181,7 @@ bool parse_timezone_token(std::string_view token, std::chrono::minutes& offset) 
     if (negative) {
         offset = -offset;
     }
-    return true;
+    return false;
 }
 
 void parse_program_tag(std::string_view tag, std::string& program, std::optional<int>& pid) {
@@ -345,6 +345,24 @@ bool parse_ssh_accepted_publickey_message(std::string_view message, Event& event
     return true;
 }
 
+bool parse_ssh_accepted_keyboard_interactive_message(std::string_view message, Event& event) {
+    static constexpr std::string_view accepted_prefix = "Accepted keyboard-interactive/pam for ";
+    if (!message.starts_with(accepted_prefix)) {
+        return false;
+    }
+
+    auto remaining = message.substr(accepted_prefix.size());
+    const auto username = consume_token(remaining);
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
+    event.source_ip = extract_token_after(message, " from ");
+    event.event_type = EventType::SshAcceptedKeyboardInteractive;
+    return true;
+}
+
 bool parse_ssh_failed_publickey_message(std::string_view message, Event& event) {
     static constexpr std::string_view publickey_prefix = "Failed publickey for ";
     if (!message.starts_with(publickey_prefix)) {
@@ -364,6 +382,54 @@ bool parse_ssh_failed_publickey_message(std::string_view message, Event& event) 
     event.username.assign(username);
     event.source_ip = extract_token_after(message, " from ");
     event.event_type = EventType::SshFailedPublicKey;
+    return true;
+}
+
+bool parse_ssh_failed_keyboard_interactive_message(std::string_view message, Event& event) {
+    static constexpr std::string_view keyboard_prefix = "Failed keyboard-interactive/pam for ";
+    if (!message.starts_with(keyboard_prefix)) {
+        return false;
+    }
+
+    auto remaining = message.substr(keyboard_prefix.size());
+    bool invalid_user = false;
+    if (remaining.starts_with("invalid user ")) {
+        invalid_user = true;
+        remaining.remove_prefix(std::string_view{"invalid user "}.size());
+    }
+
+    const auto username = consume_token(remaining);
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
+    event.source_ip = extract_token_after(message, " from ");
+    event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::SshFailedKeyboardInteractive;
+    return true;
+}
+
+bool parse_ssh_max_auth_tries_message(std::string_view message, Event& event) {
+    static constexpr std::string_view max_auth_prefix = "maximum authentication attempts exceeded for ";
+    if (!message.starts_with(max_auth_prefix)) {
+        return false;
+    }
+
+    auto remaining = message.substr(max_auth_prefix.size());
+    bool invalid_user = false;
+    if (remaining.starts_with("invalid user ")) {
+        invalid_user = true;
+        remaining.remove_prefix(std::string_view{"invalid user "}.size());
+    }
+
+    const auto username = consume_token(remaining);
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
+    event.source_ip = extract_token_after(message, " from ");
+    event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::SshMaxAuthTries;
     return true;
 }
 
@@ -480,8 +546,75 @@ bool parse_sudo_message(std::string_view message, Event& event) {
     }
 
     event.username.assign(username);
+    const auto details = trim_left(remaining.substr(separator + 1));
+    if (details.find("incorrect password attempt") != std::string_view::npos) {
+        event.event_type = EventType::SudoAuthFailure;
+        return true;
+    }
+
+    if (details.find("user NOT in sudoers") != std::string_view::npos
+        || details.find("command not allowed") != std::string_view::npos) {
+        event.event_type = EventType::SudoPolicyDenied;
+        return true;
+    }
+
+    if (details.find("COMMAND=") == std::string_view::npos) {
+        return false;
+    }
+
     event.event_type = EventType::SudoCommand;
     return true;
+}
+
+bool parse_su_message(std::string_view message, Event& event) {
+    static constexpr std::string_view failed_prefix = "FAILED SU (to ";
+    static constexpr std::string_view success_prefix = "Successful su for ";
+
+    if (message.starts_with(failed_prefix)) {
+        const auto close_target = message.find(") ");
+        if (close_target == std::string_view::npos) {
+            return false;
+        }
+
+        auto remaining = message.substr(close_target + 2);
+        const auto location_marker = remaining.find(" on ");
+        if (location_marker != std::string_view::npos) {
+            remaining = remaining.substr(0, location_marker);
+        }
+
+        const auto actor = trim(remaining);
+        if (actor.empty()) {
+            return false;
+        }
+
+        event.username.assign(actor);
+        event.event_type = EventType::SuAuthFailure;
+        return true;
+    }
+
+    if (message.starts_with(success_prefix)) {
+        const auto by_position = message.find(" by ");
+        if (by_position == std::string_view::npos) {
+            return false;
+        }
+
+        auto actor = message.substr(by_position + std::string_view{" by "}.size());
+        const auto actor_end = actor.find_first_of("( ");
+        if (actor_end != std::string_view::npos) {
+            actor = actor.substr(0, actor_end);
+        }
+
+        actor = trim(actor);
+        if (actor.empty()) {
+            return false;
+        }
+
+        event.username.assign(actor);
+        event.event_type = EventType::SessionOpened;
+        return true;
+    }
+
+    return false;
 }
 
 bool parse_pam_faillock_message(std::string_view message, Event& event) {
@@ -549,6 +682,10 @@ std::string classify_unknown_auth_pattern(const Event& event) {
         return "sudo_other";
     }
 
+    if (event.program == "su") {
+        return "su_other";
+    }
+
     return "program_" + sanitize_pattern_label(event.program);
 }
 
@@ -564,7 +701,16 @@ bool classify_event(Event& event) {
         if (parse_ssh_accepted_publickey_message(message, event)) {
             return true;
         }
+        if (parse_ssh_accepted_keyboard_interactive_message(message, event)) {
+            return true;
+        }
         if (parse_ssh_failed_publickey_message(message, event)) {
+            return true;
+        }
+        if (parse_ssh_failed_keyboard_interactive_message(message, event)) {
+            return true;
+        }
+        if (parse_ssh_max_auth_tries_message(message, event)) {
             return true;
         }
         if (parse_ssh_invalid_user_message(message, event)) {
@@ -599,6 +745,10 @@ bool classify_event(Event& event) {
 
     if (event.program == "sudo") {
         return parse_sudo_message(message, event);
+    }
+
+    if (event.program == "su") {
+        return parse_su_message(message, event);
     }
 
     return false;
@@ -774,11 +924,13 @@ std::string to_string(InputMode mode) {
 }
 
 std::optional<InputMode> parse_input_mode(std::string_view value) {
-    if (value == "syslog" || value == "syslog_legacy") {
+    if (value == "syslog" || value == "syslog-legacy" || value == "syslog_legacy") {
         return InputMode::SyslogLegacy;
     }
 
-    if (value == "journalctl-short-full" || value == "journalctl_short_full") {
+    if (value == "journalctl"
+        || value == "journalctl-short-full"
+        || value == "journalctl_short_full") {
         return InputMode::JournalctlShortFull;
     }
 
@@ -823,6 +975,7 @@ ParseReport AuthLogParser::parse_stream(std::istream& input) const {
     while (std::getline(input, line)) {
         ++line_number;
         if (trim(line).empty()) {
+            ++result.quality.skipped_blank_lines;
             continue;
         }
 

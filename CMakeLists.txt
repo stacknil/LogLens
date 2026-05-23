@@ -21,6 +21,7 @@ target_include_directories(loglens_lib
 
 add_executable(loglens src/main.cpp)
 target_link_libraries(loglens PRIVATE loglens_lib)
+target_compile_definitions(loglens PRIVATE LOGLENS_VERSION="${PROJECT_VERSION}")
 
 include(CTest)
 if(BUILD_TESTING)
@@ -31,6 +32,10 @@ if(BUILD_TESTING)
     add_executable(test_detector tests/test_detector.cpp)
     target_link_libraries(test_detector PRIVATE loglens_lib)
     add_test(NAME detector COMMAND test_detector)
+
+    add_executable(test_report tests/test_report.cpp)
+    target_link_libraries(test_report PRIVATE loglens_lib)
+    add_test(NAME report COMMAND test_report)
 
     add_executable(test_cli tests/test_cli.cpp)
     target_link_libraries(test_cli PRIVATE loglens_lib)

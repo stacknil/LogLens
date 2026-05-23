@@ -6,8 +6,10 @@
 #include <iomanip>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -22,6 +24,17 @@ struct HostSummary {
     std::size_t warning_count = 0;
     std::vector<std::pair<EventType, std::size_t>> event_counts;
 };
+
+void append_unicode_escape(std::string& output, unsigned char value) {
+    std::ostringstream escaped_code;
+    escaped_code << "\\u"
+                 << std::uppercase
+                 << std::hex
+                 << std::setfill('0')
+                 << std::setw(4)
+                 << static_cast<int>(value);
+    output += escaped_code.str();
+}
 
 std::string escape_json(std::string_view value) {
     std::string escaped;
@@ -45,7 +58,11 @@ std::string escape_json(std::string_view value) {
             escaped += "\\t";
             break;
         default:
-            escaped += character;
+            if (static_cast<unsigned char>(character) < 0x20) {
+                append_unicode_escape(escaped, static_cast<unsigned char>(character));
+            } else {
+                escaped += character;
+            }
             break;
         }
     }
@@ -53,16 +70,97 @@ std::string escape_json(std::string_view value) {
     return escaped;
 }
 
-std::string escape_csv(std::string_view value) {
-    bool needs_quotes = value.find_first_of(",\"\n\r") != std::string_view::npos;
+std::string escape_markdown_table_cell(std::string_view value) {
     std::string escaped;
-    escaped.reserve(value.size() + 2);
+    escaped.reserve(value.size());
+
+    for (std::size_t index = 0; index < value.size(); ++index) {
+        const char character = value[index];
+        switch (character) {
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '|':
+            escaped += "\\|";
+            break;
+        case '\r':
+            if (index + 1 < value.size() && value[index + 1] == '\n') {
+                ++index;
+            }
+            escaped += "<br>";
+            break;
+        case '\n':
+            escaped += "<br>";
+            break;
+        case '&':
+            escaped += "&amp;";
+            break;
+        case '<':
+            escaped += "&lt;";
+            break;
+        case '>':
+            escaped += "&gt;";
+            break;
+        default:
+            if (static_cast<unsigned char>(character) < 0x20) {
+                append_unicode_escape(escaped, static_cast<unsigned char>(character));
+            } else {
+                escaped += character;
+            }
+            break;
+        }
+    }
+
+    return escaped;
+}
+
+bool starts_with_csv_formula_marker(std::string_view value) {
+    std::size_t index = 0;
+    while (index < value.size() && value[index] == ' ') {
+        ++index;
+    }
+
+    if (index >= value.size()) {
+        return false;
+    }
+
+    switch (value[index]) {
+    case '=':
+    case '+':
+    case '-':
+    case '@':
+    case '\t':
+    case '\r':
+    case '\n':
+        return true;
+    default:
+        return false;
+    }
+}
+
+std::string neutralize_csv_formula(std::string_view value) {
+    if (!starts_with_csv_formula_marker(value)) {
+        return std::string(value);
+    }
+
+    std::string neutralized;
+    neutralized.reserve(value.size() + 1);
+    neutralized.push_back('\'');
+    neutralized.append(value);
+    return neutralized;
+}
+
+std::string escape_csv(std::string_view value) {
+    const auto safe_value = neutralize_csv_formula(value);
+    bool needs_quotes = safe_value.find_first_of(",\"\n\r") != std::string::npos;
+    std::string escaped;
+    escaped.reserve(safe_value.size() + 2);
 
     if (needs_quotes) {
         escaped.push_back('"');
     }
 
-    for (const char character : value) {
+    for (const char character : safe_value) {
         if (character == '"') {
             escaped += "\"\"";
         } else {
@@ -75,6 +173,40 @@ std::string escape_csv(std::string_view value) {
     }
 
     return escaped;
+}
+
+void write_text_file(const std::filesystem::path& path, std::string_view content) {
+    std::ofstream output(path);
+    if (!output) {
+        throw std::runtime_error("unable to open report output: " + path.string());
+    }
+
+    output << content;
+    if (!output) {
+        throw std::runtime_error("unable to write report output: " + path.string());
+    }
+
+    output.close();
+    if (!output) {
+        throw std::runtime_error("unable to finalize report output: " + path.string());
+    }
+}
+
+void ensure_output_directory(const std::filesystem::path& path) {
+    std::error_code error;
+    std::filesystem::create_directories(path, error);
+    if (error) {
+        throw std::runtime_error(
+            "unable to create report output directory: " + path.string() + ": " + error.message());
+    }
+
+    if (!std::filesystem::is_directory(path, error)) {
+        if (error) {
+            throw std::runtime_error(
+                "unable to inspect report output directory: " + path.string() + ": " + error.message());
+        }
+        throw std::runtime_error("report output path is not a directory: " + path.string());
+    }
 }
 
 std::vector<Finding> sorted_findings(const std::vector<Finding>& findings) {
@@ -169,6 +301,10 @@ std::string format_parse_success_percent(double rate) {
     std::ostringstream output;
     output << std::fixed << std::setprecision(2) << (rate * 100.0) << '%';
     return output.str();
+}
+
+std::size_t total_input_lines(const ParserQualityMetrics& quality) {
+    return quality.total_lines + quality.skipped_blank_lines;
 }
 
 std::string_view trim_left(std::string_view value) {
@@ -372,7 +508,9 @@ std::string render_markdown_report(const ReportData& data) {
         output << "- Assume year: " << *data.parse_metadata.assume_year << '\n';
     }
     output << "- Timezone present: " << (data.parse_metadata.timezone_present ? "true" : "false") << '\n';
+    output << "- Total input lines: " << total_input_lines(data.parser_quality) << '\n';
     output << "- Total lines: " << data.parser_quality.total_lines << '\n';
+    output << "- Skipped blank lines: " << data.parser_quality.skipped_blank_lines << '\n';
     output << "- Parsed lines: " << data.parser_quality.parsed_lines << '\n';
     output << "- Unparsed lines: " << data.parser_quality.unparsed_lines << '\n';
     output << "- Parse success rate: " << format_parse_success_percent(data.parser_quality.parse_success_rate) << '\n';
@@ -385,7 +523,7 @@ std::string render_markdown_report(const ReportData& data) {
         output << "| Host | Parsed Events | Findings | Warnings |\n";
         output << "| --- | ---: | ---: | ---: |\n";
         for (const auto& summary : host_summaries) {
-            output << "| " << summary.hostname
+            output << "| " << escape_markdown_table_cell(summary.hostname)
                    << " | " << summary.parsed_event_count
                    << " | " << summary.finding_count
                    << " | " << summary.warning_count << " |\n";
@@ -400,12 +538,12 @@ std::string render_markdown_report(const ReportData& data) {
         output << "| Rule | Subject | Count | Window | Notes |\n";
         output << "| --- | --- | ---: | --- | --- |\n";
         for (const auto& finding : findings) {
-            output << "| " << to_string(finding.type)
-                   << " | " << finding.subject
+            output << "| " << escape_markdown_table_cell(to_string(finding.type))
+                   << " | " << escape_markdown_table_cell(finding.subject)
                    << " | " << finding.event_count
                    << " | " << format_timestamp(finding.first_seen)
                    << " -> " << format_timestamp(finding.last_seen)
-                   << " | " << usernames_note(finding) << " |\n";
+                   << " | " << escape_markdown_table_cell(usernames_note(finding)) << " |\n";
         }
         output << '\n';
     }
@@ -414,7 +552,7 @@ std::string render_markdown_report(const ReportData& data) {
     output << "| Event Type | Count |\n";
     output << "| --- | ---: |\n";
     for (const auto& [type, count] : event_counts) {
-        output << "| " << to_string(type) << " | " << count << " |\n";
+        output << "| " << escape_markdown_table_cell(to_string(type)) << " | " << count << " |\n";
     }
     output << '\n';
 
@@ -425,7 +563,7 @@ std::string render_markdown_report(const ReportData& data) {
         output << "| Unknown Pattern | Count |\n";
         output << "| --- | ---: |\n";
         for (const auto& entry : data.parser_quality.top_unknown_patterns) {
-            output << "| " << entry.pattern << " | " << entry.count << " |\n";
+            output << "| " << escape_markdown_table_cell(entry.pattern) << " | " << entry.count << " |\n";
         }
         output << '\n';
     }
@@ -437,7 +575,8 @@ std::string render_markdown_report(const ReportData& data) {
         output << "| Line | Reason |\n";
         output << "| ---: | --- |\n";
         for (const auto& warning : warnings) {
-            output << "| " << warning.line_number << " | " << warning.reason << " |\n";
+            output << "| " << warning.line_number << " | "
+                   << escape_markdown_table_cell(warning.reason) << " |\n";
         }
     }
 
@@ -460,7 +599,9 @@ std::string render_json_report(const ReportData& data) {
     }
     output << "  \"timezone_present\": " << (data.parse_metadata.timezone_present ? "true" : "false") << ",\n";
     output << "  \"parser_quality\": {\n";
+    output << "    \"total_input_lines\": " << total_input_lines(data.parser_quality) << ",\n";
     output << "    \"total_lines\": " << data.parser_quality.total_lines << ",\n";
+    output << "    \"skipped_blank_lines\": " << data.parser_quality.skipped_blank_lines << ",\n";
     output << "    \"parsed_lines\": " << data.parser_quality.parsed_lines << ",\n";
     output << "    \"unparsed_lines\": " << data.parser_quality.unparsed_lines << ",\n";
     output << "    \"parse_success_rate\": " << format_parse_success_rate(data.parser_quality.parse_success_rate) << ",\n";
@@ -564,9 +705,10 @@ std::string render_warnings_csv(const ReportData& data) {
     std::ostringstream output;
     const auto warnings = sorted_warnings(data.warnings);
 
-    output << "kind,message\n";
+    output << "kind,line_number,message\n";
     for (const auto& warning : warnings) {
         output << "parse_warning,"
+               << warning.line_number << ','
                << escape_csv(warning.reason) << '\n';
     }
 
@@ -574,26 +716,18 @@ std::string render_warnings_csv(const ReportData& data) {
 }
 
 void write_reports(const ReportData& data, const std::filesystem::path& output_directory, bool emit_csv) {
-    std::filesystem::create_directories(output_directory);
+    ensure_output_directory(output_directory);
 
-    std::ofstream markdown_output(output_directory / "report.md");
-    markdown_output << render_markdown_report(data);
-
-    std::ofstream json_output(output_directory / "report.json");
-    json_output << render_json_report(data);
-
-    if (!emit_csv) {
-        return;
-    }
+    write_text_file(output_directory / "report.md", render_markdown_report(data));
+    write_text_file(output_directory / "report.json", render_json_report(data));
 
     const auto findings_csv_path = output_directory / "findings.csv";
     const auto warnings_csv_path = output_directory / "warnings.csv";
-
-    std::ofstream findings_csv_output(findings_csv_path);
-    findings_csv_output << render_findings_csv(data);
-
-    std::ofstream warnings_csv_output(warnings_csv_path);
-    warnings_csv_output << render_warnings_csv(data);
+    if (!emit_csv) {
+        return;
+    }
+    write_text_file(findings_csv_path, render_findings_csv(data));
+    write_text_file(warnings_csv_path, render_warnings_csv(data));
 }
 
 }  // namespace loglens

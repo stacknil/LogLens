@@ -157,15 +157,31 @@ void test_auth_signal_defaults() {
     const auto events = parse_events(
         make_syslog_config(),
         "Mar 10 08:18:05 example-host sshd[1238]: Failed publickey for root from 203.0.113.10 port 51060 ssh2\n"
-        "Mar 10 08:18:06 example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.11  user=alice\n");
+        "Mar 10 08:18:06 example-host sshd[1239]: Failed keyboard-interactive/pam for root from 203.0.113.12 port 51061 ssh2\n"
+        "Mar 10 08:18:07 example-host sshd[1240]: maximum authentication attempts exceeded for root from 203.0.113.13 port 51062 ssh2 [preauth]\n"
+        "Mar 10 08:18:08 example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.11  user=alice\n");
 
     const auto signals = loglens::build_auth_signals(events, loglens::DetectorConfig{}.auth_signal_mappings);
-    expect(signals.size() == 2, "expected two auth signals");
+    expect(signals.size() == 4, "expected four auth signals");
 
     const auto* publickey = find_signal(signals, loglens::AuthSignalKind::SshFailedPublicKey);
     expect(publickey != nullptr, "expected publickey signal");
     expect(publickey->counts_as_attempt_evidence, "expected publickey to count as attempt evidence");
     expect(publickey->counts_as_terminal_auth_failure, "expected publickey to count as terminal auth failure");
+
+    const auto* keyboard_interactive = find_signal(signals, loglens::AuthSignalKind::SshFailedKeyboardInteractive);
+    expect(keyboard_interactive != nullptr, "expected keyboard-interactive signal");
+    expect(keyboard_interactive->counts_as_attempt_evidence,
+           "expected keyboard-interactive to count as attempt evidence");
+    expect(keyboard_interactive->counts_as_terminal_auth_failure,
+           "expected keyboard-interactive to count as terminal auth failure");
+
+    const auto* max_auth_tries = find_signal(signals, loglens::AuthSignalKind::SshMaxAuthTries);
+    expect(max_auth_tries != nullptr, "expected max-auth-tries signal");
+    expect(max_auth_tries->counts_as_attempt_evidence,
+           "expected max-auth-tries to count as attempt evidence");
+    expect(max_auth_tries->counts_as_terminal_auth_failure,
+           "expected max-auth-tries to count as terminal auth failure");
 
     const auto* pam = find_signal(signals, loglens::AuthSignalKind::PamAuthFailure);
     expect(pam != nullptr, "expected pam auth signal");

@@ -260,6 +260,10 @@ AuthSignalConfig parse_auth_signal_config(JsonCursor& cursor) {
         } else if (key == "ssh_failed_publickey") {
             config.ssh_failed_publickey = parse_auth_signal_behavior(cursor, key);
             ssh_failed_publickey_seen = true;
+        } else if (key == "ssh_failed_keyboard_interactive") {
+            config.ssh_failed_keyboard_interactive = parse_auth_signal_behavior(cursor, key);
+        } else if (key == "ssh_max_auth_tries") {
+            config.ssh_max_auth_tries = parse_auth_signal_behavior(cursor, key);
         } else if (key == "pam_auth_failure") {
             config.pam_auth_failure = parse_auth_signal_behavior(cursor, key);
             pam_auth_failure_seen = true;
@@ -300,6 +304,9 @@ TimestampConfig parse_timestamp_config(JsonCursor& cursor) {
         cursor.expect(':', key);
         if (key == "assume_year") {
             config.assume_year = cursor.parse_positive_int(key);
+            if (*config.assume_year < 1000 || *config.assume_year > 9999) {
+                throw std::runtime_error("invalid config.json: timestamp.assume_year must be a four-digit year");
+            }
             assume_year_seen = true;
         } else {
             throw std::runtime_error("invalid config.json: unexpected key '" + key + "' in timestamp");

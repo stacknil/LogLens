@@ -11,6 +11,8 @@ It parses `auth.log` / `secure`-style syslog input and `journalctl --output=shor
 
 LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
 
+Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md) and [`docs/reviewer-brief.md`](./docs/reviewer-brief.md).
+
 ## Why This Project Exists
 
 Many small security tools can detect a handful of known log patterns. Fewer tools make their parsing limits visible.
@@ -58,10 +60,14 @@ LogLens currently detects:
 - One IP trying multiple usernames within 15 minutes
 - Bursty sudo activity from the same user within 5 minutes
 
-LogLens currently parses and reports these additional auth patterns beyond the core detector inputs, broadening coverage across common Linux auth families:
+LogLens currently parses and reports these additional auth patterns beyond the core detector inputs:
 
 - `Accepted publickey` SSH successes
+- `Accepted keyboard-interactive/pam` SSH successes
 - `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
+- `Failed keyboard-interactive/pam` and `maximum authentication attempts exceeded` SSH failures, which count toward SSH brute-force detection by default
+- `sudo` command, password-failure, and sudoers policy-denial audit lines
+- `su` success and failure audit lines
 - `pam_unix(...:auth): authentication failure`
 - `pam_unix(...:session): session opened`
 - selected `pam_faillock(...:auth)` failure variants
@@ -69,11 +75,15 @@ LogLens currently parses and reports these additional auth patterns beyond the c
 
 LogLens also tracks parser coverage telemetry for unsupported or malformed lines, including:
 
+- `total_input_lines`
 - `total_lines`
+- `skipped_blank_lines`
 - `parsed_lines`
 - `unparsed_lines`
 - `parse_success_rate`
 - `top_unknown_patterns`
+
+For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md).
 
 LogLens does not currently detect:
 
@@ -96,9 +106,11 @@ For fresh-machine setup and repeatable local presets, see [`docs/dev-setup.md`](
 ## Run
 
 ```bash
+./build/loglens --help
+./build/loglens --version
 ./build/loglens --mode syslog --year 2026 ./assets/sample_auth.log ./out
-./build/loglens --mode journalctl-short-full ./assets/sample_journalctl_short_full.log ./out-journal
-./build/loglens --config ./assets/sample_config.json ./assets/sample_auth.log ./out-config
+./build/loglens --mode journalctl ./assets/sample_journalctl_short_full.log ./out-journal
+./build/loglens --config=./assets/sample_config.json ./assets/sample_auth.log ./out-config
 ./build/loglens --mode syslog --year 2026 --csv ./assets/sample_auth.log ./out-csv
 ```
 
@@ -114,14 +126,16 @@ When you add `--csv`, LogLens also writes:
 - `findings.csv`
 - `warnings.csv`
 
-Without `--csv`, LogLens does not create, overwrite, or delete any existing CSV files in the output directory.
-
 The CSV schema is intentionally small and stable:
 
 - `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
-- `warnings.csv`: `kind`, `message`
+- `warnings.csv`: `kind`, `line_number`, `message`
 
-When an input spans multiple hostnames, both reports add compact host-level summaries without changing detector thresholds or introducing cross-host correlation logic. In `report.md` this appears as a host summary table, and in `report.json` it appears as a `host_summaries` array.
+Without `--csv`, LogLens does not create, overwrite, or delete any existing CSV files in the output directory.
+
+Formula-like CSV text fields are neutralized with a leading single quote so spreadsheet tools treat them as text.
+When an input spans multiple hostnames, both reports add compact host-level summaries without changing detector thresholds or introducing cross-host correlation logic.
+Markdown table fields escape table separators, line breaks, and HTML-sensitive characters so unusual log tokens cannot break report layout.
 
 ## Sample Output
 
@@ -172,6 +186,14 @@ The config file schema is intentionally small and strict:
       "counts_as_attempt_evidence": true,
       "counts_as_terminal_auth_failure": true
     },
+    "ssh_failed_keyboard_interactive": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
+    "ssh_max_auth_tries": {
+      "counts_as_attempt_evidence": true,
+      "counts_as_terminal_auth_failure": true
+    },
     "pam_auth_failure": {
       "counts_as_attempt_evidence": true,
       "counts_as_terminal_auth_failure": false
@@ -180,12 +202,13 @@ The config file schema is intentionally small and strict:
 }
 ```
 
-This mapping lets LogLens normalize parsed events into detection signals before applying brute-force or multi-user rules. By default, `pam_auth_failure` is treated as lower-confidence attempt evidence and does not count as a terminal authentication failure unless the config explicitly upgrades it.
+This mapping lets LogLens normalize parsed events into detection signals before applying brute-force or multi-user rules. By default, `pam_auth_failure` is treated as lower-confidence attempt evidence and does not count as a terminal authentication failure unless the config explicitly upgrades it. The `ssh_failed_keyboard_interactive` and `ssh_max_auth_tries` mapping keys are optional in older configs and default to terminal failure evidence.
 
 Timestamp handling is now explicit:
 
-- `--mode syslog` or `input_mode: syslog_legacy` requires `--year` or `timestamp.assume_year`
-- `--mode journalctl-short-full` or `input_mode: journalctl_short_full` parses the embedded year and timezone and ignores `assume_year`
+- `--mode syslog`, `--mode syslog-legacy`, or `input_mode: syslog_legacy` requires `--year` or `timestamp.assume_year`
+- `--year` and `timestamp.assume_year` must use a four-digit year, for example `2026`
+- `--mode journalctl`, `--mode journalctl-short-full`, or `input_mode: journalctl_short_full` parses the embedded year and timezone and ignores `assume_year`
 
 ## Example Input
 
@@ -213,7 +236,7 @@ Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authen
 
 - `syslog_legacy` requires an explicit year; LogLens does not guess one implicitly.
 - `journalctl_short_full` currently supports `UTC`, `GMT`, `Z`, and numeric timezone offsets, not arbitrary timezone abbreviations.
-- Parser coverage is still selective: it covers common `sshd`, `sudo`, `pam_unix`, and selected `pam_faillock` / `pam_sss` variants rather than broad Linux auth-family support.
+- Parser coverage is still selective: it covers common `sshd`, `sudo`, `su`, `pam_unix`, and selected `pam_faillock` / `pam_sss` variants rather than broad Linux auth-family support.
 - Unsupported lines are surfaced as parser telemetry and warnings, not as detector findings.
 - `pam_unix` auth failures remain lower-confidence by default unless signal mappings explicitly upgrade them.
 - Detector configuration uses a fixed `config.json` schema rather than partial overrides or alternate config formats.
