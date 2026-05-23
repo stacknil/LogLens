@@ -1,45 +1,85 @@
-# Reviewer path
+# Reviewer Path
 
-LogLens is easiest to review when the first question is explicit. The project is not trying to be a SIEM or a broad Linux auth parser; it is a C++20 offline CLI that makes authentication parsing, detection boundaries, and report artifacts inspectable.
+This path is for reviewers who want to understand LogLens quickly without reading the whole repository first.
 
-The core review lens is:
+## 30-second orientation
+
+Read:
+
+- [`README.md`](../README.md)
+- [`docs/reviewer-brief.md`](./reviewer-brief.md)
+
+Confirm:
+
+- LogLens is an offline C++20 CLI for Linux authentication log analysis.
+- It parses `auth.log` / `secure` style syslog input and `journalctl --output=short-full` style input.
+- It emits deterministic Markdown, JSON, and optional CSV reports.
+- Parser coverage telemetry is part of the output, not an internal-only detail.
+
+Core review lens:
 
 > Parser observability > silent detection claims.
 
-That means unsupported and malformed lines should be visible as parser telemetry or warnings instead of disappearing behind confident-looking findings.
+## 5-minute artifact review
 
-## First choose the review question
+Inspect:
 
-| Review question | Start here | Good stopping point |
-| --- | --- | --- |
-| What is LogLens? | [`README.md`](../README.md) and [`docs/reviewer-brief.md`](./reviewer-brief.md) | Can state the defensive scope, CLI shape, and non-goals |
-| What log formats are supported? | README Detections plus [`docs/parser-contract.md`](./parser-contract.md) | Can name `syslog_legacy` and `journalctl_short_full`, including the explicit year requirement for syslog |
-| What artifacts does it produce? | README Run / Sample Output plus [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp) | Can inspect `report.md`, `report.json`, `findings.csv`, and `warnings.csv` |
-| Can the parser behavior be trusted? | [`docs/parser-contract.md`](./parser-contract.md), [`tests/test_parser.cpp`](../tests/test_parser.cpp), [`assets/parser_fixture_matrix_syslog.log`](../assets/parser_fixture_matrix_syslog.log), and [`assets/parser_fixture_matrix_journalctl_short_full.log`](../assets/parser_fixture_matrix_journalctl_short_full.log) | Can see known auth lines become events and unknown lines become warnings / telemetry |
-| Is it production-ready? | README Known Limitations, [`CHANGELOG.md`](../CHANGELOG.md), and [`docs/release-v0.1.0.md`](./release-v0.1.0.md) | Can state MVP boundaries and what should not be inferred from the findings |
+- [`assets/sample_auth.log`](../assets/sample_auth.log)
+- [`assets/sample_journalctl_short_full.log`](../assets/sample_journalctl_short_full.log)
+- [`tests/fixtures/report_contracts/syslog_legacy/report.md`](../tests/fixtures/report_contracts/syslog_legacy/report.md)
+- [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json)
+- [`docs/parser-contract.md`](./parser-contract.md)
 
-## Ten-minute review path
+Look for parser coverage fields:
 
-1. Read the README through Detections and Known Limitations.
-2. Skim the reviewer brief for problem, evidence, and boundaries.
-3. Run the sample command from the README or reviewer brief.
-4. Open `report.md` and `report.json` in the output directory.
-5. Compare parser fixture inputs with `docs/parser-contract.md` and `tests/test_parser.cpp` to see recognized and unsupported line handling.
+- `total_input_lines`
+- `total_lines`
+- `skipped_blank_lines`
+- `parsed_lines`
+- `unparsed_lines`
+- `parse_success_rate`
+- `top_unknown_patterns`
 
-## What to look for
+Good stopping point: the reviewer can explain what LogLens parses, what it reports, and how unsupported lines remain visible.
 
-- Parser correctness is treated as a first-class part of the tool, not a hidden precondition.
-- Reports include coverage metrics such as parsed, unparsed, warning, and unknown-pattern counts.
-- Detection rules are small, centralized, configurable, and threshold-based.
-- Unsupported lines remain reviewable through warnings instead of becoming silent misses.
-- Public examples use sanitized hosts, users, and documentation IP ranges.
+## 15-minute local check
 
-## Good review outcome
+Run:
 
-A reviewer should be able to say:
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+./build/loglens --mode syslog --year 2026 ./assets/sample_auth.log ./out
+```
 
-- LogLens is an offline defensive log-analysis CLI for Linux authentication evidence.
-- It supports syslog-style auth logs and `journalctl --output=short-full` style logs.
-- It produces deterministic Markdown, JSON, and optional CSV artifacts.
-- It makes parser coverage visible before asking the reviewer to trust detection claims.
-- It is a focused MVP, not a production SIEM, host correlation engine, or incident verdict system.
+Then inspect:
+
+- `out/report.md`
+- `out/report.json`
+
+Optional CSV check:
+
+```bash
+./build/loglens --mode syslog --year 2026 --csv ./assets/sample_auth.log ./out-csv
+```
+
+Then inspect:
+
+- `out-csv/findings.csv`
+- `out-csv/warnings.csv`
+
+Good stopping point: the reviewer can build, test, run a sample, and compare generated artifacts with the report-contract fixtures.
+
+## Boundaries
+
+LogLens is intentionally narrow:
+
+- no live collection
+- no credential attack automation
+- no exploitation, persistence, or offensive workflow support
+- no SIEM replacement
+- no cross-host correlation engine
+- no incident verdict or attribution claim
+
+Findings are rule-based triage aids. The parser boundary is the main trust boundary: recognized lines become typed events, unsupported lines become warnings and telemetry, and malformed input should fail gracefully.
