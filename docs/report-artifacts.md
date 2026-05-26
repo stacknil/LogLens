@@ -1,0 +1,72 @@
+# Report Artifacts
+
+LogLens writes deterministic offline artifacts for reviewer inspection and downstream tooling.
+
+## Artifact Set
+
+| Artifact | When written | Review purpose |
+| --- | --- | --- |
+| `report.md` | Every successful run | Human-readable triage report with summary, findings, event counts, parser quality, and parser warnings |
+| `report.json` | Every successful run | Machine-readable report with the same core evidence and parser telemetry |
+| `findings.csv` | Only when `--csv` is set | Spreadsheet-friendly finding rows |
+| `warnings.csv` | Only when `--csv` is set | Spreadsheet-friendly parser warning rows |
+
+Without `--csv`, LogLens does not create, overwrite, or delete existing CSV files in the output directory.
+
+## JSON Contract
+
+The JSON report keeps parser observability visible next to findings:
+
+- `tool`
+- `input`
+- `input_mode`
+- `assume_year` for syslog-style input when a year is supplied
+- `timezone_present`
+- `parser_quality.total_input_lines`
+- `parser_quality.total_lines`
+- `parser_quality.skipped_blank_lines`
+- `parser_quality.parsed_lines`
+- `parser_quality.unparsed_lines`
+- `parser_quality.parse_success_rate`
+- `parser_quality.top_unknown_patterns`
+- `parsed_event_count`
+- `warning_count`
+- `finding_count`
+- `event_counts`
+- `host_summaries` when more than one hostname is represented
+- `findings`
+- `warnings`
+
+Finding objects contain `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, and `summary`.
+
+Warning objects contain the original `line_number` and the parser `reason`.
+
+## CSV Contract
+
+The optional CSV exports intentionally stay small:
+
+- `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
+- `warnings.csv`: `kind`, `line_number`, `message`
+
+Formula-like CSV text fields are neutralized with a leading single quote so spreadsheet tools treat them as text.
+
+## Markdown Safety
+
+Markdown table fields escape table separators, line breaks, HTML-sensitive characters, and control characters. Unusual log tokens should not be able to break report layout.
+
+## Golden Fixtures
+
+The report contracts are backed by generated fixture artifacts:
+
+| Fixture case | Golden artifacts |
+| --- | --- |
+| [`syslog_legacy`](../tests/fixtures/report_contracts/syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
+| [`journalctl_short_full`](../tests/fixtures/report_contracts/journalctl_short_full) | `report.md`, `report.json` |
+| [`multi_host_syslog_legacy`](../tests/fixtures/report_contracts/multi_host_syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
+| [`multi_host_journalctl_short_full`](../tests/fixtures/report_contracts/multi_host_journalctl_short_full) | `report.md`, `report.json` |
+
+The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
+
+## Boundaries
+
+Reports are triage aids. They are not SIEM evidence, incident verdicts, attribution claims, or cross-host correlation output. Host summaries are compact per-host rollups; they do not change detector thresholds.

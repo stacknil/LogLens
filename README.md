@@ -137,6 +137,8 @@ Formula-like CSV text fields are neutralized with a leading single quote so spre
 When an input spans multiple hostnames, both reports add compact host-level summaries without changing detector thresholds or introducing cross-host correlation logic.
 Markdown table fields escape table separators, line breaks, and HTML-sensitive characters so unusual log tokens cannot break report layout.
 
+For the report artifact contract and golden fixture map, see [`docs/report-artifacts.md`](./docs/report-artifacts.md).
+
 ## Sample Output
 
 For sanitized sample input, see [`assets/sample_auth.log`](./assets/sample_auth.log) and [`assets/sample_journalctl_short_full.log`](./assets/sample_journalctl_short_full.log).

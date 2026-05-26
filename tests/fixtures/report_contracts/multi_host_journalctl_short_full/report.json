@@ -4,7 +4,9 @@
   "input_mode": "journalctl_short_full",
   "timezone_present": true,
   "parser_quality": {
+    "total_input_lines": 15,
     "total_lines": 15,
+    "skipped_blank_lines": 0,
     "parsed_lines": 12,
     "unparsed_lines": 3,
     "parse_success_rate": 0.8000,

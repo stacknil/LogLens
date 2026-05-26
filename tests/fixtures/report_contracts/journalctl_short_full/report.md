@@ -5,7 +5,9 @@
 - Input: `tests/fixtures/report_contracts/journalctl_short_full/input.log`
 - Input mode: journalctl_short_full
 - Timezone present: true
+- Total input lines: 16
 - Total lines: 16
+- Skipped blank lines: 0
 - Parsed lines: 14
 - Unparsed lines: 2
 - Parse success rate: 87.50%

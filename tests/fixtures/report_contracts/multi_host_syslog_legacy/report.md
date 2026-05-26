@@ -6,7 +6,9 @@
 - Input mode: syslog_legacy
 - Assume year: 2026
 - Timezone present: false
+- Total input lines: 15
 - Total lines: 15
+- Skipped blank lines: 0
 - Parsed lines: 12
 - Unparsed lines: 3
 - Parse success rate: 80.00%

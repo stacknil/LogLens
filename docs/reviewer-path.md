@@ -28,6 +28,7 @@ Inspect:
 - [`assets/sample_journalctl_short_full.log`](../assets/sample_journalctl_short_full.log)
 - [`tests/fixtures/report_contracts/syslog_legacy/report.md`](../tests/fixtures/report_contracts/syslog_legacy/report.md)
 - [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json)
+- [`docs/report-artifacts.md`](./report-artifacts.md)
 - [`docs/parser-contract.md`](./parser-contract.md)
 
 Look for parser coverage fields:
