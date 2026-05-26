@@ -213,6 +213,19 @@ void test_failed_keyboard_interactive_event() {
            "expected ssh keyboard-interactive failure type");
 }
 
+void test_failed_keyboard_interactive_invalid_user_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:27:19 example-host sshd[1246]: Failed keyboard-interactive/pam for invalid user svc-keyboard from 203.0.113.79 port 51243 ssh2",
+        5);
+
+    expect(event.has_value(), "expected failed keyboard-interactive invalid-user event");
+    expect(event->username == "svc-keyboard", "expected parsed keyboard-interactive invalid username");
+    expect(event->source_ip == "203.0.113.79", "expected parsed keyboard-interactive invalid source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected keyboard-interactive invalid-user type");
+}
+
 void test_max_auth_tries_event() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -224,6 +237,19 @@ void test_max_auth_tries_event() {
     expect(event->source_ip == "203.0.113.78", "expected parsed max-auth-tries source ip");
     expect(event->event_type == loglens::EventType::SshMaxAuthTries,
            "expected ssh max-auth-tries failure type");
+}
+
+void test_max_auth_tries_invalid_user_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:27:26 example-host sshd[1247]: maximum authentication attempts exceeded for invalid user svc-maxauth from 203.0.113.80 port 51244 ssh2 [preauth]",
+        5);
+
+    expect(event.has_value(), "expected max-auth-tries invalid-user event");
+    expect(event->username == "svc-maxauth", "expected parsed max-auth-tries invalid username");
+    expect(event->source_ip == "203.0.113.80", "expected parsed max-auth-tries invalid source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected max-auth-tries invalid-user type");
 }
 
 void test_pam_auth_failure_event() {
@@ -517,12 +543,12 @@ void test_syslog_fixture_matrix_file() {
     const auto parser = make_syslog_parser();
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_syslog.log"));
 
-    expect(result.events.size() == 15, "expected fifteen recognized syslog fixture events");
+    expect(result.events.size() == 17, "expected seventeen recognized syslog fixture events");
     expect(result.warnings.size() == 8, "expected eight syslog fixture warnings");
-    expect(result.quality.total_lines == 23, "expected twenty-three syslog fixture lines");
-    expect(result.quality.parsed_lines == 15, "expected fifteen parsed syslog fixture lines");
+    expect(result.quality.total_lines == 25, "expected twenty-five syslog fixture lines");
+    expect(result.quality.parsed_lines == 17, "expected seventeen parsed syslog fixture lines");
     expect(result.quality.unparsed_lines == 8, "expected eight unparsed syslog fixture lines");
-    expect_close(result.quality.parse_success_rate, 15.0 / 23.0, 1e-9, "expected syslog fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 17.0 / 25.0, 1e-9, "expected syslog fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected failed publickey variant");
@@ -557,6 +583,12 @@ void test_syslog_fixture_matrix_file() {
     expect(result.events[14].event_type == loglens::EventType::SshMaxAuthTries,
            "expected max-auth-tries variant");
     expect(result.events[14].username == "frank", "expected max-auth-tries username");
+    expect(result.events[15].event_type == loglens::EventType::SshInvalidUser,
+           "expected keyboard-interactive invalid-user variant");
+    expect(result.events[15].username == "svc-keyboard", "expected keyboard-interactive invalid username");
+    expect(result.events[16].event_type == loglens::EventType::SshInvalidUser,
+           "expected max-auth-tries invalid-user variant");
+    expect(result.events[16].username == "svc-maxauth", "expected max-auth-tries invalid username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown syslog buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
@@ -579,12 +611,12 @@ void test_journalctl_fixture_matrix_file() {
         std::nullopt});
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_journalctl_short_full.log"));
 
-    expect(result.events.size() == 15, "expected fifteen recognized journalctl fixture events");
+    expect(result.events.size() == 17, "expected seventeen recognized journalctl fixture events");
     expect(result.warnings.size() == 8, "expected eight journalctl fixture warnings");
-    expect(result.quality.total_lines == 23, "expected twenty-three journalctl fixture lines");
-    expect(result.quality.parsed_lines == 15, "expected fifteen parsed journalctl fixture lines");
+    expect(result.quality.total_lines == 25, "expected twenty-five journalctl fixture lines");
+    expect(result.quality.parsed_lines == 17, "expected seventeen parsed journalctl fixture lines");
     expect(result.quality.unparsed_lines == 8, "expected eight unparsed journalctl fixture lines");
-    expect_close(result.quality.parse_success_rate, 15.0 / 23.0, 1e-9, "expected journalctl fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 17.0 / 25.0, 1e-9, "expected journalctl fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected journalctl failed publickey variant");
@@ -608,6 +640,13 @@ void test_journalctl_fixture_matrix_file() {
            "expected journalctl failed keyboard-interactive variant");
     expect(result.events[14].event_type == loglens::EventType::SshMaxAuthTries,
            "expected journalctl max-auth-tries variant");
+    expect(result.events[15].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl keyboard-interactive invalid-user variant");
+    expect(result.events[15].username == "svc-keyboard",
+           "expected journalctl keyboard-interactive invalid username");
+    expect(result.events[16].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl max-auth-tries invalid-user variant");
+    expect(result.events[16].username == "svc-maxauth", "expected journalctl max-auth-tries invalid username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown journalctl buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
@@ -639,7 +678,9 @@ int main() {
     test_su_success_event();
     test_failed_publickey_event();
     test_failed_keyboard_interactive_event();
+    test_failed_keyboard_interactive_invalid_user_event();
     test_max_auth_tries_event();
+    test_max_auth_tries_invalid_user_event();
     test_pam_auth_failure_event();
     test_pam_sss_received_failure_event();
     test_session_opened_event();
