@@ -5,7 +5,9 @@
   "assume_year": 2026,
   "timezone_present": false,
   "parser_quality": {
+    "total_input_lines": 15,
     "total_lines": 15,
+    "skipped_blank_lines": 0,
     "parsed_lines": 12,
     "unparsed_lines": 3,
     "parse_success_rate": 0.8000,
