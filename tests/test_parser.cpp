@@ -78,6 +78,32 @@ void test_invalid_user_failure() {
            "expected explicit syslog year injection");
 }
 
+void test_illegal_user_failure_is_normalized_as_invalid_user() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:11:23 example-host sshd[1235]: Failed password for illegal user legacy-admin from 203.0.113.11 port 51023 ssh2",
+        1);
+
+    expect(event.has_value(), "expected illegal-user failed-password event");
+    expect(event->username == "legacy-admin", "expected illegal-user failed-password username");
+    expect(event->source_ip == "203.0.113.11", "expected illegal-user failed-password source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected illegal-user failed-password to normalize to invalid-user type");
+}
+
+void test_illegal_user_message_is_normalized_as_invalid_user() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:11:24 example-host sshd[1236]: Illegal user legacy-backup from 203.0.113.12 port 51024",
+        1);
+
+    expect(event.has_value(), "expected direct illegal-user event");
+    expect(event->username == "legacy-backup", "expected direct illegal-user username");
+    expect(event->source_ip == "203.0.113.12", "expected direct illegal-user source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected direct illegal-user to normalize to invalid-user type");
+}
+
 void test_standard_failure() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -200,6 +226,19 @@ void test_failed_publickey_event() {
     expect(event->event_type == loglens::EventType::SshFailedPublicKey, "expected ssh publickey type");
 }
 
+void test_failed_publickey_illegal_user_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:27:11 example-host sshd[1248]: Failed publickey for illegal user svc-legacy from 203.0.113.81 port 51245 ssh2",
+        5);
+
+    expect(event.has_value(), "expected failed publickey illegal-user event");
+    expect(event->username == "svc-legacy", "expected parsed illegal-user publickey username");
+    expect(event->source_ip == "203.0.113.81", "expected parsed illegal-user publickey source ip");
+    expect(event->event_type == loglens::EventType::SshFailedPublicKey,
+           "expected illegal-user publickey to keep publickey failure type");
+}
+
 void test_failed_keyboard_interactive_event() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -226,6 +265,19 @@ void test_failed_keyboard_interactive_invalid_user_event() {
            "expected keyboard-interactive invalid-user type");
 }
 
+void test_failed_keyboard_interactive_illegal_user_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:27:20 example-host sshd[1249]: Failed keyboard-interactive/pam for illegal user svc-keyboard-legacy from 203.0.113.82 port 51246 ssh2",
+        5);
+
+    expect(event.has_value(), "expected failed keyboard-interactive illegal-user event");
+    expect(event->username == "svc-keyboard-legacy", "expected parsed keyboard-interactive illegal username");
+    expect(event->source_ip == "203.0.113.82", "expected parsed keyboard-interactive illegal source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected keyboard-interactive illegal-user type");
+}
+
 void test_max_auth_tries_event() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -250,6 +302,19 @@ void test_max_auth_tries_invalid_user_event() {
     expect(event->source_ip == "203.0.113.80", "expected parsed max-auth-tries invalid source ip");
     expect(event->event_type == loglens::EventType::SshInvalidUser,
            "expected max-auth-tries invalid-user type");
+}
+
+void test_max_auth_tries_illegal_user_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:27:27 example-host sshd[1250]: maximum authentication attempts exceeded for illegal user svc-maxauth-legacy from 203.0.113.83 port 51247 ssh2 [preauth]",
+        5);
+
+    expect(event.has_value(), "expected max-auth-tries illegal-user event");
+    expect(event->username == "svc-maxauth-legacy", "expected parsed max-auth-tries illegal username");
+    expect(event->source_ip == "203.0.113.83", "expected parsed max-auth-tries illegal source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected max-auth-tries illegal-user type");
 }
 
 void test_pam_auth_failure_event() {
@@ -543,12 +608,12 @@ void test_syslog_fixture_matrix_file() {
     const auto parser = make_syslog_parser();
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_syslog.log"));
 
-    expect(result.events.size() == 17, "expected seventeen recognized syslog fixture events");
+    expect(result.events.size() == 19, "expected nineteen recognized syslog fixture events");
     expect(result.warnings.size() == 8, "expected eight syslog fixture warnings");
-    expect(result.quality.total_lines == 25, "expected twenty-five syslog fixture lines");
-    expect(result.quality.parsed_lines == 17, "expected seventeen parsed syslog fixture lines");
+    expect(result.quality.total_lines == 27, "expected twenty-seven syslog fixture lines");
+    expect(result.quality.parsed_lines == 19, "expected nineteen parsed syslog fixture lines");
     expect(result.quality.unparsed_lines == 8, "expected eight unparsed syslog fixture lines");
-    expect_close(result.quality.parse_success_rate, 17.0 / 25.0, 1e-9, "expected syslog fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 19.0 / 27.0, 1e-9, "expected syslog fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected failed publickey variant");
@@ -589,6 +654,12 @@ void test_syslog_fixture_matrix_file() {
     expect(result.events[16].event_type == loglens::EventType::SshInvalidUser,
            "expected max-auth-tries invalid-user variant");
     expect(result.events[16].username == "svc-maxauth", "expected max-auth-tries invalid username");
+    expect(result.events[17].event_type == loglens::EventType::SshInvalidUser,
+           "expected failed-password illegal-user variant");
+    expect(result.events[17].username == "legacy-admin", "expected failed-password illegal username");
+    expect(result.events[18].event_type == loglens::EventType::SshInvalidUser,
+           "expected direct illegal-user variant");
+    expect(result.events[18].username == "legacy-backup", "expected direct illegal username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown syslog buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
@@ -611,12 +682,12 @@ void test_journalctl_fixture_matrix_file() {
         std::nullopt});
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_journalctl_short_full.log"));
 
-    expect(result.events.size() == 17, "expected seventeen recognized journalctl fixture events");
+    expect(result.events.size() == 19, "expected nineteen recognized journalctl fixture events");
     expect(result.warnings.size() == 8, "expected eight journalctl fixture warnings");
-    expect(result.quality.total_lines == 25, "expected twenty-five journalctl fixture lines");
-    expect(result.quality.parsed_lines == 17, "expected seventeen parsed journalctl fixture lines");
+    expect(result.quality.total_lines == 27, "expected twenty-seven journalctl fixture lines");
+    expect(result.quality.parsed_lines == 19, "expected nineteen parsed journalctl fixture lines");
     expect(result.quality.unparsed_lines == 8, "expected eight unparsed journalctl fixture lines");
-    expect_close(result.quality.parse_success_rate, 17.0 / 25.0, 1e-9, "expected journalctl fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 19.0 / 27.0, 1e-9, "expected journalctl fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected journalctl failed publickey variant");
@@ -647,6 +718,12 @@ void test_journalctl_fixture_matrix_file() {
     expect(result.events[16].event_type == loglens::EventType::SshInvalidUser,
            "expected journalctl max-auth-tries invalid-user variant");
     expect(result.events[16].username == "svc-maxauth", "expected journalctl max-auth-tries invalid username");
+    expect(result.events[17].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl failed-password illegal-user variant");
+    expect(result.events[17].username == "legacy-admin", "expected journalctl failed-password illegal username");
+    expect(result.events[18].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl direct illegal-user variant");
+    expect(result.events[18].username == "legacy-backup", "expected journalctl direct illegal username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown journalctl buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
@@ -667,6 +744,8 @@ void test_journalctl_fixture_matrix_file() {
 
 int main() {
     test_invalid_user_failure();
+    test_illegal_user_failure_is_normalized_as_invalid_user();
+    test_illegal_user_message_is_normalized_as_invalid_user();
     test_standard_failure();
     test_success_event();
     test_accepted_publickey_success_event();
@@ -677,10 +756,13 @@ int main() {
     test_su_auth_failure_event();
     test_su_success_event();
     test_failed_publickey_event();
+    test_failed_publickey_illegal_user_event();
     test_failed_keyboard_interactive_event();
     test_failed_keyboard_interactive_invalid_user_event();
+    test_failed_keyboard_interactive_illegal_user_event();
     test_max_auth_tries_event();
     test_max_auth_tries_invalid_user_event();
+    test_max_auth_tries_illegal_user_event();
     test_pam_auth_failure_event();
     test_pam_sss_received_failure_event();
     test_session_opened_event();
