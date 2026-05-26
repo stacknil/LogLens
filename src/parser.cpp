@@ -285,6 +285,23 @@ std::string sanitize_pattern_label(std::string_view value) {
     return normalized.empty() ? "unknown_pattern" : normalized;
 }
 
+bool consume_invalid_or_illegal_user_prefix(std::string_view& remaining) {
+    static constexpr std::string_view invalid_user_prefix = "invalid user ";
+    static constexpr std::string_view illegal_user_prefix = "illegal user ";
+
+    if (remaining.starts_with(invalid_user_prefix)) {
+        remaining.remove_prefix(invalid_user_prefix.size());
+        return true;
+    }
+
+    if (remaining.starts_with(illegal_user_prefix)) {
+        remaining.remove_prefix(illegal_user_prefix.size());
+        return true;
+    }
+
+    return false;
+}
+
 bool parse_ssh_failed_message(std::string_view message, Event& event) {
     static constexpr std::string_view failed_prefix = "Failed password for ";
     if (!message.starts_with(failed_prefix)) {
@@ -292,11 +309,7 @@ bool parse_ssh_failed_message(std::string_view message, Event& event) {
     }
 
     auto remaining = message.substr(failed_prefix.size());
-    bool invalid_user = false;
-    if (remaining.starts_with("invalid user ")) {
-        invalid_user = true;
-        remaining.remove_prefix(std::string_view{"invalid user "}.size());
-    }
+    const bool invalid_user = consume_invalid_or_illegal_user_prefix(remaining);
 
     const auto username = consume_token(remaining);
     if (username.empty()) {
@@ -370,9 +383,7 @@ bool parse_ssh_failed_publickey_message(std::string_view message, Event& event) 
     }
 
     auto remaining = message.substr(publickey_prefix.size());
-    if (remaining.starts_with("invalid user ")) {
-        remaining.remove_prefix(std::string_view{"invalid user "}.size());
-    }
+    consume_invalid_or_illegal_user_prefix(remaining);
 
     const auto username = consume_token(remaining);
     if (username.empty()) {
@@ -392,11 +403,7 @@ bool parse_ssh_failed_keyboard_interactive_message(std::string_view message, Eve
     }
 
     auto remaining = message.substr(keyboard_prefix.size());
-    bool invalid_user = false;
-    if (remaining.starts_with("invalid user ")) {
-        invalid_user = true;
-        remaining.remove_prefix(std::string_view{"invalid user "}.size());
-    }
+    const bool invalid_user = consume_invalid_or_illegal_user_prefix(remaining);
 
     const auto username = consume_token(remaining);
     if (username.empty()) {
@@ -416,11 +423,7 @@ bool parse_ssh_max_auth_tries_message(std::string_view message, Event& event) {
     }
 
     auto remaining = message.substr(max_auth_prefix.size());
-    bool invalid_user = false;
-    if (remaining.starts_with("invalid user ")) {
-        invalid_user = true;
-        remaining.remove_prefix(std::string_view{"invalid user "}.size());
-    }
+    const bool invalid_user = consume_invalid_or_illegal_user_prefix(remaining);
 
     const auto username = consume_token(remaining);
     if (username.empty()) {
@@ -435,11 +438,14 @@ bool parse_ssh_max_auth_tries_message(std::string_view message, Event& event) {
 
 bool parse_ssh_invalid_user_message(std::string_view message, Event& event) {
     static constexpr std::string_view invalid_user_prefix = "Invalid user ";
-    if (!message.starts_with(invalid_user_prefix)) {
+    static constexpr std::string_view illegal_user_prefix = "Illegal user ";
+    if (!message.starts_with(invalid_user_prefix) && !message.starts_with(illegal_user_prefix)) {
         return false;
     }
 
-    auto remaining = message.substr(invalid_user_prefix.size());
+    auto remaining = message.starts_with(invalid_user_prefix)
+        ? message.substr(invalid_user_prefix.size())
+        : message.substr(illegal_user_prefix.size());
     const auto username = consume_token(remaining);
     if (username.empty()) {
         return false;

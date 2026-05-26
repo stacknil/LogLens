@@ -15,6 +15,8 @@ Mar 10 09:03:39 example-host sshd[2017]: Failed keyboard-interactive/pam for eve
 Mar 10 09:03:39 example-host sshd[2018]: maximum authentication attempts exceeded for frank from 203.0.113.45 port 52007 ssh2 [preauth]
 Mar 10 09:03:39 example-host sshd[2019]: Failed keyboard-interactive/pam for invalid user svc-keyboard from 203.0.113.46 port 52008 ssh2
 Mar 10 09:03:39 example-host sshd[2020]: maximum authentication attempts exceeded for invalid user svc-maxauth from 203.0.113.47 port 52009 ssh2 [preauth]
+Mar 10 09:03:39 example-host sshd[2021]: Failed password for illegal user legacy-admin from 203.0.113.48 port 52017 ssh2
+Mar 10 09:03:39 example-host sshd[2022]: Illegal user legacy-backup from 203.0.113.49 port 52018
 Mar 10 09:03:40 example-host sshd[2003]: Connection closed by user alice 203.0.113.50 port 52010 [preauth]
 Mar 10 09:04:05 example-host sshd[2004]: Connection closed by authenticating user carol 203.0.113.51 port 52011 [preauth]
 Mar 10 09:04:28 example-host sshd[2005]: Connection closed by invalid user deploy 203.0.113.52 port 52012 [preauth]
