@@ -669,6 +669,10 @@ std::string classify_unknown_auth_pattern(const Event& event) {
             return "sshd_timeout_or_disconnection";
         }
 
+        if (message.starts_with("Unable to negotiate with ")) {
+            return "sshd_negotiation_failure";
+        }
+
         return "sshd_other";
     }
 
