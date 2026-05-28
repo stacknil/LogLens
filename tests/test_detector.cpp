@@ -260,8 +260,8 @@ void test_unsupported_pam_session_close_remains_telemetry_only() {
     expect(result.events.empty(), "expected unsupported session-close line to stay out of parsed events");
     expect(result.warnings.size() == 1, "expected unsupported session-close line to produce one warning");
     expect(result.quality.top_unknown_patterns.size() == 1, "expected one unknown pattern bucket");
-    expect(result.quality.top_unknown_patterns.front().pattern == "pam_unix_other",
-           "expected unsupported session-close line to remain in pam_unix_other telemetry");
+    expect(result.quality.top_unknown_patterns.front().pattern == "pam_unix_session_closed",
+           "expected unsupported session-close line to remain in session-closed telemetry");
 
     const auto signals = loglens::build_auth_signals(result.events, loglens::DetectorConfig{}.auth_signal_mappings);
     expect(signals.empty(), "expected unsupported session-close line to stay out of the signal layer");

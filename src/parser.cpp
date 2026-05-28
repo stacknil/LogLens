@@ -677,6 +677,10 @@ std::string classify_unknown_auth_pattern(const Event& event) {
     }
 
     if (event.program.starts_with("pam_unix(")) {
+        if (message.starts_with("session closed for user ")) {
+            return "pam_unix_session_closed";
+        }
+
         return "pam_unix_other";
     }
 
