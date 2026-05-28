@@ -466,9 +466,9 @@ void test_syslog_auth_family_fixture_file() {
     expect(result.quality.top_unknown_patterns[3].pattern == "pam_sss_unknown_user",
            "expected pam_sss unknown-user telemetry bucket");
     expect(result.quality.top_unknown_patterns[3].count == 1, "expected one pam_sss unknown-user line");
-    expect(result.quality.top_unknown_patterns[4].pattern == "pam_unix_other",
-           "expected pam_unix other telemetry bucket");
-    expect(result.quality.top_unknown_patterns[4].count == 1, "expected one pam_unix other line");
+    expect(result.quality.top_unknown_patterns[4].pattern == "pam_unix_session_closed",
+           "expected pam_unix session-closed telemetry bucket");
+    expect(result.quality.top_unknown_patterns[4].count == 1, "expected one pam_unix session-closed line");
 }
 
 void test_journalctl_auth_family_fixture_file() {
@@ -515,9 +515,9 @@ void test_journalctl_auth_family_fixture_file() {
     expect(result.quality.top_unknown_patterns[3].pattern == "pam_sss_unknown_user",
            "expected journalctl pam_sss unknown-user telemetry bucket");
     expect(result.quality.top_unknown_patterns[3].count == 1, "expected one journalctl pam_sss unknown-user line");
-    expect(result.quality.top_unknown_patterns[4].pattern == "pam_unix_other",
-           "expected journalctl pam_unix other telemetry bucket");
-    expect(result.quality.top_unknown_patterns[4].count == 1, "expected one journalctl pam_unix other line");
+    expect(result.quality.top_unknown_patterns[4].pattern == "pam_unix_session_closed",
+           "expected journalctl pam_unix session-closed telemetry bucket");
+    expect(result.quality.top_unknown_patterns[4].count == 1, "expected one journalctl pam_unix session-closed line");
 }
 
 void test_malformed_line() {
@@ -692,9 +692,9 @@ void test_syslog_fixture_matrix_file() {
     expect(result.quality.top_unknown_patterns[1].pattern == "sshd_timeout_or_disconnection",
            "expected timeout/disconnection syslog bucket");
     expect(result.quality.top_unknown_patterns[1].count == 3, "expected three timeout/disconnection syslog lines");
-    expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_other",
-           "expected unsupported pam_unix syslog bucket");
-    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one unsupported pam_unix syslog line");
+    expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_session_closed",
+           "expected pam_unix session-closed syslog bucket");
+    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one pam_unix session-closed syslog line");
     expect(result.quality.top_unknown_patterns[3].pattern == "sshd_negotiation_failure",
            "expected sshd negotiation-failure syslog bucket");
     expect(result.quality.top_unknown_patterns[3].count == 1, "expected one sshd negotiation-failure syslog line");
@@ -756,9 +756,9 @@ void test_journalctl_fixture_matrix_file() {
     expect(result.quality.top_unknown_patterns[1].pattern == "sshd_timeout_or_disconnection",
            "expected timeout/disconnection journalctl bucket");
     expect(result.quality.top_unknown_patterns[1].count == 3, "expected three timeout/disconnection journalctl lines");
-    expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_other",
-           "expected unsupported pam_unix journalctl bucket");
-    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one unsupported pam_unix journalctl line");
+    expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_session_closed",
+           "expected pam_unix session-closed journalctl bucket");
+    expect(result.quality.top_unknown_patterns[2].count == 1, "expected one pam_unix session-closed journalctl line");
     expect(result.quality.top_unknown_patterns[3].pattern == "sshd_negotiation_failure",
            "expected sshd negotiation-failure journalctl bucket");
     expect(result.quality.top_unknown_patterns[3].count == 1, "expected one sshd negotiation-failure journalctl line");
