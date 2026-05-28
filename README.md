@@ -83,6 +83,11 @@ LogLens also tracks parser coverage telemetry for unsupported or malformed lines
 - `parse_success_rate`
 - `top_unknown_patterns`
 
+Common unsupported-pattern buckets include `sshd_connection_closed_preauth`,
+`sshd_timeout_or_disconnection`, `sshd_negotiation_failure`, and
+`pam_unix_session_closed`. These buckets keep non-finding evidence reviewable
+without counting it as detector evidence.
+
 For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md).
 
 LogLens does not currently detect:
