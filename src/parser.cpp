@@ -181,7 +181,7 @@ bool parse_timezone_token(std::string_view token, std::chrono::minutes& offset) 
     if (negative) {
         offset = -offset;
     }
-    return false;
+    return true;
 }
 
 void parse_program_tag(std::string_view tag, std::string& program, std::optional<int>& pid) {

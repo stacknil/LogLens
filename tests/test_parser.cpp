@@ -357,9 +357,7 @@ void test_session_opened_event() {
 }
 
 void test_journalctl_short_full_event() {
-    const loglens::AuthLogParser parser(loglens::ParserConfig{
-        loglens::InputMode::JournalctlShortFull,
-        std::nullopt});
+    const auto parser = make_journalctl_parser();
     const auto event = parser.parse_line(
         "Tue 2026-03-10 08:11:22 UTC example-host sshd[2234]: Failed password for invalid user admin from 203.0.113.10 port 51022 ssh2",
         8);
@@ -370,6 +368,32 @@ void test_journalctl_short_full_event() {
     expect(event->event_type == loglens::EventType::SshInvalidUser, "expected journalctl event classification");
     expect(loglens::format_timestamp(event->timestamp) == "2026-03-10 08:11:22",
            "expected journalctl timestamp to preserve embedded year and timezone");
+}
+
+void test_journalctl_numeric_timezone_offsets() {
+    const auto parser = make_journalctl_parser();
+    std::string error;
+    const auto compact_offset_event = parser.parse_line(
+        "Tue 2026-03-10 08:11:22 +0800 example-host sshd[2235]: Failed password for root from 203.0.113.13 port 51023 ssh2",
+        9,
+        &error);
+
+    expect(compact_offset_event.has_value(), "expected compact numeric timezone event");
+    expect(error.empty(), "expected compact numeric timezone to parse cleanly");
+    expect(compact_offset_event->username == "root", "expected compact numeric timezone username");
+    expect(loglens::format_timestamp(compact_offset_event->timestamp) == "2026-03-10 00:11:22",
+           "expected compact numeric timezone to normalize to UTC");
+
+    const auto colon_offset_event = parser.parse_line(
+        "Tue 2026-03-10 08:11:22 -05:00 example-host sshd[2236]: Accepted password for alice from 203.0.113.14 port 51024 ssh2",
+        10,
+        &error);
+
+    expect(colon_offset_event.has_value(), "expected colon numeric timezone event");
+    expect(error.empty(), "expected colon numeric timezone to parse cleanly");
+    expect(colon_offset_event->username == "alice", "expected colon numeric timezone username");
+    expect(loglens::format_timestamp(colon_offset_event->timestamp) == "2026-03-10 13:11:22",
+           "expected colon numeric timezone to normalize to UTC");
 }
 
 void test_input_mode_aliases() {
@@ -767,6 +791,7 @@ int main() {
     test_pam_sss_received_failure_event();
     test_session_opened_event();
     test_journalctl_short_full_event();
+    test_journalctl_numeric_timezone_offsets();
     test_input_mode_aliases();
     test_syslog_auth_family_fixture_file();
     test_journalctl_auth_family_fixture_file();
