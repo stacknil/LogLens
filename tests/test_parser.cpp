@@ -695,9 +695,9 @@ void test_syslog_fixture_matrix_file() {
     expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_other",
            "expected unsupported pam_unix syslog bucket");
     expect(result.quality.top_unknown_patterns[2].count == 1, "expected one unsupported pam_unix syslog line");
-    expect(result.quality.top_unknown_patterns[3].pattern == "sshd_other",
-           "expected unsupported sshd syslog bucket");
-    expect(result.quality.top_unknown_patterns[3].count == 1, "expected one unsupported sshd syslog line");
+    expect(result.quality.top_unknown_patterns[3].pattern == "sshd_negotiation_failure",
+           "expected sshd negotiation-failure syslog bucket");
+    expect(result.quality.top_unknown_patterns[3].count == 1, "expected one sshd negotiation-failure syslog line");
 }
 
 void test_journalctl_fixture_matrix_file() {
@@ -759,9 +759,9 @@ void test_journalctl_fixture_matrix_file() {
     expect(result.quality.top_unknown_patterns[2].pattern == "pam_unix_other",
            "expected unsupported pam_unix journalctl bucket");
     expect(result.quality.top_unknown_patterns[2].count == 1, "expected one unsupported pam_unix journalctl line");
-    expect(result.quality.top_unknown_patterns[3].pattern == "sshd_other",
-           "expected unsupported sshd journalctl bucket");
-    expect(result.quality.top_unknown_patterns[3].count == 1, "expected one unsupported sshd journalctl line");
+    expect(result.quality.top_unknown_patterns[3].pattern == "sshd_negotiation_failure",
+           "expected sshd negotiation-failure journalctl bucket");
+    expect(result.quality.top_unknown_patterns[3].count == 1, "expected one sshd negotiation-failure journalctl line");
 }
 
 }  // namespace
