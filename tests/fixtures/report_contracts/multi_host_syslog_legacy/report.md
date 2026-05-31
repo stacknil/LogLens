@@ -6,22 +6,22 @@
 - Input mode: syslog_legacy
 - Assume year: 2026
 - Timezone present: false
-- Total input lines: 15
-- Total lines: 15
+- Total input lines: 16
+- Total lines: 16
 - Skipped blank lines: 0
 - Parsed lines: 12
-- Unparsed lines: 3
-- Parse success rate: 80.00%
+- Unparsed lines: 4
+- Parse success rate: 75.00%
 - Parsed events: 12
 - Findings: 3
-- Parser warnings: 3
+- Parser warnings: 4
 
 ## Host Summary
 
 | Host | Parsed Events | Findings | Warnings |
 | --- | ---: | ---: | ---: |
 | alpha-host | 7 | 2 | 1 |
-| beta-host | 5 | 1 | 2 |
+| beta-host | 5 | 1 | 3 |
 
 ## Findings
 
@@ -47,6 +47,7 @@
 | Unknown Pattern | Count |
 | --- | ---: |
 | pam_sss_unknown_user | 1 |
+| pam_unix_session_closed | 1 |
 | sshd_connection_closed_preauth | 1 |
 | sshd_timeout_or_disconnection | 1 |
 
@@ -57,3 +58,4 @@
 | 12 | unrecognized auth pattern: pam_sss_unknown_user |
 | 14 | unrecognized auth pattern: sshd_connection_closed_preauth |
 | 15 | unrecognized auth pattern: sshd_timeout_or_disconnection |
+| 16 | unrecognized auth pattern: pam_unix_session_closed |

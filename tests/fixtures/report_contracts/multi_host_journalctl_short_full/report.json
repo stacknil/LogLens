@@ -4,20 +4,21 @@
   "input_mode": "journalctl_short_full",
   "timezone_present": true,
   "parser_quality": {
-    "total_input_lines": 15,
-    "total_lines": 15,
+    "total_input_lines": 16,
+    "total_lines": 16,
     "skipped_blank_lines": 0,
     "parsed_lines": 12,
-    "unparsed_lines": 3,
-    "parse_success_rate": 0.8000,
+    "unparsed_lines": 4,
+    "parse_success_rate": 0.7500,
     "top_unknown_patterns": [
       {"pattern": "pam_sss_unknown_user", "count": 1},
+      {"pattern": "pam_unix_session_closed", "count": 1},
       {"pattern": "sshd_connection_closed_preauth", "count": 1},
       {"pattern": "sshd_timeout_or_disconnection", "count": 1}
     ]
   },
   "parsed_event_count": 12,
-  "warning_count": 3,
+  "warning_count": 4,
   "finding_count": 3,
   "event_counts": [
     {"event_type": "ssh_failed_password", "count": 3},
@@ -44,7 +45,7 @@
       "hostname": "beta-host",
       "parsed_event_count": 5,
       "finding_count": 1,
-      "warning_count": 2,
+      "warning_count": 3,
       "event_counts": [
         {"event_type": "ssh_accepted_publickey", "count": 1},
         {"event_type": "pam_auth_failure", "count": 1},
@@ -87,6 +88,7 @@
   "warnings": [
     {"line_number": 12, "reason": "unrecognized auth pattern: pam_sss_unknown_user"},
     {"line_number": 14, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
-    {"line_number": 15, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"}
+    {"line_number": 15, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"},
+    {"line_number": 16, "reason": "unrecognized auth pattern: pam_unix_session_closed"}
   ]
 }

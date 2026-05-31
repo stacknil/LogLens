@@ -13,3 +13,4 @@ Wed 2026-03-11 09:13:38 UTC beta-host pam_sss(sshd:auth): received for user ghos
 Wed 2026-03-11 09:14:15 UTC beta-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/vi /etc/ssh/sshd_config
 Wed 2026-03-11 09:15:12 UTC alpha-host sshd[2307]: Connection closed by authenticating user alice 203.0.113.50 port 52290 [preauth]
 Wed 2026-03-11 09:16:18 UTC beta-host sshd[2402]: Timeout, client not responding from 203.0.113.51 port 52291
+Wed 2026-03-11 09:17:24 UTC beta-host pam_unix(sshd:session): session closed for user alice
