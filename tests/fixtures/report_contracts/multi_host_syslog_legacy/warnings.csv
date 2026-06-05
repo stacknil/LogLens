@@ -3,3 +3,4 @@ parse_warning,12,unrecognized auth pattern: pam_sss_unknown_user
 parse_warning,14,unrecognized auth pattern: sshd_connection_closed_preauth
 parse_warning,15,unrecognized auth pattern: sshd_timeout_or_disconnection
 parse_warning,16,unrecognized auth pattern: pam_unix_session_closed
+parse_warning,17,unrecognized auth pattern: sshd_negotiation_failure
