@@ -5,21 +5,21 @@
 - Input: `tests/fixtures/report_contracts/multi_host_journalctl_short_full/input.log`
 - Input mode: journalctl_short_full
 - Timezone present: true
-- Total input lines: 16
-- Total lines: 16
+- Total input lines: 17
+- Total lines: 17
 - Skipped blank lines: 0
 - Parsed lines: 12
-- Unparsed lines: 4
-- Parse success rate: 75.00%
+- Unparsed lines: 5
+- Parse success rate: 70.59%
 - Parsed events: 12
 - Findings: 3
-- Parser warnings: 4
+- Parser warnings: 5
 
 ## Host Summary
 
 | Host | Parsed Events | Findings | Warnings |
 | --- | ---: | ---: | ---: |
-| alpha-host | 7 | 2 | 1 |
+| alpha-host | 7 | 2 | 2 |
 | beta-host | 5 | 1 | 3 |
 
 ## Findings
@@ -48,6 +48,7 @@
 | pam_sss_unknown_user | 1 |
 | pam_unix_session_closed | 1 |
 | sshd_connection_closed_preauth | 1 |
+| sshd_negotiation_failure | 1 |
 | sshd_timeout_or_disconnection | 1 |
 
 ## Parser Warnings
@@ -58,3 +59,4 @@
 | 14 | unrecognized auth pattern: sshd_connection_closed_preauth |
 | 15 | unrecognized auth pattern: sshd_timeout_or_disconnection |
 | 16 | unrecognized auth pattern: pam_unix_session_closed |
+| 17 | unrecognized auth pattern: sshd_negotiation_failure |

@@ -14,3 +14,4 @@ Mar 11 09:14:15 beta-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=ro
 Mar 11 09:15:12 alpha-host sshd[1307]: Connection closed by authenticating user alice 203.0.113.50 port 52290 [preauth]
 Mar 11 09:16:18 beta-host sshd[1402]: Timeout, client not responding from 203.0.113.51 port 52291
 Mar 11 09:17:24 beta-host pam_unix(sshd:session): session closed for user alice
+Mar 11 09:18:32 alpha-host sshd[1308]: Unable to negotiate with 203.0.113.52 port 52292: no matching host key type found. Their offer: ssh-rsa
