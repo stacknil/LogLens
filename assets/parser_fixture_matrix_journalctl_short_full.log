@@ -17,6 +17,7 @@ Tue 2026-03-10 09:03:39 UTC example-host sshd[3019]: Failed keyboard-interactive
 Tue 2026-03-10 09:03:39 UTC example-host sshd[3020]: maximum authentication attempts exceeded for invalid user svc-maxauth from 203.0.113.47 port 52009 ssh2 [preauth]
 Tue 2026-03-10 09:03:39 UTC example-host sshd[3021]: Failed password for illegal user legacy-admin from 203.0.113.48 port 52017 ssh2
 Tue 2026-03-10 09:03:39 UTC example-host sshd[3022]: Illegal user legacy-backup from 203.0.113.49 port 52018
+Tue 2026-03-10 09:03:39 UTC example-host sshd[3025]: Failed none for invalid user svc-none from 203.0.113.59 port 52021 ssh2
 Tue 2026-03-10 09:03:40 UTC example-host sshd[3003]: Connection closed by user alice 203.0.113.50 port 52010 [preauth]
 Tue 2026-03-10 09:04:05 UTC example-host sshd[3004]: Connection closed by authenticating user carol 203.0.113.51 port 52011 [preauth]
 Tue 2026-03-10 09:04:28 UTC example-host sshd[3005]: Connection closed by invalid user deploy 203.0.113.52 port 52012 [preauth]
