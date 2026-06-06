@@ -25,3 +25,4 @@ Mar 10 09:05:34 example-host sshd[2007]: Timeout, client not responding from 203
 Mar 10 09:05:46 example-host sshd[2010]: Received disconnect from 203.0.113.55 port 52015:11: disconnected by user
 Mar 10 09:05:58 example-host sshd[2011]: Unable to negotiate with 203.0.113.56 port 52016: no matching host key type found. Their offer: ssh-rsa
 Mar 10 09:06:10 example-host pam_unix(sshd:session): session closed for user alice
+Mar 10 09:06:24 example-host sshd[2023]: error: maximum authentication attempts exceeded for invalid user svc-error-maxauth from 203.0.113.57 port 52019 ssh2 [preauth]
