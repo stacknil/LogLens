@@ -548,19 +548,20 @@ void test_unknown_auth_patterns_are_warnings_only() {
         "Mar 10 08:11:22 example-host sshd[1234]: Failed password for root from 203.0.113.10 port 51022 ssh2\n"
         "Mar 10 08:12:05 example-host sshd[1235]: Failed publickey for invalid user svc-backup from 203.0.113.10 port 51030 ssh2\n"
         "Mar 10 08:13:10 example-host sshd[1236]: Connection closed by authenticating user alice 203.0.113.50 port 51290 [preauth]\n"
+        "Mar 10 08:13:40 example-host sshd[1238]: Connection reset by invalid user deploy 203.0.113.52 port 51292 [preauth]\n"
         "Mar 10 08:14:44 example-host sshd[1237]: Timeout, client not responding from 203.0.113.51 port 51291\n");
 
     const auto result = parser.parse_stream(input);
     expect(result.events.size() == 2, "expected only recognized lines to become events");
-    expect(result.warnings.size() == 2, "expected unknown auth patterns to become warnings");
-    expect(result.quality.total_lines == 4, "expected total analyzed line count");
+    expect(result.warnings.size() == 3, "expected unknown auth patterns to become warnings");
+    expect(result.quality.total_lines == 5, "expected total analyzed line count");
     expect(result.quality.parsed_lines == 2, "expected parsed line count");
-    expect(result.quality.unparsed_lines == 2, "expected unparsed line count");
-    expect(result.quality.parse_success_rate == 0.5, "expected parse success rate");
+    expect(result.quality.unparsed_lines == 3, "expected unparsed line count");
+    expect(result.quality.parse_success_rate == 0.4, "expected parse success rate");
     expect(result.quality.top_unknown_patterns.size() == 2, "expected two unknown pattern buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
-           "expected preauth connection close pattern");
-    expect(result.quality.top_unknown_patterns[0].count == 1, "expected preauth connection close count");
+           "expected preauth connection close/reset pattern");
+    expect(result.quality.top_unknown_patterns[0].count == 2, "expected preauth connection close/reset count");
     expect(result.quality.top_unknown_patterns[1].pattern == "sshd_timeout_or_disconnection",
            "expected timeout/disconnection pattern");
     expect(result.quality.top_unknown_patterns[1].count == 1, "expected timeout/disconnection count");
@@ -646,11 +647,11 @@ void test_syslog_fixture_matrix_file() {
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_syslog.log"));
 
     expect(result.events.size() == 20, "expected twenty recognized syslog fixture events");
-    expect(result.warnings.size() == 8, "expected eight syslog fixture warnings");
-    expect(result.quality.total_lines == 28, "expected twenty-eight syslog fixture lines");
+    expect(result.warnings.size() == 9, "expected nine syslog fixture warnings");
+    expect(result.quality.total_lines == 29, "expected twenty-nine syslog fixture lines");
     expect(result.quality.parsed_lines == 20, "expected twenty parsed syslog fixture lines");
-    expect(result.quality.unparsed_lines == 8, "expected eight unparsed syslog fixture lines");
-    expect_close(result.quality.parse_success_rate, 20.0 / 28.0, 1e-9, "expected syslog fixture parse success rate");
+    expect(result.quality.unparsed_lines == 9, "expected nine unparsed syslog fixture lines");
+    expect_close(result.quality.parse_success_rate, 20.0 / 29.0, 1e-9, "expected syslog fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected failed publickey variant");
@@ -705,7 +706,7 @@ void test_syslog_fixture_matrix_file() {
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown syslog buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
            "expected preauth connection-close syslog bucket");
-    expect(result.quality.top_unknown_patterns[0].count == 3, "expected three preauth connection-close syslog lines");
+    expect(result.quality.top_unknown_patterns[0].count == 4, "expected four preauth connection-close/reset syslog lines");
     expect(result.quality.top_unknown_patterns[1].pattern == "sshd_timeout_or_disconnection",
            "expected timeout/disconnection syslog bucket");
     expect(result.quality.top_unknown_patterns[1].count == 3, "expected three timeout/disconnection syslog lines");
@@ -724,11 +725,11 @@ void test_journalctl_fixture_matrix_file() {
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_journalctl_short_full.log"));
 
     expect(result.events.size() == 20, "expected twenty recognized journalctl fixture events");
-    expect(result.warnings.size() == 8, "expected eight journalctl fixture warnings");
-    expect(result.quality.total_lines == 28, "expected twenty-eight journalctl fixture lines");
+    expect(result.warnings.size() == 9, "expected nine journalctl fixture warnings");
+    expect(result.quality.total_lines == 29, "expected twenty-nine journalctl fixture lines");
     expect(result.quality.parsed_lines == 20, "expected twenty parsed journalctl fixture lines");
-    expect(result.quality.unparsed_lines == 8, "expected eight unparsed journalctl fixture lines");
-    expect_close(result.quality.parse_success_rate, 20.0 / 28.0, 1e-9, "expected journalctl fixture parse success rate");
+    expect(result.quality.unparsed_lines == 9, "expected nine unparsed journalctl fixture lines");
+    expect_close(result.quality.parse_success_rate, 20.0 / 29.0, 1e-9, "expected journalctl fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected journalctl failed publickey variant");
@@ -773,7 +774,7 @@ void test_journalctl_fixture_matrix_file() {
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown journalctl buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "sshd_connection_closed_preauth",
            "expected preauth connection-close journalctl bucket");
-    expect(result.quality.top_unknown_patterns[0].count == 3, "expected three preauth connection-close journalctl lines");
+    expect(result.quality.top_unknown_patterns[0].count == 4, "expected four preauth connection-close/reset journalctl lines");
     expect(result.quality.top_unknown_patterns[1].pattern == "sshd_timeout_or_disconnection",
            "expected timeout/disconnection journalctl bucket");
     expect(result.quality.top_unknown_patterns[1].count == 3, "expected three timeout/disconnection journalctl lines");
