@@ -303,16 +303,28 @@ bool consume_invalid_or_illegal_user_prefix(std::string_view& remaining) {
 }
 
 bool parse_ssh_failed_message(std::string_view message, Event& event) {
-    static constexpr std::string_view failed_prefix = "Failed password for ";
-    if (!message.starts_with(failed_prefix)) {
+    static constexpr std::string_view failed_password_prefix = "Failed password for ";
+    static constexpr std::string_view failed_none_prefix = "Failed none for ";
+
+    bool failed_none = false;
+    std::string_view remaining;
+    if (message.starts_with(failed_password_prefix)) {
+        remaining = message.substr(failed_password_prefix.size());
+    } else if (message.starts_with(failed_none_prefix)) {
+        failed_none = true;
+        remaining = message.substr(failed_none_prefix.size());
+    } else {
         return false;
     }
 
-    auto remaining = message.substr(failed_prefix.size());
     const bool invalid_user = consume_invalid_or_illegal_user_prefix(remaining);
 
     const auto username = consume_token(remaining);
     if (username.empty()) {
+        return false;
+    }
+
+    if (failed_none && !invalid_user) {
         return false;
     }
 
