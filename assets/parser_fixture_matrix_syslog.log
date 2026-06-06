@@ -20,6 +20,7 @@ Mar 10 09:03:39 example-host sshd[2022]: Illegal user legacy-backup from 203.0.1
 Mar 10 09:03:40 example-host sshd[2003]: Connection closed by user alice 203.0.113.50 port 52010 [preauth]
 Mar 10 09:04:05 example-host sshd[2004]: Connection closed by authenticating user carol 203.0.113.51 port 52011 [preauth]
 Mar 10 09:04:28 example-host sshd[2005]: Connection closed by invalid user deploy 203.0.113.52 port 52012 [preauth]
+Mar 10 09:04:36 example-host sshd[2024]: Connection reset by invalid user deploy 203.0.113.58 port 52020 [preauth]
 Mar 10 09:05:02 example-host sshd[2006]: Disconnected from authenticating user dave 203.0.113.53 port 52013 [preauth]
 Mar 10 09:05:34 example-host sshd[2007]: Timeout, client not responding from 203.0.113.54 port 52014
 Mar 10 09:05:46 example-host sshd[2010]: Received disconnect from 203.0.113.55 port 52015:11: disconnected by user

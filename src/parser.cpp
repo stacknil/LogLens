@@ -663,7 +663,8 @@ std::string classify_unknown_pam_sss_pattern(std::string_view message) {
 std::string classify_unknown_auth_pattern(const Event& event) {
     const auto message = std::string_view{event.message};
     if (event.program == "sshd") {
-        if ((message.starts_with("Connection closed by ") || message.starts_with("Connection closed by authenticating user "))
+        if ((message.starts_with("Connection closed by ") || message.starts_with("Connection closed by authenticating user ")
+             || message.starts_with("Connection reset by "))
             && message.find("[preauth]") != std::string_view::npos) {
             return "sshd_connection_closed_preauth";
         }
