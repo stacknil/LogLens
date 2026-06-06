@@ -418,6 +418,11 @@ bool parse_ssh_failed_keyboard_interactive_message(std::string_view message, Eve
 
 bool parse_ssh_max_auth_tries_message(std::string_view message, Event& event) {
     static constexpr std::string_view max_auth_prefix = "maximum authentication attempts exceeded for ";
+    static constexpr std::string_view error_prefix = "error: ";
+    if (message.starts_with(error_prefix)) {
+        message.remove_prefix(error_prefix.size());
+    }
+
     if (!message.starts_with(max_auth_prefix)) {
         return false;
     }

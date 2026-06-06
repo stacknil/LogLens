@@ -26,7 +26,7 @@ The parser currently recognizes common authentication evidence from:
 - selected `pam_faillock(...)` variants
 - selected `pam_sss(...)` variants
 
-Recognized SSH failure families include failed password, invalid user, illegal user, failed publickey, failed keyboard-interactive/pam, and maximum-authentication-attempts-exceeded lines. `illegal user` is treated as an OpenSSH wording variant of `invalid user`. Invalid or illegal-user variants of keyboard-interactive and maximum-authentication-attempts-exceeded lines are normalized into `ssh_invalid_user` events. Recognized SSH failures can become detection signals through the configured signal mapping.
+Recognized SSH failure families include failed password, invalid user, illegal user, failed publickey, failed keyboard-interactive/pam, and maximum-authentication-attempts-exceeded lines. `illegal user` is treated as an OpenSSH wording variant of `invalid user`. Maximum-authentication-attempts lines may include OpenSSH's leading `error:` marker and still normalize into the same event family. Invalid or illegal-user variants of keyboard-interactive and maximum-authentication-attempts-exceeded lines are normalized into `ssh_invalid_user` events. Recognized SSH failures can become detection signals through the configured signal mapping.
 
 Recognized success or audit families include accepted password, accepted publickey, accepted keyboard-interactive/pam, sudo command audit lines, sudo password failures, sudoers policy denials, su success/failure audit lines, and selected PAM session/auth lines.
 
