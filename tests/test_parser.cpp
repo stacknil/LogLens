@@ -104,6 +104,19 @@ void test_failed_none_invalid_user_is_normalized_as_invalid_user() {
            "expected failed-none invalid-user to normalize to invalid-user type");
 }
 
+void test_failed_none_illegal_user_is_normalized_as_invalid_user() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:11:27 example-host sshd[1239]: Failed none for illegal user legacy-none from 203.0.113.15 port 51027 ssh2",
+        1);
+
+    expect(event.has_value(), "expected failed-none illegal-user event");
+    expect(event->username == "legacy-none", "expected failed-none illegal username");
+    expect(event->source_ip == "203.0.113.15", "expected failed-none illegal source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected failed-none illegal-user to normalize to invalid-user type");
+}
+
 void test_failed_none_without_invalid_user_stays_unsupported() {
     const auto parser = make_syslog_parser();
     std::string error;
@@ -736,12 +749,12 @@ void test_syslog_fixture_matrix_file() {
     const auto parser = make_syslog_parser();
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_syslog.log"));
 
-    expect(result.events.size() == 21, "expected twenty-one recognized syslog fixture events");
+    expect(result.events.size() == 22, "expected twenty-two recognized syslog fixture events");
     expect(result.warnings.size() == 9, "expected nine syslog fixture warnings");
-    expect(result.quality.total_lines == 30, "expected thirty syslog fixture lines");
-    expect(result.quality.parsed_lines == 21, "expected twenty-one parsed syslog fixture lines");
+    expect(result.quality.total_lines == 31, "expected thirty-one syslog fixture lines");
+    expect(result.quality.parsed_lines == 22, "expected twenty-two parsed syslog fixture lines");
     expect(result.quality.unparsed_lines == 9, "expected nine unparsed syslog fixture lines");
-    expect_close(result.quality.parse_success_rate, 21.0 / 30.0, 1e-9, "expected syslog fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 22.0 / 31.0, 1e-9, "expected syslog fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected failed publickey variant");
@@ -792,8 +805,11 @@ void test_syslog_fixture_matrix_file() {
            "expected failed-none invalid-user variant");
     expect(result.events[19].username == "svc-none", "expected failed-none invalid username");
     expect(result.events[20].event_type == loglens::EventType::SshInvalidUser,
+           "expected failed-none illegal-user variant");
+    expect(result.events[20].username == "legacy-none", "expected failed-none illegal username");
+    expect(result.events[21].event_type == loglens::EventType::SshInvalidUser,
            "expected error-prefixed max-auth-tries invalid-user variant");
-    expect(result.events[20].username == "svc-error-maxauth",
+    expect(result.events[21].username == "svc-error-maxauth",
            "expected error-prefixed max-auth-tries invalid username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown syslog buckets");
@@ -817,12 +833,12 @@ void test_journalctl_fixture_matrix_file() {
         std::nullopt});
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_journalctl_short_full.log"));
 
-    expect(result.events.size() == 21, "expected twenty-one recognized journalctl fixture events");
+    expect(result.events.size() == 22, "expected twenty-two recognized journalctl fixture events");
     expect(result.warnings.size() == 9, "expected nine journalctl fixture warnings");
-    expect(result.quality.total_lines == 30, "expected thirty journalctl fixture lines");
-    expect(result.quality.parsed_lines == 21, "expected twenty-one parsed journalctl fixture lines");
+    expect(result.quality.total_lines == 31, "expected thirty-one journalctl fixture lines");
+    expect(result.quality.parsed_lines == 22, "expected twenty-two parsed journalctl fixture lines");
     expect(result.quality.unparsed_lines == 9, "expected nine unparsed journalctl fixture lines");
-    expect_close(result.quality.parse_success_rate, 21.0 / 30.0, 1e-9, "expected journalctl fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 22.0 / 31.0, 1e-9, "expected journalctl fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected journalctl failed publickey variant");
@@ -863,8 +879,11 @@ void test_journalctl_fixture_matrix_file() {
            "expected journalctl failed-none invalid-user variant");
     expect(result.events[19].username == "svc-none", "expected journalctl failed-none invalid username");
     expect(result.events[20].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl failed-none illegal-user variant");
+    expect(result.events[20].username == "legacy-none", "expected journalctl failed-none illegal username");
+    expect(result.events[21].event_type == loglens::EventType::SshInvalidUser,
            "expected journalctl error-prefixed max-auth-tries invalid-user variant");
-    expect(result.events[20].username == "svc-error-maxauth",
+    expect(result.events[21].username == "svc-error-maxauth",
            "expected journalctl error-prefixed max-auth-tries invalid username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown journalctl buckets");
@@ -888,6 +907,7 @@ int main() {
     test_invalid_user_failure();
     test_illegal_user_failure_is_normalized_as_invalid_user();
     test_failed_none_invalid_user_is_normalized_as_invalid_user();
+    test_failed_none_illegal_user_is_normalized_as_invalid_user();
     test_failed_none_without_invalid_user_stays_unsupported();
     test_illegal_user_message_is_normalized_as_invalid_user();
     test_standard_failure();
