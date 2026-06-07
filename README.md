@@ -66,6 +66,7 @@ LogLens currently parses and reports these additional auth patterns beyond the c
 - `Accepted keyboard-interactive/pam` SSH successes
 - `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
 - `Failed keyboard-interactive/pam` and `maximum authentication attempts exceeded` SSH failures, which count toward SSH brute-force detection by default
+- `sshd`-owned `PAM: Authentication failure ...` lines, with invalid/illegal-user variants normalized to `ssh_invalid_user`
 - `sudo` command, password-failure, and sudoers policy-denial audit lines
 - `su` success and failure audit lines
 - `pam_unix(...:auth): authentication failure`
@@ -95,7 +96,7 @@ LogLens does not currently detect:
 - Lateral movement
 - MFA abuse
 - SSH key misuse
-- Many PAM-specific failures beyond the parsed `pam_unix`, `pam_faillock`, and `pam_sss` sample patterns
+- Many PAM-specific failures beyond the parsed `sshd`, `pam_unix`, `pam_faillock`, and `pam_sss` sample patterns
 - Cross-file or cross-host correlation
 
 ## Build

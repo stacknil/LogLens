@@ -1,6 +1,9 @@
 Wed 2026-03-11 10:00:01 UTC example-host sshd[3100]: Accepted publickey for alice from 203.0.113.70 port 53000 ssh2: ED25519 SHA256:SANITIZEDKEY
 Wed 2026-03-11 10:00:20 UTC example-host sshd[3101]: Accepted password for bob from 203.0.113.73 port 53001 ssh2
 Wed 2026-03-11 10:00:36 UTC example-host sshd[3102]: Failed publickey for invalid user svc-deploy from 203.0.113.74 port 53002 ssh2
+Wed 2026-03-11 10:00:38 UTC example-host sshd[3103]: PAM: Authentication failure for alice from 203.0.113.76
+Wed 2026-03-11 10:00:39 UTC example-host sshd[3104]: PAM: Authentication failure for invalid user svc-pam from 203.0.113.77
+Wed 2026-03-11 10:00:40 UTC example-host sshd[3105]: PAM: Authentication failure for illegal user svc-pam-legacy from 203.0.113.78
 Wed 2026-03-11 10:00:42 UTC example-host pam_faillock(sshd:auth): Consecutive login failures for user alice account temporarily locked from 203.0.113.71
 Wed 2026-03-11 10:01:13 UTC example-host pam_faillock(sshd:auth): Authentication failure for user bob from 203.0.113.72
 Wed 2026-03-11 10:01:40 UTC example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.75  user=carol
