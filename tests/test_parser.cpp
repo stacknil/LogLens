@@ -355,6 +355,48 @@ void test_max_auth_tries_illegal_user_event() {
            "expected max-auth-tries illegal-user type");
 }
 
+void test_ssh_pam_auth_failure_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:28:40 example-host sshd[1251]: PAM: Authentication failure for alice from 203.0.113.84",
+        6);
+
+    expect(event.has_value(), "expected sshd-owned pam auth failure event");
+    expect(event->program == "sshd", "expected sshd program");
+    expect(event->username == "alice", "expected sshd-owned pam username");
+    expect(event->source_ip == "203.0.113.84", "expected sshd-owned pam source ip");
+    expect(event->event_type == loglens::EventType::PamAuthFailure,
+           "expected sshd-owned pam auth failure type");
+}
+
+void test_ssh_pam_auth_failure_invalid_user_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:28:41 example-host sshd[1252]: PAM: Authentication failure for invalid user svc-pam from 203.0.113.85",
+        6);
+
+    expect(event.has_value(), "expected sshd-owned pam invalid-user event");
+    expect(event->program == "sshd", "expected sshd program for invalid-user pam line");
+    expect(event->username == "svc-pam", "expected sshd-owned pam invalid username");
+    expect(event->source_ip == "203.0.113.85", "expected sshd-owned pam invalid source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected sshd-owned pam invalid-user type");
+}
+
+void test_ssh_pam_auth_failure_illegal_user_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:28:42 example-host sshd[1253]: PAM: Authentication failure for illegal user svc-pam-legacy from 203.0.113.86",
+        6);
+
+    expect(event.has_value(), "expected sshd-owned pam illegal-user event");
+    expect(event->program == "sshd", "expected sshd program for illegal-user pam line");
+    expect(event->username == "svc-pam-legacy", "expected sshd-owned pam illegal username");
+    expect(event->source_ip == "203.0.113.86", "expected sshd-owned pam illegal source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected sshd-owned pam illegal-user type");
+}
+
 void test_pam_auth_failure_event() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -454,12 +496,12 @@ void test_syslog_auth_family_fixture_file() {
     const auto parser = make_syslog_parser();
     const auto result = parser.parse_file(asset_path("parser_auth_families_syslog.log"));
 
-    expect(result.events.size() == 8, "expected eight recognized syslog auth-family events");
+    expect(result.events.size() == 11, "expected eleven recognized syslog auth-family events");
     expect(result.warnings.size() == 5, "expected five syslog auth-family warnings");
-    expect(result.quality.total_lines == 13, "expected thirteen syslog auth-family lines");
-    expect(result.quality.parsed_lines == 8, "expected eight parsed syslog auth-family lines");
+    expect(result.quality.total_lines == 16, "expected sixteen syslog auth-family lines");
+    expect(result.quality.parsed_lines == 11, "expected eleven parsed syslog auth-family lines");
     expect(result.quality.unparsed_lines == 5, "expected five unparsed syslog auth-family lines");
-    expect_close(result.quality.parse_success_rate, 8.0 / 13.0, 1e-9,
+    expect_close(result.quality.parse_success_rate, 11.0 / 16.0, 1e-9,
                  "expected syslog auth-family parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshAcceptedPublicKey,
@@ -472,24 +514,36 @@ void test_syslog_auth_family_fixture_file() {
            "expected failed publickey auth-family event");
     expect(result.events[2].username == "svc-deploy", "expected failed publickey username");
     expect(result.events[3].event_type == loglens::EventType::PamAuthFailure,
-           "expected pam_faillock preauth auth-family event");
-    expect(result.events[3].username == "alice", "expected pam_faillock preauth username");
-    expect(result.events[3].source_ip == "203.0.113.71", "expected pam_faillock preauth source ip");
-    expect(result.events[4].event_type == loglens::EventType::PamAuthFailure,
-           "expected pam_faillock authfail auth-family event");
-    expect(result.events[4].username == "bob", "expected pam_faillock authfail username");
-    expect(result.events[4].source_ip == "203.0.113.72", "expected pam_faillock authfail source ip");
-    expect(result.events[5].event_type == loglens::EventType::PamAuthFailure,
-           "expected pam_unix auth-family event");
-    expect(result.events[5].username == "carol", "expected pam_unix auth-family username");
-    expect(result.events[5].source_ip == "203.0.113.75", "expected pam_unix auth-family source ip");
+           "expected sshd-owned pam auth-family event");
+    expect(result.events[3].username == "alice", "expected sshd-owned pam username");
+    expect(result.events[3].source_ip == "203.0.113.76", "expected sshd-owned pam source ip");
+    expect(result.events[4].event_type == loglens::EventType::SshInvalidUser,
+           "expected sshd-owned pam invalid-user auth-family event");
+    expect(result.events[4].username == "svc-pam", "expected sshd-owned pam invalid username");
+    expect(result.events[4].source_ip == "203.0.113.77", "expected sshd-owned pam invalid source ip");
+    expect(result.events[5].event_type == loglens::EventType::SshInvalidUser,
+           "expected sshd-owned pam illegal-user auth-family event");
+    expect(result.events[5].username == "svc-pam-legacy", "expected sshd-owned pam illegal username");
+    expect(result.events[5].source_ip == "203.0.113.78", "expected sshd-owned pam illegal source ip");
     expect(result.events[6].event_type == loglens::EventType::PamAuthFailure,
+           "expected pam_faillock preauth auth-family event");
+    expect(result.events[6].username == "alice", "expected pam_faillock preauth username");
+    expect(result.events[6].source_ip == "203.0.113.71", "expected pam_faillock preauth source ip");
+    expect(result.events[7].event_type == loglens::EventType::PamAuthFailure,
+           "expected pam_faillock authfail auth-family event");
+    expect(result.events[7].username == "bob", "expected pam_faillock authfail username");
+    expect(result.events[7].source_ip == "203.0.113.72", "expected pam_faillock authfail source ip");
+    expect(result.events[8].event_type == loglens::EventType::PamAuthFailure,
+           "expected pam_unix auth-family event");
+    expect(result.events[8].username == "carol", "expected pam_unix auth-family username");
+    expect(result.events[8].source_ip == "203.0.113.75", "expected pam_unix auth-family source ip");
+    expect(result.events[9].event_type == loglens::EventType::PamAuthFailure,
            "expected pam_sss failure auth-family event");
-    expect(result.events[6].username == "dave", "expected pam_sss failure username");
-    expect(result.events[6].source_ip.empty(), "expected pam_sss failure fixture to stay source-less");
-    expect(result.events[7].event_type == loglens::EventType::SessionOpened,
+    expect(result.events[9].username == "dave", "expected pam_sss failure username");
+    expect(result.events[9].source_ip.empty(), "expected pam_sss failure fixture to stay source-less");
+    expect(result.events[10].event_type == loglens::EventType::SessionOpened,
            "expected pam_unix session-opened auth-family event");
-    expect(result.events[7].username == "erin", "expected pam_unix session-opened username");
+    expect(result.events[10].username == "erin", "expected pam_unix session-opened username");
 
     expect(result.quality.top_unknown_patterns.size() == 5, "expected five syslog auth-family buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_authsucc",
@@ -513,12 +567,12 @@ void test_journalctl_auth_family_fixture_file() {
     const auto parser = make_journalctl_parser();
     const auto result = parser.parse_file(asset_path("parser_auth_families_journalctl_short_full.log"));
 
-    expect(result.events.size() == 8, "expected eight recognized journalctl auth-family events");
+    expect(result.events.size() == 11, "expected eleven recognized journalctl auth-family events");
     expect(result.warnings.size() == 5, "expected five journalctl auth-family warnings");
-    expect(result.quality.total_lines == 13, "expected thirteen journalctl auth-family lines");
-    expect(result.quality.parsed_lines == 8, "expected eight parsed journalctl auth-family lines");
+    expect(result.quality.total_lines == 16, "expected sixteen journalctl auth-family lines");
+    expect(result.quality.parsed_lines == 11, "expected eleven parsed journalctl auth-family lines");
     expect(result.quality.unparsed_lines == 5, "expected five unparsed journalctl auth-family lines");
-    expect_close(result.quality.parse_success_rate, 8.0 / 13.0, 1e-9,
+    expect_close(result.quality.parse_success_rate, 11.0 / 16.0, 1e-9,
                  "expected journalctl auth-family parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshAcceptedPublicKey,
@@ -529,15 +583,26 @@ void test_journalctl_auth_family_fixture_file() {
     expect(result.events[2].event_type == loglens::EventType::SshFailedPublicKey,
            "expected journalctl failed publickey auth-family event");
     expect(result.events[3].event_type == loglens::EventType::PamAuthFailure,
-           "expected journalctl pam_faillock preauth auth-family event");
-    expect(result.events[4].event_type == loglens::EventType::PamAuthFailure,
-           "expected journalctl pam_faillock authfail auth-family event");
-    expect(result.events[5].event_type == loglens::EventType::PamAuthFailure,
-           "expected journalctl pam_unix auth-family event");
+           "expected journalctl sshd-owned pam auth-family event");
+    expect(result.events[3].source_ip == "203.0.113.76",
+           "expected journalctl sshd-owned pam source ip");
+    expect(result.events[4].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl sshd-owned pam invalid-user auth-family event");
+    expect(result.events[4].username == "svc-pam", "expected journalctl sshd-owned pam invalid username");
+    expect(result.events[5].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl sshd-owned pam illegal-user auth-family event");
+    expect(result.events[5].username == "svc-pam-legacy",
+           "expected journalctl sshd-owned pam illegal username");
     expect(result.events[6].event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl pam_faillock preauth auth-family event");
+    expect(result.events[7].event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl pam_faillock authfail auth-family event");
+    expect(result.events[8].event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl pam_unix auth-family event");
+    expect(result.events[9].event_type == loglens::EventType::PamAuthFailure,
            "expected journalctl pam_sss failure auth-family event");
-    expect(result.events[6].source_ip.empty(), "expected journalctl pam_sss failure fixture to stay source-less");
-    expect(result.events[7].event_type == loglens::EventType::SessionOpened,
+    expect(result.events[9].source_ip.empty(), "expected journalctl pam_sss failure fixture to stay source-less");
+    expect(result.events[10].event_type == loglens::EventType::SessionOpened,
            "expected journalctl pam_unix session-opened auth-family event");
 
     expect(result.quality.top_unknown_patterns.size() == 5, "expected five journalctl auth-family buckets");
@@ -843,6 +908,9 @@ int main() {
     test_max_auth_tries_error_prefix_event();
     test_max_auth_tries_invalid_user_event();
     test_max_auth_tries_illegal_user_event();
+    test_ssh_pam_auth_failure_event();
+    test_ssh_pam_auth_failure_invalid_user_event();
+    test_ssh_pam_auth_failure_illegal_user_event();
     test_pam_auth_failure_event();
     test_pam_sss_received_failure_event();
     test_session_opened_event();
