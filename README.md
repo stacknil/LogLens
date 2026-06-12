@@ -66,7 +66,8 @@ LogLens currently parses and reports these additional auth patterns beyond the c
 - `Accepted keyboard-interactive/pam` SSH successes
 - `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
 - `Failed keyboard-interactive/pam` and `maximum authentication attempts exceeded` SSH failures, which count toward SSH brute-force detection by default
-- `sshd`-owned `PAM: Authentication failure ...` lines, with invalid/illegal-user variants normalized to `ssh_invalid_user`
+- `input_userauth_request: invalid/illegal user ...` preauth SSH traces normalized to `ssh_invalid_user`
+- `sshd`-owned `PAM: Authentication failure ...` lines, including OpenSSH's optional leading `error:` marker, with invalid/illegal-user variants normalized to `ssh_invalid_user`
 - `sudo` command, password-failure, and sudoers policy-denial audit lines
 - `su` success and failure audit lines
 - `pam_unix(...:auth): authentication failure`

@@ -454,7 +454,13 @@ bool parse_ssh_max_auth_tries_message(std::string_view message, Event& event) {
 }
 
 bool parse_ssh_pam_auth_failure_message(std::string_view message, Event& event) {
+    static constexpr std::string_view error_prefix = "error: ";
     static constexpr std::string_view pam_auth_prefix = "PAM: Authentication failure for ";
+
+    if (message.starts_with(error_prefix)) {
+        message.remove_prefix(error_prefix.size());
+    }
+
     if (!message.starts_with(pam_auth_prefix)) {
         return false;
     }
@@ -470,6 +476,27 @@ bool parse_ssh_pam_auth_failure_message(std::string_view message, Event& event) 
     event.username.assign(username);
     event.source_ip = extract_token_after(message, " from ");
     event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::PamAuthFailure;
+    return true;
+}
+
+bool parse_ssh_input_userauth_request_message(std::string_view message, Event& event) {
+    static constexpr std::string_view input_userauth_prefix = "input_userauth_request: ";
+    if (!message.starts_with(input_userauth_prefix)) {
+        return false;
+    }
+
+    auto remaining = message.substr(input_userauth_prefix.size());
+    if (!consume_invalid_or_illegal_user_prefix(remaining)) {
+        return false;
+    }
+
+    const auto username = consume_token(remaining);
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
+    event.event_type = EventType::SshInvalidUser;
     return true;
 }
 
@@ -766,6 +793,9 @@ bool classify_event(Event& event) {
             return true;
         }
         if (parse_ssh_pam_auth_failure_message(message, event)) {
+            return true;
+        }
+        if (parse_ssh_input_userauth_request_message(message, event)) {
             return true;
         }
         if (parse_ssh_invalid_user_message(message, event)) {
