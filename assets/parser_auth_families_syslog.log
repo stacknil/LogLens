@@ -4,6 +4,7 @@ Mar 11 10:00:36 example-host sshd[2102]: Failed publickey for invalid user svc-d
 Mar 11 10:00:38 example-host sshd[2103]: PAM: Authentication failure for alice from 203.0.113.76
 Mar 11 10:00:39 example-host sshd[2104]: PAM: Authentication failure for invalid user svc-pam from 203.0.113.77
 Mar 11 10:00:40 example-host sshd[2105]: PAM: Authentication failure for illegal user svc-pam-legacy from 203.0.113.78
+Mar 11 10:00:41 example-host sshd[2106]: error: PAM: Authentication failure for invalid user svc-pam-error from 203.0.113.79
 Mar 11 10:00:42 example-host pam_faillock(sshd:auth): Consecutive login failures for user alice account temporarily locked from 203.0.113.71
 Mar 11 10:01:13 example-host pam_faillock(sshd:auth): Authentication failure for user bob from 203.0.113.72
 Mar 11 10:01:40 example-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.75  user=carol

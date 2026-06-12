@@ -142,6 +142,32 @@ void test_illegal_user_message_is_normalized_as_invalid_user() {
            "expected direct illegal-user to normalize to invalid-user type");
 }
 
+void test_input_userauth_request_invalid_user_is_normalized_as_invalid_user() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:11:28 example-host sshd[1240]: input_userauth_request: invalid user svc-verbose [preauth]",
+        1);
+
+    expect(event.has_value(), "expected input_userauth_request invalid-user event");
+    expect(event->username == "svc-verbose", "expected input_userauth_request invalid username");
+    expect(event->source_ip.empty(), "expected input_userauth_request invalid-user line to stay source-less");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected input_userauth_request invalid-user to normalize to invalid-user type");
+}
+
+void test_input_userauth_request_illegal_user_is_normalized_as_invalid_user() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:11:29 example-host sshd[1241]: input_userauth_request: illegal user legacy-verbose [preauth]",
+        1);
+
+    expect(event.has_value(), "expected input_userauth_request illegal-user event");
+    expect(event->username == "legacy-verbose", "expected input_userauth_request illegal username");
+    expect(event->source_ip.empty(), "expected input_userauth_request illegal-user line to stay source-less");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected input_userauth_request illegal-user to normalize to invalid-user type");
+}
+
 void test_standard_failure() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -410,6 +436,20 @@ void test_ssh_pam_auth_failure_illegal_user_event() {
            "expected sshd-owned pam illegal-user type");
 }
 
+void test_ssh_pam_auth_failure_error_prefix_event() {
+    const auto parser = make_syslog_parser();
+    const auto event = parser.parse_line(
+        "Mar 10 08:28:43 example-host sshd[1254]: error: PAM: Authentication failure for invalid user svc-pam-error from 203.0.113.87",
+        6);
+
+    expect(event.has_value(), "expected error-prefixed sshd-owned pam invalid-user event");
+    expect(event->program == "sshd", "expected sshd program for error-prefixed pam line");
+    expect(event->username == "svc-pam-error", "expected error-prefixed sshd-owned pam invalid username");
+    expect(event->source_ip == "203.0.113.87", "expected error-prefixed sshd-owned pam source ip");
+    expect(event->event_type == loglens::EventType::SshInvalidUser,
+           "expected error-prefixed sshd-owned pam invalid-user type");
+}
+
 void test_pam_auth_failure_event() {
     const auto parser = make_syslog_parser();
     const auto event = parser.parse_line(
@@ -509,12 +549,12 @@ void test_syslog_auth_family_fixture_file() {
     const auto parser = make_syslog_parser();
     const auto result = parser.parse_file(asset_path("parser_auth_families_syslog.log"));
 
-    expect(result.events.size() == 11, "expected eleven recognized syslog auth-family events");
+    expect(result.events.size() == 12, "expected twelve recognized syslog auth-family events");
     expect(result.warnings.size() == 5, "expected five syslog auth-family warnings");
-    expect(result.quality.total_lines == 16, "expected sixteen syslog auth-family lines");
-    expect(result.quality.parsed_lines == 11, "expected eleven parsed syslog auth-family lines");
+    expect(result.quality.total_lines == 17, "expected seventeen syslog auth-family lines");
+    expect(result.quality.parsed_lines == 12, "expected twelve parsed syslog auth-family lines");
     expect(result.quality.unparsed_lines == 5, "expected five unparsed syslog auth-family lines");
-    expect_close(result.quality.parse_success_rate, 11.0 / 16.0, 1e-9,
+    expect_close(result.quality.parse_success_rate, 12.0 / 17.0, 1e-9,
                  "expected syslog auth-family parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshAcceptedPublicKey,
@@ -538,25 +578,31 @@ void test_syslog_auth_family_fixture_file() {
            "expected sshd-owned pam illegal-user auth-family event");
     expect(result.events[5].username == "svc-pam-legacy", "expected sshd-owned pam illegal username");
     expect(result.events[5].source_ip == "203.0.113.78", "expected sshd-owned pam illegal source ip");
-    expect(result.events[6].event_type == loglens::EventType::PamAuthFailure,
-           "expected pam_faillock preauth auth-family event");
-    expect(result.events[6].username == "alice", "expected pam_faillock preauth username");
-    expect(result.events[6].source_ip == "203.0.113.71", "expected pam_faillock preauth source ip");
+    expect(result.events[6].event_type == loglens::EventType::SshInvalidUser,
+           "expected error-prefixed sshd-owned pam invalid-user auth-family event");
+    expect(result.events[6].username == "svc-pam-error",
+           "expected error-prefixed sshd-owned pam invalid username");
+    expect(result.events[6].source_ip == "203.0.113.79",
+           "expected error-prefixed sshd-owned pam invalid source ip");
     expect(result.events[7].event_type == loglens::EventType::PamAuthFailure,
-           "expected pam_faillock authfail auth-family event");
-    expect(result.events[7].username == "bob", "expected pam_faillock authfail username");
-    expect(result.events[7].source_ip == "203.0.113.72", "expected pam_faillock authfail source ip");
+           "expected pam_faillock preauth auth-family event");
+    expect(result.events[7].username == "alice", "expected pam_faillock preauth username");
+    expect(result.events[7].source_ip == "203.0.113.71", "expected pam_faillock preauth source ip");
     expect(result.events[8].event_type == loglens::EventType::PamAuthFailure,
-           "expected pam_unix auth-family event");
-    expect(result.events[8].username == "carol", "expected pam_unix auth-family username");
-    expect(result.events[8].source_ip == "203.0.113.75", "expected pam_unix auth-family source ip");
+           "expected pam_faillock authfail auth-family event");
+    expect(result.events[8].username == "bob", "expected pam_faillock authfail username");
+    expect(result.events[8].source_ip == "203.0.113.72", "expected pam_faillock authfail source ip");
     expect(result.events[9].event_type == loglens::EventType::PamAuthFailure,
+           "expected pam_unix auth-family event");
+    expect(result.events[9].username == "carol", "expected pam_unix auth-family username");
+    expect(result.events[9].source_ip == "203.0.113.75", "expected pam_unix auth-family source ip");
+    expect(result.events[10].event_type == loglens::EventType::PamAuthFailure,
            "expected pam_sss failure auth-family event");
-    expect(result.events[9].username == "dave", "expected pam_sss failure username");
-    expect(result.events[9].source_ip.empty(), "expected pam_sss failure fixture to stay source-less");
-    expect(result.events[10].event_type == loglens::EventType::SessionOpened,
+    expect(result.events[10].username == "dave", "expected pam_sss failure username");
+    expect(result.events[10].source_ip.empty(), "expected pam_sss failure fixture to stay source-less");
+    expect(result.events[11].event_type == loglens::EventType::SessionOpened,
            "expected pam_unix session-opened auth-family event");
-    expect(result.events[10].username == "erin", "expected pam_unix session-opened username");
+    expect(result.events[11].username == "erin", "expected pam_unix session-opened username");
 
     expect(result.quality.top_unknown_patterns.size() == 5, "expected five syslog auth-family buckets");
     expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_authsucc",
@@ -580,12 +626,12 @@ void test_journalctl_auth_family_fixture_file() {
     const auto parser = make_journalctl_parser();
     const auto result = parser.parse_file(asset_path("parser_auth_families_journalctl_short_full.log"));
 
-    expect(result.events.size() == 11, "expected eleven recognized journalctl auth-family events");
+    expect(result.events.size() == 12, "expected twelve recognized journalctl auth-family events");
     expect(result.warnings.size() == 5, "expected five journalctl auth-family warnings");
-    expect(result.quality.total_lines == 16, "expected sixteen journalctl auth-family lines");
-    expect(result.quality.parsed_lines == 11, "expected eleven parsed journalctl auth-family lines");
+    expect(result.quality.total_lines == 17, "expected seventeen journalctl auth-family lines");
+    expect(result.quality.parsed_lines == 12, "expected twelve parsed journalctl auth-family lines");
     expect(result.quality.unparsed_lines == 5, "expected five unparsed journalctl auth-family lines");
-    expect_close(result.quality.parse_success_rate, 11.0 / 16.0, 1e-9,
+    expect_close(result.quality.parse_success_rate, 12.0 / 17.0, 1e-9,
                  "expected journalctl auth-family parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshAcceptedPublicKey,
@@ -606,16 +652,22 @@ void test_journalctl_auth_family_fixture_file() {
            "expected journalctl sshd-owned pam illegal-user auth-family event");
     expect(result.events[5].username == "svc-pam-legacy",
            "expected journalctl sshd-owned pam illegal username");
-    expect(result.events[6].event_type == loglens::EventType::PamAuthFailure,
-           "expected journalctl pam_faillock preauth auth-family event");
+    expect(result.events[6].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl error-prefixed sshd-owned pam invalid-user auth-family event");
+    expect(result.events[6].username == "svc-pam-error",
+           "expected journalctl error-prefixed sshd-owned pam invalid username");
+    expect(result.events[6].source_ip == "203.0.113.79",
+           "expected journalctl error-prefixed sshd-owned pam invalid source ip");
     expect(result.events[7].event_type == loglens::EventType::PamAuthFailure,
-           "expected journalctl pam_faillock authfail auth-family event");
+           "expected journalctl pam_faillock preauth auth-family event");
     expect(result.events[8].event_type == loglens::EventType::PamAuthFailure,
-           "expected journalctl pam_unix auth-family event");
+           "expected journalctl pam_faillock authfail auth-family event");
     expect(result.events[9].event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl pam_unix auth-family event");
+    expect(result.events[10].event_type == loglens::EventType::PamAuthFailure,
            "expected journalctl pam_sss failure auth-family event");
-    expect(result.events[9].source_ip.empty(), "expected journalctl pam_sss failure fixture to stay source-less");
-    expect(result.events[10].event_type == loglens::EventType::SessionOpened,
+    expect(result.events[10].source_ip.empty(), "expected journalctl pam_sss failure fixture to stay source-less");
+    expect(result.events[11].event_type == loglens::EventType::SessionOpened,
            "expected journalctl pam_unix session-opened auth-family event");
 
     expect(result.quality.top_unknown_patterns.size() == 5, "expected five journalctl auth-family buckets");
@@ -749,67 +801,73 @@ void test_syslog_fixture_matrix_file() {
     const auto parser = make_syslog_parser();
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_syslog.log"));
 
-    expect(result.events.size() == 22, "expected twenty-two recognized syslog fixture events");
+    expect(result.events.size() == 23, "expected twenty-three recognized syslog fixture events");
     expect(result.warnings.size() == 9, "expected nine syslog fixture warnings");
-    expect(result.quality.total_lines == 31, "expected thirty-one syslog fixture lines");
-    expect(result.quality.parsed_lines == 22, "expected twenty-two parsed syslog fixture lines");
+    expect(result.quality.total_lines == 32, "expected thirty-two syslog fixture lines");
+    expect(result.quality.parsed_lines == 23, "expected twenty-three parsed syslog fixture lines");
     expect(result.quality.unparsed_lines == 9, "expected nine unparsed syslog fixture lines");
-    expect_close(result.quality.parse_success_rate, 22.0 / 31.0, 1e-9, "expected syslog fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 23.0 / 32.0, 1e-9, "expected syslog fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected failed publickey variant");
     expect(result.events[2].event_type == loglens::EventType::SshInvalidUser, "expected invalid user variant");
-    expect(result.events[3].event_type == loglens::EventType::PamAuthFailure, "expected pam auth failure variant");
-    expect(result.events[4].event_type == loglens::EventType::SessionOpened, "expected sudo session-opened variant");
-    expect(result.events[5].event_type == loglens::EventType::SessionOpened, "expected su-l session-opened variant");
-    expect(result.events[6].event_type == loglens::EventType::SshAcceptedPassword, "expected accepted password variant");
-    expect(result.events[7].event_type == loglens::EventType::SshAcceptedPublicKey, "expected accepted publickey variant");
-    expect(result.events[4].username == "alice", "expected sudo session actor username");
-    expect(result.events[5].username == "bob", "expected su-l session actor username");
-    expect(result.events[6].username == "alice", "expected accepted password username");
-    expect(result.events[7].username == "carol", "expected accepted publickey username");
-    expect(result.events[8].event_type == loglens::EventType::SshAcceptedKeyboardInteractive,
+    expect(result.events[3].event_type == loglens::EventType::SshInvalidUser,
+           "expected input_userauth_request invalid-user variant");
+    expect(result.events[3].username == "svc-verbose",
+           "expected input_userauth_request invalid username");
+    expect(result.events[3].source_ip.empty(),
+           "expected input_userauth_request invalid-user fixture to stay source-less");
+    expect(result.events[4].event_type == loglens::EventType::PamAuthFailure, "expected pam auth failure variant");
+    expect(result.events[5].event_type == loglens::EventType::SessionOpened, "expected sudo session-opened variant");
+    expect(result.events[6].event_type == loglens::EventType::SessionOpened, "expected su-l session-opened variant");
+    expect(result.events[7].event_type == loglens::EventType::SshAcceptedPassword, "expected accepted password variant");
+    expect(result.events[8].event_type == loglens::EventType::SshAcceptedPublicKey, "expected accepted publickey variant");
+    expect(result.events[5].username == "alice", "expected sudo session actor username");
+    expect(result.events[6].username == "bob", "expected su-l session actor username");
+    expect(result.events[7].username == "alice", "expected accepted password username");
+    expect(result.events[8].username == "carol", "expected accepted publickey username");
+    expect(result.events[9].event_type == loglens::EventType::SshAcceptedKeyboardInteractive,
            "expected accepted keyboard-interactive variant");
-    expect(result.events[8].username == "dave", "expected accepted keyboard-interactive username");
-    expect(result.events[9].event_type == loglens::EventType::SudoAuthFailure,
+    expect(result.events[9].username == "dave", "expected accepted keyboard-interactive username");
+    expect(result.events[10].event_type == loglens::EventType::SudoAuthFailure,
            "expected sudo auth failure variant");
-    expect(result.events[9].username == "alice", "expected sudo auth failure username");
-    expect(result.events[10].event_type == loglens::EventType::SudoPolicyDenied,
+    expect(result.events[10].username == "alice", "expected sudo auth failure username");
+    expect(result.events[11].event_type == loglens::EventType::SudoPolicyDenied,
            "expected sudo policy denied variant");
-    expect(result.events[10].username == "bob", "expected sudo policy denied username");
-    expect(result.events[11].event_type == loglens::EventType::SuAuthFailure,
+    expect(result.events[11].username == "bob", "expected sudo policy denied username");
+    expect(result.events[12].event_type == loglens::EventType::SuAuthFailure,
            "expected su auth failure variant");
-    expect(result.events[11].username == "carol", "expected su auth failure username");
-    expect(result.events[12].event_type == loglens::EventType::SessionOpened,
+    expect(result.events[12].username == "carol", "expected su auth failure username");
+    expect(result.events[13].event_type == loglens::EventType::SessionOpened,
            "expected su success session-opened variant");
-    expect(result.events[12].username == "dave", "expected su success actor username");
-    expect(result.events[13].event_type == loglens::EventType::SshFailedKeyboardInteractive,
+    expect(result.events[13].username == "dave", "expected su success actor username");
+    expect(result.events[14].event_type == loglens::EventType::SshFailedKeyboardInteractive,
            "expected failed keyboard-interactive variant");
-    expect(result.events[13].username == "eve", "expected failed keyboard-interactive username");
-    expect(result.events[14].event_type == loglens::EventType::SshMaxAuthTries,
+    expect(result.events[14].username == "eve", "expected failed keyboard-interactive username");
+    expect(result.events[15].event_type == loglens::EventType::SshMaxAuthTries,
            "expected max-auth-tries variant");
-    expect(result.events[14].username == "frank", "expected max-auth-tries username");
-    expect(result.events[15].event_type == loglens::EventType::SshInvalidUser,
-           "expected keyboard-interactive invalid-user variant");
-    expect(result.events[15].username == "svc-keyboard", "expected keyboard-interactive invalid username");
+    expect(result.events[15].username == "frank", "expected max-auth-tries username");
     expect(result.events[16].event_type == loglens::EventType::SshInvalidUser,
-           "expected max-auth-tries invalid-user variant");
-    expect(result.events[16].username == "svc-maxauth", "expected max-auth-tries invalid username");
+           "expected keyboard-interactive invalid-user variant");
+    expect(result.events[16].username == "svc-keyboard", "expected keyboard-interactive invalid username");
     expect(result.events[17].event_type == loglens::EventType::SshInvalidUser,
-           "expected failed-password illegal-user variant");
-    expect(result.events[17].username == "legacy-admin", "expected failed-password illegal username");
+           "expected max-auth-tries invalid-user variant");
+    expect(result.events[17].username == "svc-maxauth", "expected max-auth-tries invalid username");
     expect(result.events[18].event_type == loglens::EventType::SshInvalidUser,
-           "expected direct illegal-user variant");
-    expect(result.events[18].username == "legacy-backup", "expected direct illegal username");
+           "expected failed-password illegal-user variant");
+    expect(result.events[18].username == "legacy-admin", "expected failed-password illegal username");
     expect(result.events[19].event_type == loglens::EventType::SshInvalidUser,
-           "expected failed-none invalid-user variant");
-    expect(result.events[19].username == "svc-none", "expected failed-none invalid username");
+           "expected direct illegal-user variant");
+    expect(result.events[19].username == "legacy-backup", "expected direct illegal username");
     expect(result.events[20].event_type == loglens::EventType::SshInvalidUser,
-           "expected failed-none illegal-user variant");
-    expect(result.events[20].username == "legacy-none", "expected failed-none illegal username");
+           "expected failed-none invalid-user variant");
+    expect(result.events[20].username == "svc-none", "expected failed-none invalid username");
     expect(result.events[21].event_type == loglens::EventType::SshInvalidUser,
+           "expected failed-none illegal-user variant");
+    expect(result.events[21].username == "legacy-none", "expected failed-none illegal username");
+    expect(result.events[22].event_type == loglens::EventType::SshInvalidUser,
            "expected error-prefixed max-auth-tries invalid-user variant");
-    expect(result.events[21].username == "svc-error-maxauth",
+    expect(result.events[22].username == "svc-error-maxauth",
            "expected error-prefixed max-auth-tries invalid username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown syslog buckets");
@@ -833,57 +891,64 @@ void test_journalctl_fixture_matrix_file() {
         std::nullopt});
     const auto result = parser.parse_file(asset_path("parser_fixture_matrix_journalctl_short_full.log"));
 
-    expect(result.events.size() == 22, "expected twenty-two recognized journalctl fixture events");
+    expect(result.events.size() == 23, "expected twenty-three recognized journalctl fixture events");
     expect(result.warnings.size() == 9, "expected nine journalctl fixture warnings");
-    expect(result.quality.total_lines == 31, "expected thirty-one journalctl fixture lines");
-    expect(result.quality.parsed_lines == 22, "expected twenty-two parsed journalctl fixture lines");
+    expect(result.quality.total_lines == 32, "expected thirty-two journalctl fixture lines");
+    expect(result.quality.parsed_lines == 23, "expected twenty-three parsed journalctl fixture lines");
     expect(result.quality.unparsed_lines == 9, "expected nine unparsed journalctl fixture lines");
-    expect_close(result.quality.parse_success_rate, 22.0 / 31.0, 1e-9, "expected journalctl fixture parse success rate");
+    expect_close(result.quality.parse_success_rate, 23.0 / 32.0, 1e-9,
+                 "expected journalctl fixture parse success rate");
 
     expect(result.events[0].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid-user failed password");
     expect(result.events[1].event_type == loglens::EventType::SshFailedPublicKey, "expected journalctl failed publickey variant");
     expect(result.events[2].event_type == loglens::EventType::SshInvalidUser, "expected journalctl invalid user variant");
-    expect(result.events[3].event_type == loglens::EventType::PamAuthFailure, "expected journalctl pam auth failure variant");
-    expect(result.events[4].event_type == loglens::EventType::SessionOpened, "expected journalctl sudo session-opened variant");
-    expect(result.events[5].event_type == loglens::EventType::SessionOpened, "expected journalctl su-l session-opened variant");
-    expect(result.events[6].event_type == loglens::EventType::SshAcceptedPassword, "expected journalctl accepted password variant");
-    expect(result.events[7].event_type == loglens::EventType::SshAcceptedPublicKey, "expected journalctl accepted publickey variant");
-    expect(result.events[8].event_type == loglens::EventType::SshAcceptedKeyboardInteractive,
+    expect(result.events[3].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl input_userauth_request invalid-user variant");
+    expect(result.events[3].username == "svc-verbose",
+           "expected journalctl input_userauth_request invalid username");
+    expect(result.events[3].source_ip.empty(),
+           "expected journalctl input_userauth_request invalid-user fixture to stay source-less");
+    expect(result.events[4].event_type == loglens::EventType::PamAuthFailure, "expected journalctl pam auth failure variant");
+    expect(result.events[5].event_type == loglens::EventType::SessionOpened, "expected journalctl sudo session-opened variant");
+    expect(result.events[6].event_type == loglens::EventType::SessionOpened, "expected journalctl su-l session-opened variant");
+    expect(result.events[7].event_type == loglens::EventType::SshAcceptedPassword, "expected journalctl accepted password variant");
+    expect(result.events[8].event_type == loglens::EventType::SshAcceptedPublicKey, "expected journalctl accepted publickey variant");
+    expect(result.events[9].event_type == loglens::EventType::SshAcceptedKeyboardInteractive,
            "expected journalctl accepted keyboard-interactive variant");
-    expect(result.events[9].event_type == loglens::EventType::SudoAuthFailure,
+    expect(result.events[10].event_type == loglens::EventType::SudoAuthFailure,
            "expected journalctl sudo auth failure variant");
-    expect(result.events[10].event_type == loglens::EventType::SudoPolicyDenied,
+    expect(result.events[11].event_type == loglens::EventType::SudoPolicyDenied,
            "expected journalctl sudo policy denied variant");
-    expect(result.events[11].event_type == loglens::EventType::SuAuthFailure,
+    expect(result.events[12].event_type == loglens::EventType::SuAuthFailure,
            "expected journalctl su auth failure variant");
-    expect(result.events[12].event_type == loglens::EventType::SessionOpened,
+    expect(result.events[13].event_type == loglens::EventType::SessionOpened,
            "expected journalctl su success session-opened variant");
-    expect(result.events[13].event_type == loglens::EventType::SshFailedKeyboardInteractive,
+    expect(result.events[14].event_type == loglens::EventType::SshFailedKeyboardInteractive,
            "expected journalctl failed keyboard-interactive variant");
-    expect(result.events[14].event_type == loglens::EventType::SshMaxAuthTries,
+    expect(result.events[15].event_type == loglens::EventType::SshMaxAuthTries,
            "expected journalctl max-auth-tries variant");
-    expect(result.events[15].event_type == loglens::EventType::SshInvalidUser,
-           "expected journalctl keyboard-interactive invalid-user variant");
-    expect(result.events[15].username == "svc-keyboard",
-           "expected journalctl keyboard-interactive invalid username");
     expect(result.events[16].event_type == loglens::EventType::SshInvalidUser,
-           "expected journalctl max-auth-tries invalid-user variant");
-    expect(result.events[16].username == "svc-maxauth", "expected journalctl max-auth-tries invalid username");
+           "expected journalctl keyboard-interactive invalid-user variant");
+    expect(result.events[16].username == "svc-keyboard",
+           "expected journalctl keyboard-interactive invalid username");
     expect(result.events[17].event_type == loglens::EventType::SshInvalidUser,
-           "expected journalctl failed-password illegal-user variant");
-    expect(result.events[17].username == "legacy-admin", "expected journalctl failed-password illegal username");
+           "expected journalctl max-auth-tries invalid-user variant");
+    expect(result.events[17].username == "svc-maxauth", "expected journalctl max-auth-tries invalid username");
     expect(result.events[18].event_type == loglens::EventType::SshInvalidUser,
-           "expected journalctl direct illegal-user variant");
-    expect(result.events[18].username == "legacy-backup", "expected journalctl direct illegal username");
+           "expected journalctl failed-password illegal-user variant");
+    expect(result.events[18].username == "legacy-admin", "expected journalctl failed-password illegal username");
     expect(result.events[19].event_type == loglens::EventType::SshInvalidUser,
-           "expected journalctl failed-none invalid-user variant");
-    expect(result.events[19].username == "svc-none", "expected journalctl failed-none invalid username");
+           "expected journalctl direct illegal-user variant");
+    expect(result.events[19].username == "legacy-backup", "expected journalctl direct illegal username");
     expect(result.events[20].event_type == loglens::EventType::SshInvalidUser,
-           "expected journalctl failed-none illegal-user variant");
-    expect(result.events[20].username == "legacy-none", "expected journalctl failed-none illegal username");
+           "expected journalctl failed-none invalid-user variant");
+    expect(result.events[20].username == "svc-none", "expected journalctl failed-none invalid username");
     expect(result.events[21].event_type == loglens::EventType::SshInvalidUser,
+           "expected journalctl failed-none illegal-user variant");
+    expect(result.events[21].username == "legacy-none", "expected journalctl failed-none illegal username");
+    expect(result.events[22].event_type == loglens::EventType::SshInvalidUser,
            "expected journalctl error-prefixed max-auth-tries invalid-user variant");
-    expect(result.events[21].username == "svc-error-maxauth",
+    expect(result.events[22].username == "svc-error-maxauth",
            "expected journalctl error-prefixed max-auth-tries invalid username");
 
     expect(result.quality.top_unknown_patterns.size() == 4, "expected four unknown journalctl buckets");
@@ -910,6 +975,8 @@ int main() {
     test_failed_none_illegal_user_is_normalized_as_invalid_user();
     test_failed_none_without_invalid_user_stays_unsupported();
     test_illegal_user_message_is_normalized_as_invalid_user();
+    test_input_userauth_request_invalid_user_is_normalized_as_invalid_user();
+    test_input_userauth_request_illegal_user_is_normalized_as_invalid_user();
     test_standard_failure();
     test_success_event();
     test_accepted_publickey_success_event();
@@ -931,6 +998,7 @@ int main() {
     test_ssh_pam_auth_failure_event();
     test_ssh_pam_auth_failure_invalid_user_event();
     test_ssh_pam_auth_failure_illegal_user_event();
+    test_ssh_pam_auth_failure_error_prefix_event();
     test_pam_auth_failure_event();
     test_pam_sss_received_failure_event();
     test_session_opened_event();
