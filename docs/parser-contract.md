@@ -43,9 +43,9 @@ This is the main trust boundary: unsupported input should remain inspectable, ev
 
 Stable unsupported-pattern buckets currently exercised by the fixture corpus include
 `sshd_connection_closed_preauth`, `sshd_timeout_or_disconnection`,
-`sshd_negotiation_failure`, and `pam_unix_session_closed`. They are parser
-telemetry and warnings only; detector signal mappings decide which parsed events
-can contribute to findings.
+`sshd_negotiation_failure`, `pam_faillock_account_locked`, and
+`pam_unix_session_closed`. They are parser telemetry and warnings only; detector
+signal mappings decide which parsed events can contribute to findings.
 
 ## Detection signal boundary
 
