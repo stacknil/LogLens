@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -8,6 +9,7 @@ namespace {
 
 void expect(bool condition, const std::string& message) {
     if (!condition) {
+        std::cerr << "test_cli assertion failed: " << message << '\n';
         throw std::runtime_error(message);
     }
 }
