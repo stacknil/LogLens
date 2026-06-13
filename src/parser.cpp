@@ -700,6 +700,10 @@ bool parse_pam_faillock_message(std::string_view message, Event& event) {
 }
 
 std::string classify_unknown_pam_faillock_pattern(std::string_view message) {
+    if (message.starts_with("Account temporarily locked for user ")) {
+        return "pam_faillock_account_locked";
+    }
+
     if (message.starts_with("User ") && message.find("successfully authenticated") != std::string_view::npos) {
         return "pam_faillock_authsucc";
     }

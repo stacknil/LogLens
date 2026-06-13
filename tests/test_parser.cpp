@@ -605,12 +605,12 @@ void test_syslog_auth_family_fixture_file() {
     expect(result.events[11].username == "erin", "expected pam_unix session-opened username");
 
     expect(result.quality.top_unknown_patterns.size() == 5, "expected five syslog auth-family buckets");
-    expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_authsucc",
+    expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_account_locked",
+           "expected pam_faillock account-locked telemetry bucket");
+    expect(result.quality.top_unknown_patterns[0].count == 1, "expected one pam_faillock account-locked line");
+    expect(result.quality.top_unknown_patterns[1].pattern == "pam_faillock_authsucc",
            "expected pam_faillock authsucc telemetry bucket");
-    expect(result.quality.top_unknown_patterns[0].count == 1, "expected one pam_faillock authsucc line");
-    expect(result.quality.top_unknown_patterns[1].pattern == "pam_faillock_other",
-           "expected pam_faillock other telemetry bucket");
-    expect(result.quality.top_unknown_patterns[1].count == 1, "expected one pam_faillock other line");
+    expect(result.quality.top_unknown_patterns[1].count == 1, "expected one pam_faillock authsucc line");
     expect(result.quality.top_unknown_patterns[2].pattern == "pam_sss_authinfo_unavail",
            "expected pam_sss authinfo-unavail telemetry bucket");
     expect(result.quality.top_unknown_patterns[2].count == 1, "expected one pam_sss authinfo-unavail line");
@@ -671,12 +671,13 @@ void test_journalctl_auth_family_fixture_file() {
            "expected journalctl pam_unix session-opened auth-family event");
 
     expect(result.quality.top_unknown_patterns.size() == 5, "expected five journalctl auth-family buckets");
-    expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_authsucc",
+    expect(result.quality.top_unknown_patterns[0].pattern == "pam_faillock_account_locked",
+           "expected journalctl pam_faillock account-locked telemetry bucket");
+    expect(result.quality.top_unknown_patterns[0].count == 1,
+           "expected one journalctl pam_faillock account-locked line");
+    expect(result.quality.top_unknown_patterns[1].pattern == "pam_faillock_authsucc",
            "expected journalctl pam_faillock authsucc telemetry bucket");
-    expect(result.quality.top_unknown_patterns[0].count == 1, "expected one journalctl pam_faillock authsucc line");
-    expect(result.quality.top_unknown_patterns[1].pattern == "pam_faillock_other",
-           "expected journalctl pam_faillock other telemetry bucket");
-    expect(result.quality.top_unknown_patterns[1].count == 1, "expected one journalctl pam_faillock other line");
+    expect(result.quality.top_unknown_patterns[1].count == 1, "expected one journalctl pam_faillock authsucc line");
     expect(result.quality.top_unknown_patterns[2].pattern == "pam_sss_authinfo_unavail",
            "expected journalctl pam_sss authinfo-unavail telemetry bucket");
     expect(result.quality.top_unknown_patterns[2].count == 1, "expected one journalctl pam_sss authinfo-unavail line");
