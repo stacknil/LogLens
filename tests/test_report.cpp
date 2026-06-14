@@ -29,6 +29,31 @@ std::string read_file(const std::filesystem::path& path) {
     return std::string((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
 }
 
+std::filesystem::path repo_root() {
+    const std::filesystem::path source_path{__FILE__};
+    std::vector<std::filesystem::path> candidates;
+
+    if (source_path.is_absolute()) {
+        candidates.push_back(source_path);
+    } else {
+        const auto cwd = std::filesystem::current_path();
+        candidates.push_back(cwd / source_path);
+        candidates.push_back(cwd.parent_path() / source_path);
+    }
+
+    for (const auto& candidate : candidates) {
+        if (std::filesystem::exists(candidate)) {
+            return candidate.parent_path().parent_path();
+        }
+    }
+
+    throw std::runtime_error("unable to resolve repository root from test source path");
+}
+
+std::filesystem::path asset_path(std::string_view filename) {
+    return repo_root() / "assets" / std::string(filename);
+}
+
 loglens::ReportData make_report_data() {
     loglens::ReportData data;
     data.input_path = std::filesystem::path{"assets/sample_auth.log"};
@@ -39,6 +64,48 @@ loglens::ReportData make_report_data() {
     data.parser_quality.unparsed_lines = 1;
     data.parser_quality.top_unknown_patterns.push_back({"bad_pattern", 1});
     return data;
+}
+
+void test_noisy_auth_report_json_keeps_unsupported_lines_visible() {
+    const auto input_path = asset_path("noisy_auth_sample.log");
+    const loglens::AuthLogParser parser(loglens::ParserConfig{
+        loglens::InputMode::SyslogLegacy,
+        2026});
+    const auto parsed = parser.parse_file(input_path);
+
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(parsed.events);
+
+    loglens::ReportData data;
+    data.input_path = std::filesystem::path{"assets/noisy_auth_sample.log"};
+    data.parse_metadata = parsed.metadata;
+    data.parser_quality = parsed.quality;
+    data.events = parsed.events;
+    data.findings = findings;
+    data.warnings = parsed.warnings;
+    data.auth_signal_mappings = detector.config().auth_signal_mappings;
+
+    const auto json = loglens::render_json_report(data);
+
+    expect(findings.empty(), "expected noisy unsupported lines not to create findings");
+    expect(json.find("\"parse_success_rate\": 0.3333") != std::string::npos,
+           "expected noisy report json parse success rate");
+    expect(json.find("\"parsed_event_count\": 8") != std::string::npos,
+           "expected noisy report json parsed event count");
+    expect(json.find("\"warning_count\": 16") != std::string::npos,
+           "expected noisy report json warning count");
+    expect(json.find("\"finding_count\": 0") != std::string::npos,
+           "expected noisy report json finding count");
+    expect(json.find("\"pattern\": \"sshd_connection_closed_preauth\", \"count\": 2") != std::string::npos,
+           "expected noisy report json stable sshd preauth bucket");
+    expect(json.find("\"pattern\": \"pam_faillock_account_locked\", \"count\": 2") != std::string::npos,
+           "expected noisy report json stable pam_faillock account-lock bucket");
+    expect(json.find("\"line_number\": 13, \"reason\": \"unrecognized auth pattern: sshd_connection_closed_preauth\"")
+               != std::string::npos,
+           "expected noisy report json to keep unsupported sshd warning visible");
+    expect(json.find("\"line_number\": 24, \"reason\": \"unrecognized auth pattern: sudo_other\"")
+               != std::string::npos,
+           "expected noisy report json to keep unsupported partial sudo warning visible");
 }
 
 void test_markdown_table_cells_escape_user_controlled_values() {
@@ -244,6 +311,7 @@ void test_write_reports_reports_csv_write_failure() {
 }  // namespace
 
 int main() {
+    test_noisy_auth_report_json_keeps_unsupported_lines_visible();
     test_markdown_table_cells_escape_user_controlled_values();
     test_json_escapes_generic_control_characters();
     test_reports_include_total_input_line_count();
