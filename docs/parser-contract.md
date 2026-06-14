@@ -79,6 +79,7 @@ Parsed successes and audit-only events remain reportable but do not count as bru
 | [`assets/parser_fixture_matrix_journalctl_short_full.log`](../assets/parser_fixture_matrix_journalctl_short_full.log) | Journalctl short-full known/unknown parser matrix |
 | [`assets/parser_auth_families_syslog.log`](../assets/parser_auth_families_syslog.log) | Syslog PAM/auth-family parser coverage |
 | [`assets/parser_auth_families_journalctl_short_full.log`](../assets/parser_auth_families_journalctl_short_full.log) | Journalctl PAM/auth-family parser coverage |
+| [`assets/noisy_auth_sample.log`](../assets/noisy_auth_sample.log) and [`tests/fixtures/parser_matrix/noisy_auth_expected.json`](../tests/fixtures/parser_matrix/noisy_auth_expected.json) | Noisy syslog parser-coverage matrix for malformed, unsupported, blank, irrelevant, multi-host, and unusual-username input |
 | [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp) | Stable report-shape expectations for generated artifacts |
 
 ## Non-goals

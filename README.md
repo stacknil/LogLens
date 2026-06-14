@@ -90,7 +90,7 @@ Common unsupported-pattern buckets include `sshd_connection_closed_preauth`,
 `pam_faillock_account_locked`, and `pam_unix_session_closed`. These buckets keep
 non-finding evidence reviewable without counting it as detector evidence.
 
-For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md).
+For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
 
 LogLens does not currently detect:
 

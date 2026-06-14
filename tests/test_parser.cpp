@@ -2,6 +2,8 @@
 
 #include <cmath>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -52,10 +54,65 @@ std::filesystem::path asset_path(std::string_view filename) {
     return repo_root() / "assets" / std::string(filename);
 }
 
+std::filesystem::path parser_matrix_fixture_path(std::string_view filename) {
+    return repo_root() / "tests" / "fixtures" / "parser_matrix" / std::string(filename);
+}
+
+std::string read_text_file(const std::filesystem::path& path) {
+    std::ifstream input(path);
+    if (!input) {
+        throw std::runtime_error("unable to read file: " + path.string());
+    }
+
+    return std::string((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+}
+
 void expect_close(double actual, double expected, double tolerance, const std::string& message) {
     if (std::fabs(actual - expected) > tolerance) {
         throw std::runtime_error(message);
     }
+}
+
+std::size_t total_input_lines(const loglens::ParseReport& result) {
+    return result.quality.total_lines + result.quality.skipped_blank_lines;
+}
+
+std::string noisy_auth_coverage_json(const loglens::ParseReport& result) {
+    std::ostringstream output;
+    output << "{\n"
+           << "  \"fixture\": \"assets/noisy_auth_sample.log\",\n"
+           << "  \"input_mode\": \"" << loglens::to_string(result.metadata.input_mode) << "\",\n"
+           << "  \"assume_year\": " << *result.metadata.assume_year << ",\n"
+           << "  \"total_input_lines\": " << total_input_lines(result) << ",\n"
+           << "  \"total_lines\": " << result.quality.total_lines << ",\n"
+           << "  \"skipped_blank_lines\": " << result.quality.skipped_blank_lines << ",\n"
+           << "  \"parsed_lines\": " << result.quality.parsed_lines << ",\n"
+           << "  \"unparsed_lines\": " << result.quality.unparsed_lines << ",\n"
+           << "  \"parse_success_rate\": " << std::fixed << std::setprecision(10)
+           << result.quality.parse_success_rate << ",\n"
+           << "  \"parsed_event_count\": " << result.events.size() << ",\n"
+           << "  \"warning_count\": " << result.warnings.size() << ",\n"
+           << "  \"top_unknown_patterns\": [\n";
+
+    for (std::size_t index = 0; index < result.quality.top_unknown_patterns.size(); ++index) {
+        const auto& entry = result.quality.top_unknown_patterns[index];
+        output << "    {\"pattern\": \"" << entry.pattern << "\", \"count\": " << entry.count << "}";
+        output << (index + 1 == result.quality.top_unknown_patterns.size() ? "\n" : ",\n");
+    }
+
+    output << "  ],\n"
+           << "  \"warnings\": [\n";
+
+    for (std::size_t index = 0; index < result.warnings.size(); ++index) {
+        const auto& warning = result.warnings[index];
+        output << "    {\"line_number\": " << warning.line_number
+               << ", \"reason\": \"" << warning.reason << "\"}";
+        output << (index + 1 == result.warnings.size() ? "\n" : ",\n");
+    }
+
+    output << "  ]\n"
+           << "}\n";
+    return output.str();
 }
 
 void test_invalid_user_failure() {
@@ -967,6 +1024,42 @@ void test_journalctl_fixture_matrix_file() {
     expect(result.quality.top_unknown_patterns[3].count == 1, "expected one sshd negotiation-failure journalctl line");
 }
 
+void test_noisy_auth_fixture_matrix_file() {
+    const auto parser = make_syslog_parser();
+    const auto result = parser.parse_file(asset_path("noisy_auth_sample.log"));
+
+    expect(result.events.size() == 8, "expected eight parsed noisy-auth events");
+    expect(result.warnings.size() == 16, "expected sixteen noisy-auth warnings");
+    expect(total_input_lines(result) == 27, "expected noisy-auth total input line count");
+    expect(result.quality.total_lines == 24, "expected noisy-auth nonblank line count");
+    expect(result.quality.skipped_blank_lines == 3, "expected noisy-auth skipped blank line count");
+    expect(result.quality.parsed_lines == 8, "expected noisy-auth parsed line count");
+    expect(result.quality.unparsed_lines == 16, "expected noisy-auth unparsed line count");
+    expect_close(result.quality.parse_success_rate, 8.0 / 24.0, 1e-9,
+                 "expected noisy-auth parse success rate");
+
+    expect(result.events[0].hostname == "alpha-host", "expected first noisy-auth host");
+    expect(result.events[0].username == "svc+deploy", "expected unusual invalid-user username");
+    expect(result.events[1].hostname == "beta-host", "expected second noisy-auth host");
+    expect(result.events[1].username == "ops.robot", "expected dotted accepted-password username");
+    expect(result.events[2].event_type == loglens::EventType::SudoCommand,
+           "expected noisy-auth sudo command event");
+    expect(result.events[3].event_type == loglens::EventType::SudoPolicyDenied,
+           "expected noisy-auth sudoers denial event");
+    expect(result.events[4].event_type == loglens::EventType::SudoPolicyDenied,
+           "expected noisy-auth command-not-allowed denial event");
+    expect(result.events[5].event_type == loglens::EventType::PamAuthFailure,
+           "expected partial pam_unix failure to remain parsed lower-confidence evidence");
+    expect(result.events[5].username.empty(), "expected partial pam_unix failure to stay username-less");
+    expect(result.events[5].source_ip.empty(), "expected partial pam_unix failure to stay source-less");
+    expect(result.events[7].hostname == "delta-host", "expected noisy-auth multi-host coverage");
+    expect(result.events[7].username == "weird/user", "expected slash username in input_userauth_request");
+
+    const auto actual = noisy_auth_coverage_json(result);
+    const auto expected = read_text_file(parser_matrix_fixture_path("noisy_auth_expected.json"));
+    expect(actual == expected, "expected noisy auth coverage summary to match fixture");
+}
+
 }  // namespace
 
 int main() {
@@ -1016,5 +1109,6 @@ int main() {
     test_journalctl_rejects_empty_fractional_seconds();
     test_syslog_fixture_matrix_file();
     test_journalctl_fixture_matrix_file();
+    test_noisy_auth_fixture_matrix_file();
     return 0;
 }
