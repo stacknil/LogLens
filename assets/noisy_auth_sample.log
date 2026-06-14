@@ -1,0 +1,27 @@
+Mar 10 25:61:00 alpha-host sshd[9001]: Failed password for invalid user bad-clock from 203.0.113.1 port 50000 ssh2
+Feb 31 08:00:02 alpha-host sshd[9002]: Failed password for invalid user bad-date from 203.0.113.2 port 50001 ssh2
+
+
+Mar 10 08:00:10 alpha-host sshd[1001]: Failed password for invalid user svc+deploy from 203.0.113.10 port 50100 ssh2
+Mar 10 08:00:20 beta-host sshd[1002]: Accepted password for ops.robot from 203.0.113.11 port 50101 ssh2
+Mar 10 08:00:30 gamma-host sudo:    svc-admin : TTY=pts/1 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 10 08:00:40 alpha-host sudo[1004]: limited.user : user NOT in sudoers ; TTY=pts/2 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/id
+Mar 10 08:00:50 beta-host sudo[1005]: blocked-user : command not allowed ; TTY=pts/3 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/less /etc/hosts
+Mar 10 08:01:00 beta-host pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=
+Mar 10 08:01:10 gamma-host pam_faillock(sshd:auth): Authentication failure for user svc.locked from 203.0.113.13
+Mar 10 08:01:20 delta-host sshd[1008]: input_userauth_request: invalid user weird/user [preauth]
+Mar 10 08:01:30 alpha-host sshd[1009]: Connection closed by authenticating user legacy-user 203.0.113.20 port 50200 [preauth]
+Mar 10 08:01:40 beta-host sshd[1010]: Connection reset by invalid user trial.user 203.0.113.21 port 50201 [preauth]
+Mar 10 08:01:50 gamma-host sshd[1011]: Received disconnect from 203.0.113.22 port 50202:11: disconnected by user
+Mar 10 08:02:00 delta-host sshd[1012]: Timeout, client not responding from 203.0.113.23 port 50203
+Mar 10 08:02:10 alpha-host sshd[1013]: Unable to negotiate with 203.0.113.24 port 50204: no matching key exchange method found
+Mar 10 08:02:20 beta-host sshd[1014]: Unable to negotiate with 203.0.113.25 port 50205: no matching host key type found
+Mar 10 08:02:30 gamma-host pam_unix(sshd:session): session closed for user svc+deploy
+Mar 10 08:02:40 delta-host pam_unix(sudo:session): session closed for user svc-admin
+Mar 10 08:02:50 alpha-host pam_faillock(sshd:auth): Account temporarily locked for user locked.user
+Mar 10 08:03:00 beta-host pam_faillock(sshd:auth): Account temporarily locked for user svc-temp
+Mar 10 08:03:10 gamma-host pam_sss(sshd:auth): received for user unknown.shadow: 10 (User not known to the underlying authentication module)
+Mar 10 08:03:20 beta-host sudo: pam_unix(sudo:auth): authentication failure; user=limited.user
+
+rotated
+Mar 10 08:03:30 alpha-host CRON[2001]: (root) CMD (/usr/bin/true)
