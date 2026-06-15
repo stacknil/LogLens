@@ -11,7 +11,7 @@ It parses `auth.log` / `secure`-style syslog input and `journalctl --output=shor
 
 LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
 
-Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md) and [`docs/reviewer-brief.md`](./docs/reviewer-brief.md).
+Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md) and [`docs/reviewer-brief.md`](./docs/reviewer-brief.md). For detection reasoning, read the forensic-style [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md) and the [`rule catalog`](./docs/rule-catalog.md).
 
 ## Why This Project Exists
 
@@ -90,7 +90,7 @@ Common unsupported-pattern buckets include `sshd_connection_closed_preauth`,
 `pam_faillock_account_locked`, and `pam_unix_session_closed`. These buckets keep
 non-finding evidence reviewable without counting it as detector evidence.
 
-For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
+For rule-by-rule semantics and signal boundaries, see [`docs/rule-catalog.md`](./docs/rule-catalog.md). For a forensic-style evidence walkthrough, see [`docs/case-study-linux-auth-bruteforce.md`](./docs/case-study-linux-auth-bruteforce.md). For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
 
 LogLens does not currently detect:
 
@@ -106,6 +106,12 @@ LogLens does not currently detect:
 cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
+```
+
+For Visual Studio or other multi-config generators, pass the built configuration to CTest:
+
+```bash
+ctest --test-dir build -C Debug --output-on-failure
 ```
 
 For fresh-machine setup and repeatable local presets, see [`docs/dev-setup.md`](./docs/dev-setup.md).
@@ -212,6 +218,8 @@ The config file schema is intentionally small and strict:
 ```
 
 This mapping lets LogLens normalize parsed events into detection signals before applying brute-force or multi-user rules. By default, `pam_auth_failure` is treated as lower-confidence attempt evidence and does not count as a terminal authentication failure unless the config explicitly upgrades it. The `ssh_failed_keyboard_interactive` and `ssh_max_auth_tries` mapping keys are optional in older configs and default to terminal failure evidence.
+
+The checked-in [`assets/sample_config.json`](./assets/sample_config.json) is tested as a runnable default-equivalent config fixture. If default detector thresholds or signal mappings change, update that file and the related tests together.
 
 Timestamp handling is now explicit:
 

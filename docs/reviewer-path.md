@@ -2,6 +2,17 @@
 
 This path is for reviewers who want to understand LogLens quickly without reading the whole repository first.
 
+## First choose the review question
+
+| Review question | Start here | Good stopping point |
+| --- | --- | --- |
+| What is LogLens? | [`README.md`](../README.md) and [`docs/reviewer-brief.md`](./reviewer-brief.md) | Can state scope, supported inputs, outputs, and non-goals |
+| What log formats are supported? | [`docs/parser-contract.md`](./parser-contract.md) | Can name `syslog_legacy` and `journalctl_short_full` behavior |
+| What artifacts does it produce? | [`docs/report-artifacts.md`](./report-artifacts.md) and report-contract fixtures | Can inspect Markdown, JSON, and optional CSV outputs |
+| How do rules use evidence? | [`docs/rule-catalog.md`](./rule-catalog.md) | Can explain grouping keys, windows, thresholds, and unsupported-evidence boundaries |
+| Can the parser behavior be trusted? | Parser contract, fixture matrix, and parser coverage fields | Can see known, unknown, and malformed line handling |
+| How should a finding be interpreted? | [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md) | Can trace raw evidence to normalized events, findings, warnings, and non-goals |
+
 ## 30-second orientation
 
 Read:
@@ -30,6 +41,16 @@ Inspect:
 - [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json)
 - [`docs/report-artifacts.md`](./report-artifacts.md)
 - [`docs/parser-contract.md`](./parser-contract.md)
+- [`docs/rule-catalog.md`](./rule-catalog.md)
+- [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md)
+
+Look for the evidence route:
+
+- raw log line
+- normalized event
+- signal mapping boundary
+- rule grouping, window, and threshold
+- report finding or parser warning
 
 Look for parser coverage fields:
 
@@ -41,7 +62,7 @@ Look for parser coverage fields:
 - `parse_success_rate`
 - `top_unknown_patterns`
 
-Good stopping point: the reviewer can explain what LogLens parses, what it reports, and how unsupported lines remain visible.
+Good stopping point: the reviewer can explain what LogLens parses, how rules count supported evidence, what the reports contain, and how unsupported lines remain visible without becoming findings.
 
 ## 15-minute local check
 
@@ -53,6 +74,9 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ./build/loglens --mode syslog --year 2026 ./assets/sample_auth.log ./out
 ```
+
+For Visual Studio or other multi-config generators, use
+`ctest --test-dir build -C Debug --output-on-failure` for the test step.
 
 Then inspect:
 
