@@ -24,6 +24,7 @@ Metadata equivalent:
 - Rule names are stable report values.
 - Windows and thresholds are configurable through `config.json`.
 - Default values below match the built-in detector configuration.
+- The checked-in `assets/sample_config.json` is a tested default-equivalent fixture.
 
 ## Brute Force
 

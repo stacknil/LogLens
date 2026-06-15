@@ -44,6 +44,9 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+For Visual Studio or other multi-config generators, run the test step with the
+built configuration, for example `ctest --test-dir build -C Debug --output-on-failure`.
+
 ## Windows Notes
 
 - Run from a Developer PowerShell for Visual Studio 2022, an x64 Native Tools prompt, or another shell where the MSVC toolchain is already available.
@@ -63,5 +66,5 @@ sudo apt install cmake g++ make
 ## Expected Local Outputs
 
 - Build directories under `build/dev-debug` or `build/ci-release`
-- Test runs for `parser`, `detector`, and `cli`
+- Test runs for `parser`, `detector`, `report`, `cli`, and `report_contracts`
 - `compile_commands.json` in the debug build directory when the selected generator supports it
