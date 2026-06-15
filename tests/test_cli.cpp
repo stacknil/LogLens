@@ -225,6 +225,12 @@ int main(int argc, char* argv[]) {
         + " " + quote_argument(config_run_out))
                                                 .c_str());
     expect(config_run_exit == 0, "expected sample config run to succeed");
+    expect_report_core_fields(
+        read_file(config_run_out / "report.md"),
+        read_file(config_run_out / "report.json"),
+        "syslog_legacy",
+        true,
+        false);
 
     const auto journalctl_out = output_dir / "journalctl_cli";
     std::filesystem::create_directories(journalctl_out);
