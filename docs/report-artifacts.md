@@ -61,11 +61,11 @@ The report contracts are backed by generated fixture artifacts:
 | Fixture case | Golden artifacts |
 | --- | --- |
 | [`syslog_legacy`](../tests/fixtures/report_contracts/syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
-| [`journalctl_short_full`](../tests/fixtures/report_contracts/journalctl_short_full) | `report.md`, `report.json` |
+| [`journalctl_short_full`](../tests/fixtures/report_contracts/journalctl_short_full) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 | [`multi_host_syslog_legacy`](../tests/fixtures/report_contracts/multi_host_syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
-| [`multi_host_journalctl_short_full`](../tests/fixtures/report_contracts/multi_host_journalctl_short_full) | `report.md`, `report.json` |
+| [`multi_host_journalctl_short_full`](../tests/fixtures/report_contracts/multi_host_journalctl_short_full) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 
-The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
+The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). Parser or rule changes that alter report artifacts must update these snapshots explicitly. The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
 
 ## Boundaries
 

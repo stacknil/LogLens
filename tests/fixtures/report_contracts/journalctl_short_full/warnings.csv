@@ -1,0 +1,3 @@
+kind,line_number,message
+parse_warning,15,unrecognized auth pattern: sshd_connection_closed_preauth
+parse_warning,16,unrecognized auth pattern: sshd_timeout_or_disconnection
