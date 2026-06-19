@@ -7,6 +7,22 @@ C++20 defensive log analysis CLI for Linux authentication logs, with parser cove
 
 It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports, with optional CSV exports for findings and warnings.
 
+## Example Finding
+
+A compact finding summary is a bounded triage signal, not attribution:
+
+```json
+{
+  "rule_id": "brute_force",
+  "subject_kind": "source_ip",
+  "subject": "198.51.100.23",
+  "window": "10m",
+  "threshold": 5,
+  "observed": 8,
+  "verdict_boundary": "triage_signal_not_attribution"
+}
+```
+
 ## Project Status
 
 LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
