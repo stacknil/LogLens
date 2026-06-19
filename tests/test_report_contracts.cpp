@@ -242,6 +242,14 @@ void run_report_contract_case(const std::filesystem::path& loglens_exe,
     const auto golden_json = read_file(fixture_directory / "report.json");
 
     expect_equal_lines(
+        split_lines(actual_markdown),
+        split_lines(golden_markdown),
+        "markdown snapshot mismatch for " + fixture_directory.filename().string());
+    expect_equal_lines(
+        split_lines(actual_json),
+        split_lines(golden_json),
+        "json snapshot mismatch for " + fixture_directory.filename().string());
+    expect_equal_lines(
         extract_markdown_contract_lines(actual_markdown),
         extract_markdown_contract_lines(golden_markdown),
         "markdown contract mismatch for " + fixture_directory.filename().string());
@@ -328,10 +336,24 @@ int main(int argc, char* argv[]) {
             true);
         run_report_contract_case(
             loglens_exe,
+            fixture_root / "journalctl_short_full",
+            output_root,
+            "journalctl-short-full",
+            "--csv",
+            true);
+        run_report_contract_case(
+            loglens_exe,
             fixture_root / "multi_host_syslog_legacy",
             output_root,
             "syslog",
             "--year 2026 --csv",
+            true);
+        run_report_contract_case(
+            loglens_exe,
+            fixture_root / "multi_host_journalctl_short_full",
+            output_root,
+            "journalctl-short-full",
+            "--csv",
             true);
     } catch (...) {
         std::filesystem::current_path(original_cwd);
