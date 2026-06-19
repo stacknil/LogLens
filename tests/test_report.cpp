@@ -149,6 +149,39 @@ void test_json_escapes_generic_control_characters() {
            "expected json warning reason to use valid escapes");
 }
 
+void test_json_finding_includes_explainability_fields() {
+    auto data = make_report_data();
+
+    loglens::Finding finding;
+    finding.type = loglens::FindingType::SudoBurst;
+    finding.rule_id = "sudo_burst";
+    finding.subject_kind = "username";
+    finding.subject = "alice";
+    finding.grouping_key = "username";
+    finding.threshold = 3;
+    finding.observed_count = 4;
+    finding.event_count = 4;
+    finding.first_seen = timestamp_at_minute(21);
+    finding.last_seen = timestamp_at_minute(24);
+    finding.evidence_event_ids = {"line:6", "line:7", "line:8", "line:9"};
+    finding.summary = "alice ran 4 sudo commands within 5 minutes.";
+    data.findings.push_back(finding);
+
+    const auto json = loglens::render_json_report(data);
+
+    expect(json.find("\"rule_id\": \"sudo_burst\"") != std::string::npos,
+           "expected json finding to include rule id");
+    expect(json.find("\"grouping_key\": \"username\"") != std::string::npos,
+           "expected json finding to include grouping key");
+    expect(json.find("\"threshold\": 3") != std::string::npos,
+           "expected json finding to include threshold");
+    expect(json.find("\"observed_count\": 4") != std::string::npos,
+           "expected json finding to include observed count");
+    expect(json.find("\"evidence_event_ids\": [\"line:6\", \"line:7\", \"line:8\", \"line:9\"]")
+               != std::string::npos,
+           "expected json finding to include evidence event ids");
+}
+
 void test_reports_include_total_input_line_count() {
     auto data = make_report_data();
     data.parser_quality.total_lines = 3;
@@ -314,6 +347,7 @@ int main() {
     test_noisy_auth_report_json_keeps_unsupported_lines_visible();
     test_markdown_table_cells_escape_user_controlled_values();
     test_json_escapes_generic_control_characters();
+    test_json_finding_includes_explainability_fields();
     test_reports_include_total_input_line_count();
     test_csv_neutralizes_formula_like_fields();
     test_write_reports_fails_when_report_path_is_directory();

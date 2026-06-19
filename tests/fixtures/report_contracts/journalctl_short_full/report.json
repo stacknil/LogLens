@@ -29,32 +29,47 @@
   ],
   "findings": [
     {
+      "rule_id": "brute_force",
       "rule": "brute_force",
       "subject_kind": "source_ip",
       "subject": "203.0.113.10",
+      "grouping_key": "source_ip",
+      "threshold": 5,
+      "observed_count": 5,
       "event_count": 5,
       "window_start": "2026-03-10 08:11:22",
       "window_end": "2026-03-10 08:18:05",
+      "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
       "usernames": [],
       "summary": "5 failed SSH attempts from 203.0.113.10 within 10 minutes."
     },
     {
+      "rule_id": "multi_user_probing",
       "rule": "multi_user_probing",
       "subject_kind": "source_ip",
       "subject": "203.0.113.10",
+      "grouping_key": "source_ip",
+      "threshold": 3,
+      "observed_count": 5,
       "event_count": 5,
       "window_start": "2026-03-10 08:11:22",
       "window_end": "2026-03-10 08:18:05",
+      "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
       "usernames": ["admin", "deploy", "guest", "root", "test"],
       "summary": "203.0.113.10 targeted 5 usernames within 15 minutes."
     },
     {
+      "rule_id": "sudo_burst",
       "rule": "sudo_burst",
       "subject_kind": "username",
       "subject": "alice",
+      "grouping_key": "username",
+      "threshold": 3,
+      "observed_count": 3,
       "event_count": 3,
       "window_start": "2026-03-10 08:21:00",
       "window_end": "2026-03-10 08:24:15",
+      "evidence_event_ids": ["line:7", "line:8", "line:9"],
       "usernames": [],
       "summary": "alice ran 3 sudo commands within 5 minutes."
     }

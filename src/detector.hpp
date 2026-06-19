@@ -29,11 +29,16 @@ struct DetectorConfig {
 
 struct Finding {
     FindingType type = FindingType::BruteForce;
+    std::string rule_id;
     std::string subject_kind;
     std::string subject;
+    std::string grouping_key;
+    std::size_t threshold = 0;
+    std::size_t observed_count = 0;
     std::size_t event_count = 0;
     std::chrono::sys_seconds first_seen{};
     std::chrono::sys_seconds last_seen{};
+    std::vector<std::string> evidence_event_ids;
     std::vector<std::string> usernames;
     std::string summary;
 };
