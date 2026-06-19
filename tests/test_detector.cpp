@@ -204,15 +204,36 @@ void test_default_thresholds() {
 
     const auto* brute_force = find_finding(findings, loglens::FindingType::BruteForce, "203.0.113.10");
     expect(brute_force != nullptr, "expected brute force finding");
+    expect(brute_force->rule_id == "brute_force", "expected brute force rule id");
+    expect(brute_force->grouping_key == "source_ip", "expected brute force grouping key");
+    expect(brute_force->threshold == 5, "expected brute force threshold");
+    expect(brute_force->observed_count == 5, "expected brute force observed count");
     expect(brute_force->event_count == 5, "expected brute force count");
+    expect((brute_force->evidence_event_ids == std::vector<std::string>{
+               "line:1", "line:2", "line:3", "line:4", "line:5"}),
+           "expected brute force evidence event ids");
 
     const auto* multi_user = find_finding(findings, loglens::FindingType::MultiUserProbing, "203.0.113.10");
     expect(multi_user != nullptr, "expected multi-user finding");
+    expect(multi_user->rule_id == "multi_user_probing", "expected multi-user rule id");
+    expect(multi_user->grouping_key == "source_ip", "expected multi-user grouping key");
+    expect(multi_user->threshold == 3, "expected multi-user threshold");
+    expect(multi_user->observed_count == 5, "expected multi-user observed username count");
+    expect(multi_user->event_count == 5, "expected multi-user event count");
+    expect((multi_user->evidence_event_ids == std::vector<std::string>{
+               "line:1", "line:2", "line:3", "line:4", "line:5"}),
+           "expected multi-user evidence event ids");
     expect(multi_user->usernames.size() == 5, "expected five usernames");
 
     const auto* sudo = find_finding(findings, loglens::FindingType::SudoBurst, "alice");
     expect(sudo != nullptr, "expected sudo finding");
+    expect(sudo->rule_id == "sudo_burst", "expected sudo rule id");
+    expect(sudo->grouping_key == "username", "expected sudo grouping key");
+    expect(sudo->threshold == 3, "expected sudo threshold");
+    expect(sudo->observed_count == 3, "expected sudo observed count");
     expect(sudo->event_count == 3, "expected sudo count");
+    expect((sudo->evidence_event_ids == std::vector<std::string>{"line:6", "line:7", "line:8"}),
+           "expected sudo evidence event ids");
 }
 
 void test_custom_thresholds() {

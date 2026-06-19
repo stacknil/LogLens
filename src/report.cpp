@@ -291,6 +291,38 @@ std::string usernames_csv_field(const Finding& finding) {
     return usernames.str();
 }
 
+std::string finding_rule_id(const Finding& finding) {
+    if (!finding.rule_id.empty()) {
+        return finding.rule_id;
+    }
+    return to_string(finding.type);
+}
+
+std::string finding_grouping_key(const Finding& finding) {
+    if (!finding.grouping_key.empty()) {
+        return finding.grouping_key;
+    }
+    return finding.subject_kind;
+}
+
+std::size_t finding_observed_count(const Finding& finding) {
+    if (finding.observed_count != 0) {
+        return finding.observed_count;
+    }
+    return finding.event_count;
+}
+
+void write_json_string_array(std::ostream& output, const std::vector<std::string>& values) {
+    output << '[';
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        output << '"' << escape_json(values[index]) << '"';
+        if (index + 1 != values.size()) {
+            output << ", ";
+        }
+    }
+    output << ']';
+}
+
 std::string format_parse_success_rate(double rate) {
     std::ostringstream output;
     output << std::fixed << std::setprecision(4) << rate;
@@ -651,20 +683,22 @@ std::string render_json_report(const ReportData& data) {
     for (std::size_t index = 0; index < findings.size(); ++index) {
         const auto& finding = findings[index];
         output << "    {\n";
+        output << "      \"rule_id\": \"" << escape_json(finding_rule_id(finding)) << "\",\n";
         output << "      \"rule\": \"" << to_string(finding.type) << "\",\n";
         output << "      \"subject_kind\": \"" << escape_json(finding.subject_kind) << "\",\n";
         output << "      \"subject\": \"" << escape_json(finding.subject) << "\",\n";
+        output << "      \"grouping_key\": \"" << escape_json(finding_grouping_key(finding)) << "\",\n";
+        output << "      \"threshold\": " << finding.threshold << ",\n";
+        output << "      \"observed_count\": " << finding_observed_count(finding) << ",\n";
         output << "      \"event_count\": " << finding.event_count << ",\n";
         output << "      \"window_start\": \"" << format_timestamp(finding.first_seen) << "\",\n";
         output << "      \"window_end\": \"" << format_timestamp(finding.last_seen) << "\",\n";
-        output << "      \"usernames\": [";
-        for (std::size_t name_index = 0; name_index < finding.usernames.size(); ++name_index) {
-            output << '"' << escape_json(finding.usernames[name_index]) << '"';
-            if (name_index + 1 != finding.usernames.size()) {
-                output << ", ";
-            }
-        }
-        output << "],\n";
+        output << "      \"evidence_event_ids\": ";
+        write_json_string_array(output, finding.evidence_event_ids);
+        output << ",\n";
+        output << "      \"usernames\": ";
+        write_json_string_array(output, finding.usernames);
+        output << ",\n";
         output << "      \"summary\": \"" << escape_json(finding.summary) << "\"\n";
         output << "    }";
         output << (index + 1 == findings.size() ? "\n" : ",\n");

@@ -26,6 +26,19 @@ Metadata equivalent:
 - Default values below match the built-in detector configuration.
 - The checked-in `assets/sample_config.json` is a tested default-equivalent fixture.
 
+## Finding Explainability Fields
+
+JSON findings include both the finding conclusion and the rule context used to reach it:
+
+- `rule_id`: stable rule identifier
+- `grouping_key`: the normalized field used to group evidence
+- `threshold`: configured threshold for the rule
+- `observed_count`: observed value compared against the threshold
+- `window_start` and `window_end`: selected evidence window
+- `evidence_event_ids`: deterministic local event IDs in the selected window, formatted as `line:<number>`
+
+For `multi_user_probing`, `observed_count` is the distinct username count, while `event_count` remains the number of attempt-evidence events in the selected window.
+
 ## Brute Force
 
 ### Rule name

@@ -37,7 +37,9 @@ The JSON report keeps parser observability visible next to findings:
 - `findings`
 - `warnings`
 
-Finding objects contain `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, and `summary`.
+Finding objects contain `rule_id`, `rule`, `subject_kind`, `subject`, `grouping_key`, `threshold`, `observed_count`, `event_count`, `window_start`, `window_end`, `evidence_event_ids`, `usernames`, and `summary`.
+
+`evidence_event_ids` are deterministic local event identifiers derived from the source line number, formatted as `line:<number>`. They let reviewers trace a finding back to the normalized input events that satisfied the rule window without implying global event identity.
 
 Warning objects contain the original `line_number` and the parser `reason`.
 
