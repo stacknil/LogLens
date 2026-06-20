@@ -39,6 +39,19 @@ JSON findings include both the finding conclusion and the rule context used to r
 
 For `multi_user_probing`, `observed_count` is the distinct username count, while `event_count` remains the number of attempt-evidence events in the selected window.
 
+## False-Positive Taxonomy
+
+The taxonomy names benign or ambiguous explanations a reviewer should consider before interpreting a finding. It is not an allow-list, suppression policy, or automatic disposition.
+
+Each rule uses the same review buckets:
+
+- NAT
+- internal scanner
+- lab replay
+- shared bastion
+- scheduled admin task
+- malformed log replay
+
 ## Brute Force
 
 ### Rule name
@@ -84,6 +97,17 @@ The detector uses a sliding timestamp window within each source-IP group.
 This rule identifies concentrated failed SSH authentication evidence from one source IP. It does not decide whether the source is malicious, shared infrastructure, a vulnerability scanner, an internal test, a NAT gateway, or replayed lab traffic.
 
 The finding is a triage signal. It is not a compromise verdict, attribution claim, or recommendation to block an address.
+
+### False-positive taxonomy
+
+| Bucket | Review interpretation |
+| --- | --- |
+| NAT | Multiple legitimate clients behind one egress address can collapse into one `source_ip`. |
+| internal scanner | Authorized credential auditing or exposure scanning can intentionally generate repeated failures. |
+| lab replay | Sanitized sample data, training fixtures, or repeated demos can preserve concentrated failure patterns. |
+| shared bastion | A managed jump host or administrative relay can make many failed attempts appear to come from one source. |
+| scheduled admin task | A recurring job with stale credentials can fail repeatedly inside the rule window. |
+| malformed log replay | Duplicated or replayed log material can inflate apparent volume; unsupported malformed lines remain warnings and are not counted. |
 
 ### Why unsupported evidence is not counted
 
@@ -142,6 +166,17 @@ This rule identifies username spread from one source IP. Username spread can be 
 
 The rule does not infer intent. It only states that one source IP produced attempt evidence against multiple usernames inside the configured window.
 
+### False-positive taxonomy
+
+| Bucket | Review interpretation |
+| --- | --- |
+| NAT | Different users behind one egress address can look like one source probing multiple accounts. |
+| internal scanner | Authorized username-enumeration tests or account-audit tooling can touch many usernames by design. |
+| lab replay | Replayed lab logs can preserve synthetic username spread without representing live probing. |
+| shared bastion | Shared administrative entry points can produce attempts for several accounts from one source IP. |
+| scheduled admin task | Account validation, migration, or monitoring jobs can try multiple service or user accounts in one window. |
+| malformed log replay | Replayed or partially malformed evidence can duplicate username variety; unsupported records remain parser warnings and do not add usernames. |
+
 ### Why unsupported evidence is not counted
 
 Unsupported records do not provide normalized usernames, source IPs, or attempt-evidence flags. Counting them would turn parser uncertainty into detector confidence.
@@ -193,6 +228,17 @@ The detector uses a sliding timestamp window within each username group.
 This rule identifies concentrated sudo command activity by one user. It does not decide whether the activity is malicious, authorized maintenance, incident response, package management, service repair, or a scripted administrative task.
 
 The finding is strongest when reviewed with session context, change windows, host ownership, and the command text preserved in the report.
+
+### False-positive taxonomy
+
+| Bucket | Review interpretation |
+| --- | --- |
+| NAT | Usually not a primary explanation because this rule groups by `username`, but it may matter when reviewed alongside source-IP findings. |
+| internal scanner | Endpoint assessment, compliance checks, or privileged inventory tooling can run several sudo commands quickly. |
+| lab replay | Demo or training logs can replay a compact privileged-command sequence. |
+| shared bastion | Shared administrative accounts or jump-host workflows can concentrate privileged commands under one username. |
+| scheduled admin task | Maintenance windows, package updates, service repair, or scripted operations can produce bursty sudo activity. |
+| malformed log replay | Duplicated sudo lines or replayed command logs can inflate the command count; unsupported malformed sudo-like lines stay out of rule input. |
 
 ### Why unsupported evidence is not counted
 
