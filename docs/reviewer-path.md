@@ -12,6 +12,7 @@ This path is for reviewers who want to understand LogLens quickly without readin
 | How do rules use evidence? | [`docs/rule-catalog.md`](./rule-catalog.md) | Can explain grouping keys, windows, thresholds, and unsupported-evidence boundaries |
 | Can the parser behavior be trusted? | Parser contract, fixture matrix, and parser coverage fields | Can see known, unknown, and malformed line handling |
 | How should a finding be interpreted? | [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md) | Can trace raw evidence to normalized events, findings, warnings, and non-goals |
+| How does it behave on larger local inputs? | [`docs/performance-envelope.md`](./performance-envelope.md) | Can state the local 1k/10k/100k-line envelope and its caveats |
 
 ## 30-second orientation
 

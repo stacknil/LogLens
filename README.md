@@ -11,7 +11,7 @@ It parses `auth.log` / `secure`-style syslog input and `journalctl --output=shor
 
 LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
 
-Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md) and [`docs/reviewer-brief.md`](./docs/reviewer-brief.md). For detection reasoning, read the forensic-style [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md) and the [`rule catalog`](./docs/rule-catalog.md).
+Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md) and [`docs/reviewer-brief.md`](./docs/reviewer-brief.md). For detection reasoning, read the forensic-style [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md) and the [`rule catalog`](./docs/rule-catalog.md). For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
 
 ## Why This Project Exists
 
