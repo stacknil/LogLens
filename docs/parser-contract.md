@@ -36,10 +36,19 @@ Recognized success or audit families include accepted password, accepted publick
 | --- | --- | --- |
 | Recognized auth line | Emits a typed `Event` with timestamp, hostname, program, optional pid, message, source IP, username, event type, and line number | Can contribute to summaries, reports, and configured detection signals |
 | Blank line | Skips the line and increments `skipped_blank_lines` | Does not become a warning or parsed event |
-| Malformed header | Emits a parser warning with the original line number and structural reason | Counts toward `unparsed_lines` and `top_unknown_patterns` |
-| Well-formed but unsupported auth pattern | Emits a parser warning with an unknown-pattern bucket | Stays visible as telemetry instead of being silently ignored |
+| Malformed header | Emits a parser warning with the original line number, structural reason, and `unknown_timestamp` category | Counts toward `unparsed_lines`, `failure_categories`, and `top_unknown_patterns` |
+| Well-formed but unsupported auth pattern | Emits a parser warning with a failure category and unknown-pattern bucket | Stays visible as telemetry instead of being silently ignored |
 
 This is the main trust boundary: unsupported input should remain inspectable, even when it does not produce a finding.
+
+Parser failure categories are intentionally coarser than unknown-pattern
+buckets:
+
+- `unknown_timestamp`
+- `unknown_program`
+- `known_program_unknown_message`
+- `malformed_source_ip`
+- `unsupported_pam_variant`
 
 Stable unsupported-pattern buckets currently exercised by the fixture corpus include
 `sshd_connection_closed_preauth`, `sshd_timeout_or_disconnection`,

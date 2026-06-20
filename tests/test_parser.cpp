@@ -101,11 +101,22 @@ std::string noisy_auth_coverage_json(const loglens::ParseReport& result) {
     }
 
     output << "  ],\n"
+           << "  \"failure_categories\": [\n";
+
+    for (std::size_t index = 0; index < result.quality.failure_categories.size(); ++index) {
+        const auto& entry = result.quality.failure_categories[index];
+        output << "    {\"category\": \"" << loglens::to_string(entry.category)
+               << "\", \"count\": " << entry.count << "}";
+        output << (index + 1 == result.quality.failure_categories.size() ? "\n" : ",\n");
+    }
+
+    output << "  ],\n"
            << "  \"warnings\": [\n";
 
     for (std::size_t index = 0; index < result.warnings.size(); ++index) {
         const auto& warning = result.warnings[index];
         output << "    {\"line_number\": " << warning.line_number
+               << ", \"category\": \"" << loglens::to_string(warning.category) << "\""
                << ", \"reason\": \"" << warning.reason << "\"}";
         output << (index + 1 == result.warnings.size() ? "\n" : ",\n");
     }
@@ -749,10 +760,39 @@ void test_journalctl_auth_family_fixture_file() {
 void test_malformed_line() {
     const auto parser = make_syslog_parser();
     std::string error;
-    const auto event = parser.parse_line("malformed log line without syslog header", 9, &error);
+    loglens::ParserFailureCategory category = loglens::ParserFailureCategory::KnownProgramUnknownMessage;
+    const auto event = parser.parse_line("malformed log line without syslog header", 9, &error, &category);
 
     expect(!event.has_value(), "expected malformed line to fail");
     expect(!error.empty(), "expected parse error for malformed line");
+    expect(category == loglens::ParserFailureCategory::UnknownTimestamp,
+           "expected malformed header to be categorized as unknown timestamp");
+}
+
+void test_parser_failure_taxonomy() {
+    const auto parser = make_syslog_parser();
+    std::istringstream input(
+        "rotated\n"
+        "Mar 10 08:00:00 example-host CRON[2001]: (root) CMD (/usr/bin/true)\n"
+        "Mar 10 08:00:10 example-host sshd[1001]: Connection closed by authenticating user root 203.0.113.10 port 50100 [preauth]\n"
+        "Mar 10 08:00:20 example-host sshd[1002]: Failed password for root from not_an_ip port 50101 ssh2\n"
+        "Mar 10 08:00:30 example-host pam_faillock(sshd:auth): Account temporarily locked for user root\n");
+
+    const auto result = parser.parse_stream(input);
+
+    expect(result.events.empty(), "expected taxonomy fixture to produce warnings only");
+    expect(result.warnings.size() == 5, "expected five taxonomy warnings");
+    expect(result.quality.failure_categories.size() == 5, "expected five parser failure categories");
+    expect(loglens::to_string(result.warnings[0].category) == "unknown_timestamp",
+           "expected first warning category");
+    expect(loglens::to_string(result.warnings[1].category) == "unknown_program",
+           "expected second warning category");
+    expect(loglens::to_string(result.warnings[2].category) == "known_program_unknown_message",
+           "expected third warning category");
+    expect(loglens::to_string(result.warnings[3].category) == "malformed_source_ip",
+           "expected fourth warning category");
+    expect(loglens::to_string(result.warnings[4].category) == "unsupported_pam_variant",
+           "expected fifth warning category");
 }
 
 void test_unknown_auth_patterns_are_warnings_only() {
@@ -800,6 +840,9 @@ void test_stream_warnings_and_metadata() {
     expect(result.quality.top_unknown_patterns.size() == 1, "expected one unknown pattern");
     expect(result.quality.top_unknown_patterns.front().pattern == "missing_syslog_header_fields",
            "expected normalized structural parse failure pattern");
+    expect(result.quality.failure_categories.size() == 1, "expected one parser failure category");
+    expect(result.quality.failure_categories.front().category == loglens::ParserFailureCategory::UnknownTimestamp,
+           "expected missing header to be categorized as unknown timestamp");
 }
 
 void test_stream_tracks_skipped_blank_lines() {
@@ -841,6 +884,9 @@ void test_journalctl_metadata() {
     expect(result.quality.top_unknown_patterns.size() == 1, "expected one journalctl unknown pattern");
     expect(result.quality.top_unknown_patterns.front().pattern == "missing_journalctl_short_full_header_fields",
            "expected normalized journalctl failure pattern");
+    expect(result.quality.failure_categories.size() == 1, "expected one journalctl parser failure category");
+    expect(result.quality.failure_categories.front().category == loglens::ParserFailureCategory::UnknownTimestamp,
+           "expected journalctl missing header to be categorized as unknown timestamp");
 }
 
 void test_journalctl_rejects_empty_fractional_seconds() {
@@ -1102,6 +1148,7 @@ int main() {
     test_syslog_auth_family_fixture_file();
     test_journalctl_auth_family_fixture_file();
     test_malformed_line();
+    test_parser_failure_taxonomy();
     test_unknown_auth_patterns_are_warnings_only();
     test_stream_warnings_and_metadata();
     test_stream_tracks_skipped_blank_lines();

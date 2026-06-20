@@ -600,14 +600,27 @@ std::string render_markdown_report(const ReportData& data) {
         output << '\n';
     }
 
+    if (data.parser_quality.failure_categories.empty()) {
+        output << "No parser failure categories were recorded.\n\n";
+    } else {
+        output << "| Failure Category | Count |\n";
+        output << "| --- | ---: |\n";
+        for (const auto& entry : data.parser_quality.failure_categories) {
+            output << "| " << escape_markdown_table_cell(to_string(entry.category))
+                   << " | " << entry.count << " |\n";
+        }
+        output << '\n';
+    }
+
     output << "## Parser Warnings\n\n";
     if (warnings.empty()) {
         output << "No malformed lines were skipped.\n";
     } else {
-        output << "| Line | Reason |\n";
-        output << "| ---: | --- |\n";
+        output << "| Line | Category | Reason |\n";
+        output << "| ---: | --- | --- |\n";
         for (const auto& warning : warnings) {
             output << "| " << warning.line_number << " | "
+                   << escape_markdown_table_cell(to_string(warning.category)) << " | "
                    << escape_markdown_table_cell(warning.reason) << " |\n";
         }
     }
@@ -642,6 +655,13 @@ std::string render_json_report(const ReportData& data) {
         const auto& entry = data.parser_quality.top_unknown_patterns[index];
         output << "      {\"pattern\": \"" << escape_json(entry.pattern) << "\", \"count\": " << entry.count << "}";
         output << (index + 1 == data.parser_quality.top_unknown_patterns.size() ? "\n" : ",\n");
+    }
+    output << "    ],\n";
+    output << "    \"failure_categories\": [\n";
+    for (std::size_t index = 0; index < data.parser_quality.failure_categories.size(); ++index) {
+        const auto& entry = data.parser_quality.failure_categories[index];
+        output << "      {\"category\": \"" << to_string(entry.category) << "\", \"count\": " << entry.count << "}";
+        output << (index + 1 == data.parser_quality.failure_categories.size() ? "\n" : ",\n");
     }
     output << "    ]\n";
     output << "  },\n";
@@ -708,6 +728,7 @@ std::string render_json_report(const ReportData& data) {
     for (std::size_t index = 0; index < warnings.size(); ++index) {
         const auto& warning = warnings[index];
         output << "    {\"line_number\": " << warning.line_number
+               << ", \"category\": \"" << to_string(warning.category) << "\""
                << ", \"reason\": \"" << escape_json(warning.reason) << "\"}";
         output << (index + 1 == warnings.size() ? "\n" : ",\n");
     }
@@ -739,10 +760,11 @@ std::string render_warnings_csv(const ReportData& data) {
     std::ostringstream output;
     const auto warnings = sorted_warnings(data.warnings);
 
-    output << "kind,line_number,message\n";
+    output << "kind,line_number,category,message\n";
     for (const auto& warning : warnings) {
         output << "parse_warning,"
                << warning.line_number << ','
+               << escape_csv(to_string(warning.category)) << ','
                << escape_csv(warning.reason) << '\n';
     }
 

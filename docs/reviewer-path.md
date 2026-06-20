@@ -60,6 +60,7 @@ Look for parser coverage fields:
 - `parsed_lines`
 - `unparsed_lines`
 - `parse_success_rate`
+- `failure_categories`
 - `top_unknown_patterns`
 
 Good stopping point: the reviewer can explain what LogLens parses, how rules count supported evidence, what the reports contain, and how unsupported lines remain visible without becoming findings.

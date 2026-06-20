@@ -83,12 +83,17 @@ LogLens also tracks parser coverage telemetry for unsupported or malformed lines
 - `parsed_lines`
 - `unparsed_lines`
 - `parse_success_rate`
+- `failure_categories`
 - `top_unknown_patterns`
 
 Common unsupported-pattern buckets include `sshd_connection_closed_preauth`,
 `sshd_timeout_or_disconnection`, `sshd_negotiation_failure`,
 `pam_faillock_account_locked`, and `pam_unix_session_closed`. These buckets keep
 non-finding evidence reviewable without counting it as detector evidence.
+Failure categories group unsupported lines into reviewer-facing parser boundary
+classes: `unknown_timestamp`, `unknown_program`,
+`known_program_unknown_message`, `malformed_source_ip`, and
+`unsupported_pam_variant`.
 
 For rule-by-rule semantics and signal boundaries, see [`docs/rule-catalog.md`](./docs/rule-catalog.md). For a forensic-style evidence walkthrough, see [`docs/case-study-linux-auth-bruteforce.md`](./docs/case-study-linux-auth-bruteforce.md). For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
 
@@ -142,7 +147,7 @@ When you add `--csv`, LogLens also writes:
 The CSV schema is intentionally small and stable:
 
 - `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
-- `warnings.csv`: `kind`, `line_number`, `message`
+- `warnings.csv`: `kind`, `line_number`, `category`, `message`
 
 Without `--csv`, LogLens does not create, overwrite, or delete any existing CSV files in the output directory.
 

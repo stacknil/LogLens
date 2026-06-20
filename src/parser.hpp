@@ -19,6 +19,16 @@ enum class InputMode {
 std::string to_string(InputMode mode);
 std::optional<InputMode> parse_input_mode(std::string_view value);
 
+enum class ParserFailureCategory {
+    UnknownTimestamp,
+    UnknownProgram,
+    KnownProgramUnknownMessage,
+    MalformedSourceIp,
+    UnsupportedPamVariant
+};
+
+std::string to_string(ParserFailureCategory category);
+
 struct ParserConfig {
     InputMode input_mode = InputMode::SyslogLegacy;
     std::optional<int> assumed_year;
@@ -27,6 +37,7 @@ struct ParserConfig {
 struct ParseWarning {
     std::size_t line_number = 0;
     std::string reason;
+    ParserFailureCategory category = ParserFailureCategory::KnownProgramUnknownMessage;
 };
 
 struct ParseMetadata {
@@ -40,12 +51,18 @@ struct UnknownPatternCount {
     std::size_t count = 0;
 };
 
+struct ParserFailureCategoryCount {
+    ParserFailureCategory category = ParserFailureCategory::KnownProgramUnknownMessage;
+    std::size_t count = 0;
+};
+
 struct ParserQualityMetrics {
     std::size_t total_lines = 0;
     std::size_t skipped_blank_lines = 0;
     std::size_t parsed_lines = 0;
     std::size_t unparsed_lines = 0;
     double parse_success_rate = 0.0;
+    std::vector<ParserFailureCategoryCount> failure_categories;
     std::vector<UnknownPatternCount> top_unknown_patterns;
 };
 
@@ -62,7 +79,8 @@ class AuthLogParser {
 
     std::optional<Event> parse_line(std::string_view line,
                                     std::size_t line_number,
-                                    std::string* error = nullptr) const;
+                                    std::string* error = nullptr,
+                                    ParserFailureCategory* category = nullptr) const;
     ParseReport parse_stream(std::istream& input) const;
     ParseReport parse_file(const std::filesystem::path& path) const;
 

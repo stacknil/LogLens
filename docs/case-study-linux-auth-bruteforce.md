@@ -110,10 +110,10 @@ The sudo finding is adjacent but separate. It is not joined to the SSH failure c
 
 The parser warnings are:
 
-| Line | Unknown-pattern bucket | Evidence interpretation |
-| ---: | --- | --- |
-| 15 | `sshd_connection_closed_preauth` | preauth connection-close noise was observed but not promoted to a typed event |
-| 16 | `sshd_timeout_or_disconnection` | timeout/disconnection noise was observed but not promoted to a typed event |
+| Line | Failure category | Unknown-pattern bucket | Evidence interpretation |
+| ---: | --- | --- | --- |
+| 15 | `known_program_unknown_message` | `sshd_connection_closed_preauth` | preauth connection-close noise was observed but not promoted to a typed event |
+| 16 | `known_program_unknown_message` | `sshd_timeout_or_disconnection` | timeout/disconnection noise was observed but not promoted to a typed event |
 
 These warnings are useful because they prevent silent overconfidence. A reviewer can see both the finding-producing evidence and the unsupported surrounding records.
 

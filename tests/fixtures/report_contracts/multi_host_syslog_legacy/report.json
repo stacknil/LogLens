@@ -17,6 +17,10 @@
       {"pattern": "sshd_connection_closed_preauth", "count": 1},
       {"pattern": "sshd_negotiation_failure", "count": 1},
       {"pattern": "sshd_timeout_or_disconnection", "count": 1}
+    ],
+    "failure_categories": [
+      {"category": "known_program_unknown_message", "count": 3},
+      {"category": "unsupported_pam_variant", "count": 2}
     ]
   },
   "parsed_event_count": 12,
@@ -103,10 +107,10 @@
     }
   ],
   "warnings": [
-    {"line_number": 12, "reason": "unrecognized auth pattern: pam_sss_unknown_user"},
-    {"line_number": 14, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
-    {"line_number": 15, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"},
-    {"line_number": 16, "reason": "unrecognized auth pattern: pam_unix_session_closed"},
-    {"line_number": 17, "reason": "unrecognized auth pattern: sshd_negotiation_failure"}
+    {"line_number": 12, "category": "unsupported_pam_variant", "reason": "unrecognized auth pattern: pam_sss_unknown_user"},
+    {"line_number": 14, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
+    {"line_number": 15, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"},
+    {"line_number": 16, "category": "unsupported_pam_variant", "reason": "unrecognized auth pattern: pam_unix_session_closed"},
+    {"line_number": 17, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_negotiation_failure"}
   ]
 }

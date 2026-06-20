@@ -17,22 +17,28 @@
     {"pattern": "sshd_negotiation_failure", "count": 2},
     {"pattern": "sshd_timeout_or_disconnection", "count": 2}
   ],
+  "failure_categories": [
+    {"category": "known_program_unknown_message", "count": 7},
+    {"category": "unsupported_pam_variant", "count": 5},
+    {"category": "unknown_timestamp", "count": 3},
+    {"category": "unknown_program", "count": 1}
+  ],
   "warnings": [
-    {"line_number": 1, "reason": "invalid time token"},
-    {"line_number": 2, "reason": "invalid calendar date"},
-    {"line_number": 13, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
-    {"line_number": 14, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
-    {"line_number": 15, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"},
-    {"line_number": 16, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"},
-    {"line_number": 17, "reason": "unrecognized auth pattern: sshd_negotiation_failure"},
-    {"line_number": 18, "reason": "unrecognized auth pattern: sshd_negotiation_failure"},
-    {"line_number": 19, "reason": "unrecognized auth pattern: pam_unix_session_closed"},
-    {"line_number": 20, "reason": "unrecognized auth pattern: pam_unix_session_closed"},
-    {"line_number": 21, "reason": "unrecognized auth pattern: pam_faillock_account_locked"},
-    {"line_number": 22, "reason": "unrecognized auth pattern: pam_faillock_account_locked"},
-    {"line_number": 23, "reason": "unrecognized auth pattern: pam_sss_unknown_user"},
-    {"line_number": 24, "reason": "unrecognized auth pattern: sudo_other"},
-    {"line_number": 26, "reason": "missing syslog header fields"},
-    {"line_number": 27, "reason": "unrecognized auth pattern: program_cron"}
+    {"line_number": 1, "category": "unknown_timestamp", "reason": "invalid time token"},
+    {"line_number": 2, "category": "unknown_timestamp", "reason": "invalid calendar date"},
+    {"line_number": 13, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
+    {"line_number": 14, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
+    {"line_number": 15, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"},
+    {"line_number": 16, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"},
+    {"line_number": 17, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_negotiation_failure"},
+    {"line_number": 18, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_negotiation_failure"},
+    {"line_number": 19, "category": "unsupported_pam_variant", "reason": "unrecognized auth pattern: pam_unix_session_closed"},
+    {"line_number": 20, "category": "unsupported_pam_variant", "reason": "unrecognized auth pattern: pam_unix_session_closed"},
+    {"line_number": 21, "category": "unsupported_pam_variant", "reason": "unrecognized auth pattern: pam_faillock_account_locked"},
+    {"line_number": 22, "category": "unsupported_pam_variant", "reason": "unrecognized auth pattern: pam_faillock_account_locked"},
+    {"line_number": 23, "category": "unsupported_pam_variant", "reason": "unrecognized auth pattern: pam_sss_unknown_user"},
+    {"line_number": 24, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sudo_other"},
+    {"line_number": 26, "category": "unknown_timestamp", "reason": "missing syslog header fields"},
+    {"line_number": 27, "category": "unknown_program", "reason": "unrecognized auth pattern: program_cron"}
   ]
 }

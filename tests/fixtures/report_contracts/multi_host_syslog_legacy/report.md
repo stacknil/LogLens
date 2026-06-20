@@ -52,12 +52,17 @@
 | sshd_negotiation_failure | 1 |
 | sshd_timeout_or_disconnection | 1 |
 
+| Failure Category | Count |
+| --- | ---: |
+| known_program_unknown_message | 3 |
+| unsupported_pam_variant | 2 |
+
 ## Parser Warnings
 
-| Line | Reason |
-| ---: | --- |
-| 12 | unrecognized auth pattern: pam_sss_unknown_user |
-| 14 | unrecognized auth pattern: sshd_connection_closed_preauth |
-| 15 | unrecognized auth pattern: sshd_timeout_or_disconnection |
-| 16 | unrecognized auth pattern: pam_unix_session_closed |
-| 17 | unrecognized auth pattern: sshd_negotiation_failure |
+| Line | Category | Reason |
+| ---: | --- | --- |
+| 12 | unsupported_pam_variant | unrecognized auth pattern: pam_sss_unknown_user |
+| 14 | known_program_unknown_message | unrecognized auth pattern: sshd_connection_closed_preauth |
+| 15 | known_program_unknown_message | unrecognized auth pattern: sshd_timeout_or_disconnection |
+| 16 | unsupported_pam_variant | unrecognized auth pattern: pam_unix_session_closed |
+| 17 | known_program_unknown_message | unrecognized auth pattern: sshd_negotiation_failure |
