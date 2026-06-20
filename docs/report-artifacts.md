@@ -28,6 +28,7 @@ The JSON report keeps parser observability visible next to findings:
 - `parser_quality.parsed_lines`
 - `parser_quality.unparsed_lines`
 - `parser_quality.parse_success_rate`
+- `parser_quality.failure_categories`
 - `parser_quality.top_unknown_patterns`
 - `parsed_event_count`
 - `warning_count`
@@ -41,14 +42,21 @@ Finding objects contain `rule_id`, `rule`, `subject_kind`, `subject`, `grouping_
 
 `evidence_event_ids` are deterministic local event identifiers derived from the source line number, formatted as `line:<number>`. They let reviewers trace a finding back to the normalized input events that satisfied the rule window without implying global event identity.
 
-Warning objects contain the original `line_number` and the parser `reason`.
+Warning objects contain the original `line_number`, parser `category`, and parser `reason`.
+
+Parser failure categories are stable reviewer-facing buckets for unsupported
+lines: `unknown_timestamp`, `unknown_program`,
+`known_program_unknown_message`, `malformed_source_ip`, and
+`unsupported_pam_variant`. They complement `top_unknown_patterns`: categories
+explain the parser boundary class, while unknown-pattern buckets preserve the
+more specific unsupported message shape.
 
 ## CSV Contract
 
 The optional CSV exports intentionally stay small:
 
 - `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
-- `warnings.csv`: `kind`, `line_number`, `message`
+- `warnings.csv`: `kind`, `line_number`, `category`, `message`
 
 Formula-like CSV text fields are neutralized with a leading single quote so spreadsheet tools treat them as text.
 

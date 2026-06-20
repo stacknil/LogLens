@@ -42,9 +42,13 @@
 | sshd_connection_closed_preauth | 1 |
 | sshd_timeout_or_disconnection | 1 |
 
+| Failure Category | Count |
+| --- | ---: |
+| known_program_unknown_message | 2 |
+
 ## Parser Warnings
 
-| Line | Reason |
-| ---: | --- |
-| 15 | unrecognized auth pattern: sshd_connection_closed_preauth |
-| 16 | unrecognized auth pattern: sshd_timeout_or_disconnection |
+| Line | Category | Reason |
+| ---: | --- | --- |
+| 15 | known_program_unknown_message | unrecognized auth pattern: sshd_connection_closed_preauth |
+| 16 | known_program_unknown_message | unrecognized auth pattern: sshd_timeout_or_disconnection |

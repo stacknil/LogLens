@@ -189,8 +189,8 @@ int main(int argc, char* argv[]) {
     expect(findings_csv.find("brute_force,source_ip,203.0.113.10,5,2026-03-10 08:11:22,2026-03-10 08:18:05,,5 failed SSH attempts from 203.0.113.10 within 10 minutes.")
                != std::string::npos,
            "expected brute-force findings csv row");
-    expect(warnings_csv.find("kind,line_number,message") == 0, "expected warnings csv header");
-    expect(warnings_csv.find("parse_warning,15,unrecognized auth pattern: sshd_connection_closed_preauth")
+    expect(warnings_csv.find("kind,line_number,category,message") == 0, "expected warnings csv header");
+    expect(warnings_csv.find("parse_warning,15,known_program_unknown_message,unrecognized auth pattern: sshd_connection_closed_preauth")
                != std::string::npos,
            "expected warning csv row");
 

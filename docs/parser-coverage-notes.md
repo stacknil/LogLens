@@ -20,10 +20,11 @@ The locked expected coverage summary lives in [`tests/fixtures/parser_matrix/noi
 - `parsed_lines`: 8
 - `unparsed_lines`: 16
 - `parse_success_rate`: 0.3333333333
+- `failure_categories`: coarse parser boundary categories for unsupported lines
 - `top_unknown_patterns`: the five most common unsupported-pattern buckets
 
 ## Reading the numbers
 
-A low parse success rate is not automatically a bug for this fixture. The sample is deliberately noisy, and the useful property is that unsupported evidence remains explainable through `warnings` and `top_unknown_patterns`.
+A low parse success rate is not automatically a bug for this fixture. The sample is deliberately noisy, and the useful property is that unsupported evidence remains explainable through `warnings`, `failure_categories`, and `top_unknown_patterns`.
 
 The matrix should stay defensive and public-safe: use documentation IP ranges, synthetic hostnames, and synthetic usernames only.

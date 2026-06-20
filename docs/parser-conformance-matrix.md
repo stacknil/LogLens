@@ -8,7 +8,7 @@ corpus.
 The parser contract is intentionally conservative:
 
 - recognized evidence emits a normalized `Event`
-- unsupported evidence emits a parser warning and an unknown-pattern bucket
+- unsupported evidence emits a parser warning, a failure category, and an unknown-pattern bucket
 - unsupported evidence does not become detector input
 
 ## Input Format Matrix
@@ -57,23 +57,23 @@ event type in both formats.
 Unsupported buckets are warning labels, not normalized events. The expected
 normalized event is always `none`.
 
-| Unsupported evidence | Input formats | Expected unsupported line bucket | Expected normalized event |
-| --- | --- | --- | --- |
-| `sshd` preauth connection closed or reset, including `Connection closed by ... [preauth]`, `Connection closed by authenticating user ... [preauth]`, and `Connection reset by ... [preauth]` | `syslog_legacy`, `journalctl_short_full` | `sshd_connection_closed_preauth` | none |
-| `sshd` timeout, disconnection, or disconnect notice, including `Timeout, client not responding`, `Disconnected from ...`, and `Received disconnect ...` | `syslog_legacy`, `journalctl_short_full` | `sshd_timeout_or_disconnection` | none |
-| `sshd` negotiation failure such as `Unable to negotiate with ...` | `syslog_legacy`, `journalctl_short_full` | `sshd_negotiation_failure` | none |
-| Other well-formed but unsupported `sshd` messages | `syslog_legacy`, `journalctl_short_full` | `sshd_other` | none |
-| `pam_unix(...:session)` session closed | `syslog_legacy`, `journalctl_short_full` | `pam_unix_session_closed` | none |
-| Other unsupported `pam_unix(...)` messages | `syslog_legacy`, `journalctl_short_full` | `pam_unix_other` | none |
-| `pam_faillock(...:auth)` account temporarily locked | `syslog_legacy`, `journalctl_short_full` | `pam_faillock_account_locked` | none |
-| `pam_faillock(...:auth)` successful authentication telemetry | `syslog_legacy`, `journalctl_short_full` | `pam_faillock_authsucc` | none |
-| Other unsupported `pam_faillock(...)` messages | `syslog_legacy`, `journalctl_short_full` | `pam_faillock_other` | none |
-| `pam_sss(...:auth)` user not known to underlying authentication module | `syslog_legacy`, `journalctl_short_full` | `pam_sss_unknown_user` | none |
-| `pam_sss(...:auth)` authentication service cannot retrieve authentication info | `syslog_legacy`, `journalctl_short_full` | `pam_sss_authinfo_unavail` | none |
-| Other unsupported `pam_sss(...)` messages | `syslog_legacy`, `journalctl_short_full` | `pam_sss_other` | none |
-| Well-formed `sudo` line that is not command, incorrect-password, or policy-denial evidence | `syslog_legacy`, `journalctl_short_full` | `sudo_other` | none |
-| Well-formed `su` line that is not recognized as success or failure audit evidence | `syslog_legacy`, `journalctl_short_full` | `su_other` | none |
-| Well-formed unsupported program tag | `syslog_legacy`, `journalctl_short_full` | `program_<sanitized_program>` | none |
+| Unsupported evidence | Input formats | Failure category | Expected unsupported line bucket | Expected normalized event |
+| --- | --- | --- | --- | --- |
+| `sshd` preauth connection closed or reset, including `Connection closed by ... [preauth]`, `Connection closed by authenticating user ... [preauth]`, and `Connection reset by ... [preauth]` | `syslog_legacy`, `journalctl_short_full` | `known_program_unknown_message` | `sshd_connection_closed_preauth` | none |
+| `sshd` timeout, disconnection, or disconnect notice, including `Timeout, client not responding`, `Disconnected from ...`, and `Received disconnect ...` | `syslog_legacy`, `journalctl_short_full` | `known_program_unknown_message` | `sshd_timeout_or_disconnection` | none |
+| `sshd` negotiation failure such as `Unable to negotiate with ...` | `syslog_legacy`, `journalctl_short_full` | `known_program_unknown_message` | `sshd_negotiation_failure` | none |
+| Other well-formed but unsupported `sshd` messages | `syslog_legacy`, `journalctl_short_full` | `known_program_unknown_message` | `sshd_other` | none |
+| `pam_unix(...:session)` session closed | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_unix_session_closed` | none |
+| Other unsupported `pam_unix(...)` messages | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_unix_other` | none |
+| `pam_faillock(...:auth)` account temporarily locked | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_faillock_account_locked` | none |
+| `pam_faillock(...:auth)` successful authentication telemetry | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_faillock_authsucc` | none |
+| Other unsupported `pam_faillock(...)` messages | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_faillock_other` | none |
+| `pam_sss(...:auth)` user not known to underlying authentication module | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_sss_unknown_user` | none |
+| `pam_sss(...:auth)` authentication service cannot retrieve authentication info | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_sss_authinfo_unavail` | none |
+| Other unsupported `pam_sss(...)` messages | `syslog_legacy`, `journalctl_short_full` | `unsupported_pam_variant` | `pam_sss_other` | none |
+| Well-formed `sudo` line that is not command, incorrect-password, or policy-denial evidence | `syslog_legacy`, `journalctl_short_full` | `known_program_unknown_message` | `sudo_other` | none |
+| Well-formed `su` line that is not recognized as success or failure audit evidence | `syslog_legacy`, `journalctl_short_full` | `known_program_unknown_message` | `su_other` | none |
+| Well-formed unsupported program tag | `syslog_legacy`, `journalctl_short_full` | `unknown_program` | `program_<sanitized_program>` | none |
 
 ## Header And Structural Warning Matrix
 
@@ -81,18 +81,19 @@ Structural failures do not reach the authentication message classifier. They
 still produce parser warnings and unknown-pattern buckets through the same
 coverage telemetry path.
 
-| Failure class | Input formats | Expected bucket | Expected normalized event |
-| --- | --- | --- | --- |
-| Missing syslog assumed year | `syslog_legacy` | `syslog_legacy_mode_requires_assume_year` | none |
-| Missing syslog header fields | `syslog_legacy` | `missing_syslog_header_fields` | none |
-| Invalid syslog month token | `syslog_legacy` | `invalid_month_token` | none |
-| Invalid syslog day token | `syslog_legacy` | `invalid_day_token` | none |
-| Invalid time token | `syslog_legacy`, `journalctl_short_full` | `invalid_time_token` | none |
-| Invalid calendar date | `syslog_legacy`, `journalctl_short_full` | `invalid_calendar_date` | none |
-| Missing journalctl short-full header fields | `journalctl_short_full` | `missing_journalctl_short_full_header_fields` | none |
-| Invalid journalctl date token | `journalctl_short_full` | `invalid_journalctl_date_token` | none |
-| Invalid journalctl timezone token | `journalctl_short_full` | `invalid_timezone_token` | none |
-| Missing program/message delimiter | `syslog_legacy`, `journalctl_short_full` | `missing_program_message_delimiter` | none |
+| Failure class | Input formats | Failure category | Expected bucket | Expected normalized event |
+| --- | --- | --- | --- | --- |
+| Missing syslog assumed year | `syslog_legacy` | `unknown_timestamp` | `syslog_legacy_mode_requires_assume_year` | none |
+| Missing syslog header fields | `syslog_legacy` | `unknown_timestamp` | `missing_syslog_header_fields` | none |
+| Invalid syslog month token | `syslog_legacy` | `unknown_timestamp` | `invalid_month_token` | none |
+| Invalid syslog day token | `syslog_legacy` | `unknown_timestamp` | `invalid_day_token` | none |
+| Invalid time token | `syslog_legacy`, `journalctl_short_full` | `unknown_timestamp` | `invalid_time_token` | none |
+| Invalid calendar date | `syslog_legacy`, `journalctl_short_full` | `unknown_timestamp` | `invalid_calendar_date` | none |
+| Missing journalctl short-full header fields | `journalctl_short_full` | `unknown_timestamp` | `missing_journalctl_short_full_header_fields` | none |
+| Invalid journalctl date token | `journalctl_short_full` | `unknown_timestamp` | `invalid_journalctl_date_token` | none |
+| Invalid journalctl timezone token | `journalctl_short_full` | `unknown_timestamp` | `invalid_timezone_token` | none |
+| Missing program/message delimiter | `syslog_legacy`, `journalctl_short_full` | `unknown_program` | `missing_program_message_delimiter` | none |
+| Malformed source IP token | `syslog_legacy`, `journalctl_short_full` | `malformed_source_ip` | `malformed_source_ip` | none |
 
 ## Fixture Anchors
 
@@ -113,4 +114,5 @@ these places:
 - normalized event expectation in `tests/test_parser.cpp`
 - supported fixture line under `assets/`
 - unsupported warning bucket expectation
+- parser failure category expectation
 - report-contract fixture if the visible report shape changes

@@ -100,10 +100,10 @@ void test_noisy_auth_report_json_keeps_unsupported_lines_visible() {
            "expected noisy report json stable sshd preauth bucket");
     expect(json.find("\"pattern\": \"pam_faillock_account_locked\", \"count\": 2") != std::string::npos,
            "expected noisy report json stable pam_faillock account-lock bucket");
-    expect(json.find("\"line_number\": 13, \"reason\": \"unrecognized auth pattern: sshd_connection_closed_preauth\"")
+    expect(json.find("\"line_number\": 13, \"category\": \"known_program_unknown_message\", \"reason\": \"unrecognized auth pattern: sshd_connection_closed_preauth\"")
                != std::string::npos,
            "expected noisy report json to keep unsupported sshd warning visible");
-    expect(json.find("\"line_number\": 24, \"reason\": \"unrecognized auth pattern: sudo_other\"")
+    expect(json.find("\"line_number\": 24, \"category\": \"known_program_unknown_message\", \"reason\": \"unrecognized auth pattern: sudo_other\"")
                != std::string::npos,
            "expected noisy report json to keep unsupported partial sudo warning visible");
 }
@@ -130,7 +130,8 @@ void test_markdown_table_cells_escape_user_controlled_values() {
     expect(markdown.find("summary \\| &lt;raw&gt; &amp; more Usernames: ali\\|ce, bob&lt;root&gt;")
                != std::string::npos,
            "expected markdown finding notes to escape table and html-sensitive characters");
-    expect(markdown.find("| 1 | bad \\| value<br>next &lt;tag&gt; &amp; more |") != std::string::npos,
+    expect(markdown.find("| 1 | known_program_unknown_message | bad \\| value<br>next &lt;tag&gt; &amp; more |")
+               != std::string::npos,
            "expected markdown warning reason to escape table pipes and newlines");
 }
 
@@ -218,7 +219,7 @@ void test_csv_neutralizes_formula_like_fields() {
            "expected formula-like finding subject to be neutralized");
     expect(findings_csv.find(",'+bob;-carol;@dave,' @summary") != std::string::npos,
            "expected formula-like usernames and summary to be neutralized");
-    expect(warnings_csv.find("parse_warning,2,'=warning") != std::string::npos,
+    expect(warnings_csv.find("parse_warning,2,known_program_unknown_message,'=warning") != std::string::npos,
            "expected formula-like warning reason to be neutralized");
 }
 

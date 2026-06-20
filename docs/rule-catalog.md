@@ -111,7 +111,7 @@ The finding is a triage signal. It is not a compromise verdict, attribution clai
 
 ### Why unsupported evidence is not counted
 
-Unsupported lines are parser warnings, not `AuthSignal` records. They may appear in `top_unknown_patterns`, but they do not carry the `counts_as_terminal_auth_failure` flag required by this rule.
+Unsupported lines are parser warnings, not `AuthSignal` records. They may appear in `failure_categories` and `top_unknown_patterns`, but they do not carry the `counts_as_terminal_auth_failure` flag required by this rule.
 
 This prevents unsupported preauth noise, malformed lines, and unmodeled auth-family messages from silently increasing brute-force counts.
 
