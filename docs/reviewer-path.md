@@ -11,6 +11,7 @@ This path is for reviewers who want to understand LogLens quickly without readin
 | What artifacts does it produce? | [`docs/report-artifacts.md`](./report-artifacts.md) and report-contract fixtures | Can inspect Markdown, JSON, and optional CSV outputs |
 | How do rules use evidence? | [`docs/rule-catalog.md`](./rule-catalog.md) | Can explain grouping keys, windows, thresholds, and unsupported-evidence boundaries |
 | Can the parser behavior be trusted? | Parser contract, fixture matrix, and parser coverage fields | Can see known, unknown, and malformed line handling |
+| What proves the main claims? | [`docs/quality-gates.md`](./quality-gates.md) | Can map claims to tests, fixtures, docs, and repeatable commands |
 | How should a finding be interpreted? | [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md) | Can trace raw evidence to normalized events, findings, warnings, and non-goals |
 | How does it behave on larger local inputs? | [`docs/performance-envelope.md`](./performance-envelope.md) | Can state the local 1k/10k/100k-line envelope and its caveats |
 
@@ -42,6 +43,7 @@ Inspect:
 - [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json)
 - [`docs/report-artifacts.md`](./report-artifacts.md)
 - [`docs/parser-contract.md`](./parser-contract.md)
+- [`docs/quality-gates.md`](./quality-gates.md)
 - [`docs/rule-catalog.md`](./rule-catalog.md)
 - [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md)
 
