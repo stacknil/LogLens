@@ -18,6 +18,8 @@ Without `--csv`, LogLens does not create, overwrite, or delete existing CSV file
 The JSON report keeps parser observability visible next to findings:
 
 - `tool`
+- `schema`
+- `schema_version`
 - `input`
 - `input_mode`
 - `assume_year` for syslog-style input when a year is supplied
@@ -43,6 +45,11 @@ Finding objects contain `rule_id`, `rule`, `subject_kind`, `subject`, `grouping_
 `evidence_event_ids` are deterministic local event identifiers derived from the source line number, formatted as `line:<number>`. They let reviewers trace a finding back to the normalized input events that satisfied the rule window without implying global event identity.
 
 Warning objects contain the original `line_number`, parser `category`, and parser `reason`.
+
+`schema` and `schema_version` identify the report artifact contract, not the
+application release. They are intended for downstream tooling that needs a
+stable way to reject incompatible report shapes. The current JSON contract is
+`loglens.report.v1` with `schema_version` set to `1`.
 
 Parser failure categories are stable reviewer-facing buckets for unsupported
 lines: `unknown_timestamp`, `unknown_program`,

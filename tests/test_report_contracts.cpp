@@ -138,6 +138,8 @@ std::vector<std::string> extract_json_contract_lines(const std::string& json) {
         }
 
         if (starts_with(line, "\"tool\": ")
+            || starts_with(line, "\"schema\": ")
+            || starts_with(line, "\"schema_version\": ")
             || starts_with(line, "\"input\": ")
             || starts_with(line, "\"input_mode\": ")
             || starts_with(line, "\"assume_year\": ")

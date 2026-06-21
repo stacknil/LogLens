@@ -183,6 +183,15 @@ void test_json_finding_includes_explainability_fields() {
            "expected json finding to include evidence event ids");
 }
 
+void test_json_report_includes_schema_identity() {
+    const auto json = loglens::render_json_report(make_report_data());
+
+    expect(json.find("\"schema\": \"loglens.report.v1\"") != std::string::npos,
+           "expected json report to include schema identifier");
+    expect(json.find("\"schema_version\": 1") != std::string::npos,
+           "expected json report to include schema version");
+}
+
 void test_reports_include_total_input_line_count() {
     auto data = make_report_data();
     data.parser_quality.total_lines = 3;
@@ -349,6 +358,7 @@ int main() {
     test_markdown_table_cells_escape_user_controlled_values();
     test_json_escapes_generic_control_characters();
     test_json_finding_includes_explainability_fields();
+    test_json_report_includes_schema_identity();
     test_reports_include_total_input_line_count();
     test_csv_neutralizes_formula_like_fields();
     test_write_reports_fails_when_report_path_is_directory();

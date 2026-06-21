@@ -1,5 +1,7 @@
 {
   "tool": "LogLens",
+  "schema": "loglens.report.v1",
+  "schema_version": 1,
   "input": "tests/fixtures/report_contracts/syslog_legacy/input.log",
   "input_mode": "syslog_legacy",
   "assume_year": 2026,
