@@ -637,6 +637,8 @@ std::string render_json_report(const ReportData& data) {
 
     output << "{\n";
     output << "  \"tool\": \"LogLens\",\n";
+    output << "  \"schema\": \"loglens.report.v1\",\n";
+    output << "  \"schema_version\": 1,\n";
     output << "  \"input\": \"" << escape_json(data.input_path.generic_string()) << "\",\n";
     output << "  \"input_mode\": \"" << to_string(data.parse_metadata.input_mode) << "\",\n";
     if (data.parse_metadata.assume_year.has_value()) {

@@ -1,5 +1,7 @@
 {
   "tool": "LogLens",
+  "schema": "loglens.report.v1",
+  "schema_version": 1,
   "input": "tests/fixtures/report_contracts/journalctl_short_full/input.log",
   "input_mode": "journalctl_short_full",
   "timezone_present": true,
