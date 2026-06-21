@@ -13,6 +13,7 @@ Linux auth logs are noisy, format-sensitive, and easy to parse incorrectly. Revi
 - Reproducible command: `./build/loglens --mode syslog --year 2026 ./assets/sample_auth.log ./out`
 - Deterministic outputs: `report.md`, `report.json`, optional `findings.csv`, optional `warnings.csv`, and parser coverage telemetry.
 - Detection reasoning: [`docs/rule-catalog.md`](./rule-catalog.md) documents rule inputs and boundaries; [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md) traces a sanitized evidence set from raw lines to findings and warnings.
+- Quality gates: [`docs/quality-gates.md`](./quality-gates.md) maps reviewer-facing claims to tests, fixtures, docs, and repeatable commands.
 - Tests / CI: CTest coverage plus GitHub Actions CI on Ubuntu and Windows; CodeQL is required on protected main.
 - Release evidence: changelog, release process docs, versioned release notes, and GitHub release artifacts.
 - Non-goals: live collection, SIEM replacement, cross-host correlation, exploitation, credential attack automation, or incident verdicts.
