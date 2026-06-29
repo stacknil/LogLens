@@ -212,6 +212,8 @@ void test_default_thresholds() {
     expect((brute_force->evidence_event_ids == std::vector<std::string>{
                "line:1", "line:2", "line:3", "line:4", "line:5"}),
            "expected brute force evidence event ids");
+    expect(brute_force->verdict_boundary == "triage_signal_not_compromise_or_attribution",
+           "expected brute force verdict boundary");
 
     const auto* multi_user = find_finding(findings, loglens::FindingType::MultiUserProbing, "203.0.113.10");
     expect(multi_user != nullptr, "expected multi-user finding");
@@ -223,6 +225,8 @@ void test_default_thresholds() {
     expect((multi_user->evidence_event_ids == std::vector<std::string>{
                "line:1", "line:2", "line:3", "line:4", "line:5"}),
            "expected multi-user evidence event ids");
+    expect(multi_user->verdict_boundary == "triage_signal_not_intent_or_attribution",
+           "expected multi-user verdict boundary");
     expect(multi_user->usernames.size() == 5, "expected five usernames");
 
     const auto* sudo = find_finding(findings, loglens::FindingType::SudoBurst, "alice");
@@ -234,6 +238,8 @@ void test_default_thresholds() {
     expect(sudo->event_count == 3, "expected sudo count");
     expect((sudo->evidence_event_ids == std::vector<std::string>{"line:6", "line:7", "line:8"}),
            "expected sudo evidence event ids");
+    expect(sudo->verdict_boundary == "triage_signal_not_maliciousness_or_authorization",
+           "expected sudo verdict boundary");
 }
 
 void test_custom_thresholds() {

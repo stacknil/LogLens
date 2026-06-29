@@ -170,6 +170,7 @@ std::vector<std::string> extract_json_contract_lines(const std::string& json) {
             || starts_with(line, "\"window_start\": ")
             || starts_with(line, "\"window_end\": ")
             || starts_with(line, "\"evidence_event_ids\": ")
+            || starts_with(line, "\"verdict_boundary\": ")
             || starts_with(line, "\"usernames\": ")
             || starts_with(line, "\"summary\": ")
             || starts_with(line, "{\"line_number\": ")) {

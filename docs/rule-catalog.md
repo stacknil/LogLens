@@ -36,8 +36,17 @@ JSON findings include both the finding conclusion and the rule context used to r
 - `observed_count`: observed value compared against the threshold
 - `window_start` and `window_end`: selected evidence window
 - `evidence_event_ids`: deterministic local event IDs in the selected window, formatted as `line:<number>`
+- `verdict_boundary`: stable token that names the non-verdict boundary for the finding
 
 For `multi_user_probing`, `observed_count` is the distinct username count, while `event_count` remains the number of attempt-evidence events in the selected window.
+
+Current `verdict_boundary` values are:
+
+| Rule | `verdict_boundary` |
+| --- | --- |
+| `brute_force` | `triage_signal_not_compromise_or_attribution` |
+| `multi_user_probing` | `triage_signal_not_intent_or_attribution` |
+| `sudo_burst` | `triage_signal_not_maliciousness_or_authorization` |
 
 ## False-Positive Taxonomy
 
