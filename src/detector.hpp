@@ -39,11 +39,13 @@ struct Finding {
     std::chrono::sys_seconds first_seen{};
     std::chrono::sys_seconds last_seen{};
     std::vector<std::string> evidence_event_ids;
+    std::string verdict_boundary;
     std::vector<std::string> usernames;
     std::string summary;
 };
 
 std::string to_string(FindingType type);
+std::string default_verdict_boundary(FindingType type);
 
 class Detector {
   public:

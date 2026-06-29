@@ -165,6 +165,7 @@ void test_json_finding_includes_explainability_fields() {
     finding.first_seen = timestamp_at_minute(21);
     finding.last_seen = timestamp_at_minute(24);
     finding.evidence_event_ids = {"line:6", "line:7", "line:8", "line:9"};
+    finding.verdict_boundary = "triage_signal_not_maliciousness_or_authorization";
     finding.summary = "alice ran 4 sudo commands within 5 minutes.";
     data.findings.push_back(finding);
 
@@ -181,14 +182,17 @@ void test_json_finding_includes_explainability_fields() {
     expect(json.find("\"evidence_event_ids\": [\"line:6\", \"line:7\", \"line:8\", \"line:9\"]")
                != std::string::npos,
            "expected json finding to include evidence event ids");
+    expect(json.find("\"verdict_boundary\": \"triage_signal_not_maliciousness_or_authorization\"")
+               != std::string::npos,
+           "expected json finding to include verdict boundary");
 }
 
 void test_json_report_includes_schema_identity() {
     const auto json = loglens::render_json_report(make_report_data());
 
-    expect(json.find("\"schema\": \"loglens.report.v1\"") != std::string::npos,
+    expect(json.find("\"schema\": \"loglens.report.v2\"") != std::string::npos,
            "expected json report to include schema identifier");
-    expect(json.find("\"schema_version\": 1") != std::string::npos,
+    expect(json.find("\"schema_version\": 2") != std::string::npos,
            "expected json report to include schema version");
 }
 

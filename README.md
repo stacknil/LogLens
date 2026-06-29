@@ -15,11 +15,13 @@ A compact finding summary is a bounded triage signal, not attribution:
 {
   "rule_id": "brute_force",
   "subject_kind": "source_ip",
-  "subject": "198.51.100.23",
-  "window": "10m",
+  "subject": "203.0.113.10",
+  "window_start": "2026-03-10 08:11:22",
+  "window_end": "2026-03-10 08:18:05",
   "threshold": 5,
-  "observed": 8,
-  "verdict_boundary": "triage_signal_not_attribution"
+  "observed_count": 5,
+  "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+  "verdict_boundary": "triage_signal_not_compromise_or_attribution"
 }
 ```
 

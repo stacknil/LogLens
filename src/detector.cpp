@@ -88,6 +88,7 @@ Finding make_brute_force_finding(const std::string& ip,
     finding.first_seen = first_seen;
     finding.last_seen = last_seen;
     finding.evidence_event_ids = std::move(evidence_event_ids);
+    finding.verdict_boundary = default_verdict_boundary(finding.type);
     finding.summary = std::to_string(count) + " failed SSH attempts from " + ip
         + " within " + std::to_string(window.count()) + " minutes.";
     return finding;
@@ -114,6 +115,7 @@ Finding make_multi_user_finding(const std::string& ip,
     finding.first_seen = first_seen;
     finding.last_seen = last_seen;
     finding.evidence_event_ids = std::move(evidence_event_ids);
+    finding.verdict_boundary = default_verdict_boundary(finding.type);
     finding.usernames = std::move(usernames);
     finding.summary = ip + " targeted " + std::to_string(finding.usernames.size())
         + " usernames within " + std::to_string(window.count()) + " minutes.";
@@ -139,6 +141,7 @@ Finding make_sudo_finding(const std::string& user,
     finding.first_seen = first_seen;
     finding.last_seen = last_seen;
     finding.evidence_event_ids = std::move(evidence_event_ids);
+    finding.verdict_boundary = default_verdict_boundary(finding.type);
     finding.summary = user + " ran " + std::to_string(count)
         + " sudo commands within " + std::to_string(window.count()) + " minutes.";
     return finding;
@@ -303,6 +306,18 @@ std::string to_string(FindingType type) {
     case FindingType::SudoBurst:
     default:
         return "sudo_burst";
+    }
+}
+
+std::string default_verdict_boundary(FindingType type) {
+    switch (type) {
+    case FindingType::BruteForce:
+        return "triage_signal_not_compromise_or_attribution";
+    case FindingType::MultiUserProbing:
+        return "triage_signal_not_intent_or_attribution";
+    case FindingType::SudoBurst:
+    default:
+        return "triage_signal_not_maliciousness_or_authorization";
     }
 }
 

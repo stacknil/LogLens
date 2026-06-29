@@ -312,6 +312,13 @@ std::size_t finding_observed_count(const Finding& finding) {
     return finding.event_count;
 }
 
+std::string finding_verdict_boundary(const Finding& finding) {
+    if (!finding.verdict_boundary.empty()) {
+        return finding.verdict_boundary;
+    }
+    return default_verdict_boundary(finding.type);
+}
+
 void write_json_string_array(std::ostream& output, const std::vector<std::string>& values) {
     output << '[';
     for (std::size_t index = 0; index < values.size(); ++index) {
@@ -637,8 +644,8 @@ std::string render_json_report(const ReportData& data) {
 
     output << "{\n";
     output << "  \"tool\": \"LogLens\",\n";
-    output << "  \"schema\": \"loglens.report.v1\",\n";
-    output << "  \"schema_version\": 1,\n";
+    output << "  \"schema\": \"loglens.report.v2\",\n";
+    output << "  \"schema_version\": 2,\n";
     output << "  \"input\": \"" << escape_json(data.input_path.generic_string()) << "\",\n";
     output << "  \"input_mode\": \"" << to_string(data.parse_metadata.input_mode) << "\",\n";
     if (data.parse_metadata.assume_year.has_value()) {
@@ -718,6 +725,7 @@ std::string render_json_report(const ReportData& data) {
         output << "      \"evidence_event_ids\": ";
         write_json_string_array(output, finding.evidence_event_ids);
         output << ",\n";
+        output << "      \"verdict_boundary\": \"" << escape_json(finding_verdict_boundary(finding)) << "\",\n";
         output << "      \"usernames\": ";
         write_json_string_array(output, finding.usernames);
         output << ",\n";
