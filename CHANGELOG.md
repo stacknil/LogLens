@@ -10,6 +10,7 @@ All notable user-visible changes should be recorded here.
 - Added `schema` and `schema_version` fields to `report.json` so downstream tooling can identify the report artifact contract.
 - Added `verdict_boundary` to JSON findings and advanced the report artifact contract to `loglens.report.v2`.
 - Expanded parser coverage for `Accepted publickey` and selected `pam_faillock` / `pam_sss` variants.
+- Added a 150-line sanitized mixed auth corpus fixture covering Ubuntu / Debian-style `auth.log`, RHEL-family `secure`-style syslog, unknown lines, malformed source IPs, and blank-line handling.
 - Added compact host-level summaries for multi-host reports.
 - Added optional CSV export for findings and warnings when explicitly requested.
 

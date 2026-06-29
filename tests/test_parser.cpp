@@ -1,5 +1,6 @@
 #include "parser.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -7,6 +8,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -75,6 +77,34 @@ void expect_close(double actual, double expected, double tolerance, const std::s
 
 std::size_t total_input_lines(const loglens::ParseReport& result) {
     return result.quality.total_lines + result.quality.skipped_blank_lines;
+}
+
+std::size_t event_count(const std::vector<loglens::Event>& events, loglens::EventType type) {
+    return static_cast<std::size_t>(
+        std::count_if(events.begin(), events.end(), [type](const loglens::Event& event) {
+            return event.event_type == type;
+        }));
+}
+
+std::size_t unknown_pattern_count(const loglens::ParserQualityMetrics& quality, std::string_view pattern) {
+    const auto it = std::find_if(
+        quality.top_unknown_patterns.begin(),
+        quality.top_unknown_patterns.end(),
+        [pattern](const loglens::UnknownPatternCount& entry) {
+            return entry.pattern == pattern;
+        });
+    return it == quality.top_unknown_patterns.end() ? 0 : it->count;
+}
+
+std::size_t failure_category_count(const loglens::ParserQualityMetrics& quality,
+                                   loglens::ParserFailureCategory category) {
+    const auto it = std::find_if(
+        quality.failure_categories.begin(),
+        quality.failure_categories.end(),
+        [category](const loglens::ParserFailureCategoryCount& entry) {
+            return entry.category == category;
+        });
+    return it == quality.failure_categories.end() ? 0 : it->count;
 }
 
 std::string noisy_auth_coverage_json(const loglens::ParseReport& result) {
@@ -1106,6 +1136,58 @@ void test_noisy_auth_fixture_matrix_file() {
     expect(actual == expected, "expected noisy auth coverage summary to match fixture");
 }
 
+void test_mixed_auth_corpus_fixture_file() {
+    const auto parser = make_syslog_parser();
+    const auto result = parser.parse_file(asset_path("mixed_auth_corpus.log"));
+
+    expect(total_input_lines(result) == 150, "expected mixed auth corpus total input line count");
+    expect(result.quality.total_lines == 140, "expected mixed auth corpus nonblank line count");
+    expect(result.quality.skipped_blank_lines == 10, "expected mixed auth corpus skipped blank line count");
+    expect(result.events.size() == 90, "expected ninety mixed auth corpus parsed events");
+    expect(result.warnings.size() == 50, "expected fifty mixed auth corpus warnings");
+    expect(result.quality.parsed_lines == 90, "expected mixed auth corpus parsed line count");
+    expect(result.quality.unparsed_lines == 50, "expected mixed auth corpus unparsed line count");
+    expect_close(result.quality.parse_success_rate, 90.0 / 140.0, 1e-9,
+                 "expected mixed auth corpus parse success rate");
+
+    expect(event_count(result.events, loglens::EventType::SshInvalidUser) == 10,
+           "expected ten mixed corpus invalid-user events");
+    expect(event_count(result.events, loglens::EventType::SshFailedPublicKey) == 10,
+           "expected ten mixed corpus failed-publickey events");
+    expect(event_count(result.events, loglens::EventType::SshAcceptedPublicKey) == 10,
+           "expected ten mixed corpus accepted-publickey events");
+    expect(event_count(result.events, loglens::EventType::SudoCommand) == 10,
+           "expected ten mixed corpus sudo command events");
+    expect(event_count(result.events, loglens::EventType::SudoAuthFailure) == 10,
+           "expected ten mixed corpus sudo auth-failure events");
+    expect(event_count(result.events, loglens::EventType::PamAuthFailure) == 30,
+           "expected thirty mixed corpus PAM auth-failure events");
+    expect(event_count(result.events, loglens::EventType::SuAuthFailure) == 10,
+           "expected ten mixed corpus su auth-failure events");
+
+    expect(unknown_pattern_count(result.quality, "invalid_month_token") == 10,
+           "expected ten invalid-month telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "malformed_source_ip") == 10,
+           "expected ten malformed-source-IP telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "pam_unix_session_closed") == 10,
+           "expected ten pam_unix session-closed telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "program_cron") == 10,
+           "expected ten unsupported-program telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "sshd_connection_closed_preauth") == 10,
+           "expected ten sshd preauth-close telemetry buckets");
+
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::KnownProgramUnknownMessage) == 10,
+           "expected ten known-program unknown-message failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::MalformedSourceIp) == 10,
+           "expected ten malformed-source-IP failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::UnknownProgram) == 10,
+           "expected ten unknown-program failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::UnknownTimestamp) == 10,
+           "expected ten unknown-timestamp failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::UnsupportedPamVariant) == 10,
+           "expected ten unsupported-PAM-variant failures");
+}
+
 }  // namespace
 
 int main() {
@@ -1157,5 +1239,6 @@ int main() {
     test_syslog_fixture_matrix_file();
     test_journalctl_fixture_matrix_file();
     test_noisy_auth_fixture_matrix_file();
+    test_mixed_auth_corpus_fixture_file();
     return 0;
 }

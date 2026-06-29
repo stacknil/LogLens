@@ -132,6 +132,7 @@ coverage telemetry path.
 | [`assets/parser_auth_families_syslog.log`](../assets/parser_auth_families_syslog.log) | Selected `sshd`, `pam_unix`, `pam_faillock`, `pam_sss`, and session-opened auth-family support, plus five unsupported PAM-family telemetry buckets |
 | [`assets/parser_auth_families_journalctl_short_full.log`](../assets/parser_auth_families_journalctl_short_full.log) | Same auth-family event and warning shape as the syslog auth-family fixture, with journalctl timestamp parsing |
 | [`assets/noisy_auth_sample.log`](../assets/noisy_auth_sample.log) and [`tests/fixtures/parser_matrix/noisy_auth_expected.json`](../tests/fixtures/parser_matrix/noisy_auth_expected.json) | Noisy syslog coverage fixture with malformed lines, blank lines, unsupported auth-family evidence, irrelevant service lines, and locked parser quality counts |
+| [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log) | 150-line sanitized mixed syslog corpus with Ubuntu / Debian-style `auth.log` and RHEL-family `secure` host labels, 90 parsed events, 50 parser warnings, 10 blank lines, and locked unknown-pattern and failure-category coverage |
 
 ## Review Rule
 
