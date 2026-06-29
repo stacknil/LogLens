@@ -23,7 +23,9 @@ All notable user-visible changes should be recorded here.
 
 ### Docs
 
-- None yet.
+- Expanded the parser conformance matrix with explicit Ubuntu / Debian
+  `auth.log`, RHEL-family `secure`, `journalctl --output=short-full`, `sshd`,
+  `sudo`, `pam_unix`, `pam_faillock`, and `pam_sss` style coverage.
 
 ## v0.4.0
 
