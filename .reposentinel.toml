@@ -1,0 +1,22 @@
+# LogLens uses repo-sentinel-lite as a narrow hygiene gate:
+# required repository files plus accidental sensitive filenames.
+#
+# High-entropy content scanning is intentionally disabled here so fixture logs
+# and C++ build outputs do not affect this gate.
+max_text_file_size = 0
+entropy_threshold = 999.0
+
+ignore_globs = [
+  "build/**",
+  "build_manual*",
+  "out/**",
+  "report.md",
+  "report.json",
+  "*.exe",
+  "CMakeFiles",
+  "CMakeFiles/**",
+  "CMakeCache.txt",
+  "cmake_install.cmake",
+  "compile_commands.json",
+  "*.vcxproj.user",
+]
