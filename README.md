@@ -29,7 +29,7 @@ A compact finding summary is a bounded triage signal, not attribution:
 
 LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
 
-Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), and the [`quality gates map`](./docs/quality-gates.md). For detection reasoning, read the forensic-style [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md) and the [`rule catalog`](./docs/rule-catalog.md). For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
+Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), and the [`quality gates map`](./docs/quality-gates.md). For detection reasoning, read the forensic-style [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md), the [`rule catalog`](./docs/rule-catalog.md), and the [`false-positive taxonomy`](./docs/false-positive-taxonomy.md). For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
 
 ## Why This Project Exists
 
@@ -113,7 +113,7 @@ classes: `unknown_timestamp`, `unknown_program`,
 `known_program_unknown_message`, `malformed_source_ip`, and
 `unsupported_pam_variant`.
 
-For rule-by-rule semantics and signal boundaries, see [`docs/rule-catalog.md`](./docs/rule-catalog.md). For a forensic-style evidence walkthrough, see [`docs/case-study-linux-auth-bruteforce.md`](./docs/case-study-linux-auth-bruteforce.md). For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
+For rule-by-rule semantics and signal boundaries, see [`docs/rule-catalog.md`](./docs/rule-catalog.md). For benign-context hypotheses and the evidence needed to support them, see [`docs/false-positive-taxonomy.md`](./docs/false-positive-taxonomy.md). For a forensic-style evidence walkthrough, see [`docs/case-study-linux-auth-bruteforce.md`](./docs/case-study-linux-auth-bruteforce.md). For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
 
 LogLens does not currently detect:
 

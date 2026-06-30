@@ -50,16 +50,16 @@ Current `verdict_boundary` values are:
 
 ## False-Positive Taxonomy
 
-The taxonomy names benign or ambiguous explanations a reviewer should consider before interpreting a finding. It is not an allow-list, suppression policy, or automatic disposition.
+The taxonomy names benign or ambiguous explanations a reviewer should consider before interpreting a finding. It is not an allow-list, suppression policy, or automatic disposition. The detailed evidence-review matrices are in [`false-positive-taxonomy.md`](./false-positive-taxonomy.md).
 
 Each rule uses the same review buckets:
 
 - NAT
+- bastion
 - internal scanner
 - lab replay
-- shared bastion
 - scheduled admin task
-- malformed log replay
+- shared account
 
 ## Brute Force
 
@@ -112,11 +112,13 @@ The finding is a triage signal. It is not a compromise verdict, attribution clai
 | Bucket | Review interpretation |
 | --- | --- |
 | NAT | Multiple legitimate clients behind one egress address can collapse into one `source_ip`. |
+| bastion | An approved jump host can concentrate many operators or jobs under one source address. |
 | internal scanner | Authorized credential auditing or exposure scanning can intentionally generate repeated failures. |
 | lab replay | Sanitized sample data, training fixtures, or repeated demos can preserve concentrated failure patterns. |
-| shared bastion | A managed jump host or administrative relay can make many failed attempts appear to come from one source. |
 | scheduled admin task | A recurring job with stale credentials can fail repeatedly inside the rule window. |
-| malformed log replay | Duplicated or replayed log material can inflate apparent volume; unsupported malformed lines remain warnings and are not counted. |
+| shared account | Several operators or services can retry one shared credential from the grouped source. |
+
+See the [brute-force review matrix](./false-positive-taxonomy.md#brute-force) for corroborating evidence and residual uncertainty.
 
 ### Why unsupported evidence is not counted
 
@@ -180,11 +182,13 @@ The rule does not infer intent. It only states that one source IP produced attem
 | Bucket | Review interpretation |
 | --- | --- |
 | NAT | Different users behind one egress address can look like one source probing multiple accounts. |
+| bastion | A shared administrative entry point can originate expected attempts for several accounts. |
 | internal scanner | Authorized username-enumeration tests or account-audit tooling can touch many usernames by design. |
 | lab replay | Replayed lab logs can preserve synthetic username spread without representing live probing. |
-| shared bastion | Shared administrative entry points can produce attempts for several accounts from one source IP. |
 | scheduled admin task | Account validation, migration, or monitoring jobs can try multiple service or user accounts in one window. |
-| malformed log replay | Replayed or partially malformed evidence can duplicate username variety; unsupported records remain parser warnings and do not add usernames. |
+| shared account | Shared-account workflows can include fallback attempts across several shared or service identities. |
+
+See the [multi-user probing review matrix](./false-positive-taxonomy.md#multi-user-probing) for corroborating evidence and residual uncertainty.
 
 ### Why unsupported evidence is not counted
 
@@ -243,11 +247,13 @@ The finding is strongest when reviewed with session context, change windows, hos
 | Bucket | Review interpretation |
 | --- | --- |
 | NAT | Usually not a primary explanation because this rule groups by `username`, but it may matter when reviewed alongside source-IP findings. |
+| bastion | Approved jump-host workflows can precede a compact sequence of privileged maintenance commands. |
 | internal scanner | Endpoint assessment, compliance checks, or privileged inventory tooling can run several sudo commands quickly. |
 | lab replay | Demo or training logs can replay a compact privileged-command sequence. |
-| shared bastion | Shared administrative accounts or jump-host workflows can concentrate privileged commands under one username. |
 | scheduled admin task | Maintenance windows, package updates, service repair, or scripted operations can produce bursty sudo activity. |
-| malformed log replay | Duplicated sudo lines or replayed command logs can inflate the command count; unsupported malformed sudo-like lines stay out of rule input. |
+| shared account | Several administrators or services can concentrate commands under one username. |
+
+See the [sudo-burst review matrix](./false-positive-taxonomy.md#sudo-burst) for corroborating evidence and residual uncertainty.
 
 ### Why unsupported evidence is not counted
 
