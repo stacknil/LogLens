@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -107,6 +108,42 @@ std::size_t failure_category_count(const loglens::ParserQualityMetrics& quality,
     return it == quality.failure_categories.end() ? 0 : it->count;
 }
 
+std::vector<std::pair<loglens::EventType, std::size_t>> parser_event_type_counts(
+    const std::vector<loglens::Event>& events) {
+    std::vector<std::pair<loglens::EventType, std::size_t>> counts{
+        {loglens::EventType::SshFailedPassword, 0},
+        {loglens::EventType::SshAcceptedPassword, 0},
+        {loglens::EventType::SshAcceptedPublicKey, 0},
+        {loglens::EventType::SshAcceptedKeyboardInteractive, 0},
+        {loglens::EventType::SshInvalidUser, 0},
+        {loglens::EventType::SshFailedPublicKey, 0},
+        {loglens::EventType::SshFailedKeyboardInteractive, 0},
+        {loglens::EventType::SshMaxAuthTries, 0},
+        {loglens::EventType::PamAuthFailure, 0},
+        {loglens::EventType::SessionOpened, 0},
+        {loglens::EventType::SudoCommand, 0},
+        {loglens::EventType::SudoAuthFailure, 0},
+        {loglens::EventType::SudoPolicyDenied, 0},
+        {loglens::EventType::SuAuthFailure, 0}};
+
+    for (const auto& event : events) {
+        for (auto& [type, count] : counts) {
+            if (type == event.event_type) {
+                ++count;
+                break;
+            }
+        }
+    }
+
+    counts.erase(
+        std::remove_if(counts.begin(), counts.end(), [](const auto& entry) {
+            return entry.second == 0;
+        }),
+        counts.end());
+
+    return counts;
+}
+
 std::string noisy_auth_coverage_json(const loglens::ParseReport& result) {
     std::ostringstream output;
     output << "{\n"
@@ -138,6 +175,70 @@ std::string noisy_auth_coverage_json(const loglens::ParseReport& result) {
         output << "    {\"category\": \"" << loglens::to_string(entry.category)
                << "\", \"count\": " << entry.count << "}";
         output << (index + 1 == result.quality.failure_categories.size() ? "\n" : ",\n");
+    }
+
+    output << "  ],\n"
+           << "  \"warnings\": [\n";
+
+    for (std::size_t index = 0; index < result.warnings.size(); ++index) {
+        const auto& warning = result.warnings[index];
+        output << "    {\"line_number\": " << warning.line_number
+               << ", \"category\": \"" << loglens::to_string(warning.category) << "\""
+               << ", \"reason\": \"" << warning.reason << "\"}";
+        output << (index + 1 == result.warnings.size() ? "\n" : ",\n");
+    }
+
+    output << "  ]\n"
+           << "}\n";
+    return output.str();
+}
+
+std::string mixed_auth_coverage_json(const loglens::ParseReport& result) {
+    std::ostringstream output;
+    const auto event_counts = parser_event_type_counts(result.events);
+
+    output << "{\n"
+           << "  \"artifact\": \"loglens.parser_coverage_sample\",\n"
+           << "  \"schema_version\": 1,\n"
+           << "  \"fixture\": \"assets/mixed_auth_corpus.log\",\n"
+           << "  \"input_mode\": \"" << loglens::to_string(result.metadata.input_mode) << "\",\n"
+           << "  \"assume_year\": " << *result.metadata.assume_year << ",\n"
+           << "  \"parser_quality\": {\n"
+           << "    \"total_input_lines\": " << total_input_lines(result) << ",\n"
+           << "    \"total_lines\": " << result.quality.total_lines << ",\n"
+           << "    \"skipped_blank_lines\": " << result.quality.skipped_blank_lines << ",\n"
+           << "    \"parsed_lines\": " << result.quality.parsed_lines << ",\n"
+           << "    \"unparsed_lines\": " << result.quality.unparsed_lines << ",\n"
+           << "    \"parse_success_rate\": " << std::fixed << std::setprecision(10)
+           << result.quality.parse_success_rate << ",\n"
+           << "    \"top_unknown_patterns\": [\n";
+
+    for (std::size_t index = 0; index < result.quality.top_unknown_patterns.size(); ++index) {
+        const auto& entry = result.quality.top_unknown_patterns[index];
+        output << "      {\"pattern\": \"" << entry.pattern << "\", \"count\": " << entry.count << "}";
+        output << (index + 1 == result.quality.top_unknown_patterns.size() ? "\n" : ",\n");
+    }
+
+    output << "    ],\n"
+           << "    \"failure_categories\": [\n";
+
+    for (std::size_t index = 0; index < result.quality.failure_categories.size(); ++index) {
+        const auto& entry = result.quality.failure_categories[index];
+        output << "      {\"category\": \"" << loglens::to_string(entry.category)
+               << "\", \"count\": " << entry.count << "}";
+        output << (index + 1 == result.quality.failure_categories.size() ? "\n" : ",\n");
+    }
+
+    output << "    ]\n"
+           << "  },\n"
+           << "  \"parsed_event_count\": " << result.events.size() << ",\n"
+           << "  \"warning_count\": " << result.warnings.size() << ",\n"
+           << "  \"event_type_counts\": [\n";
+
+    for (std::size_t index = 0; index < event_counts.size(); ++index) {
+        const auto& [type, count] = event_counts[index];
+        output << "    {\"event_type\": \"" << loglens::to_string(type) << "\", \"count\": " << count << "}";
+        output << (index + 1 == event_counts.size() ? "\n" : ",\n");
     }
 
     output << "  ],\n"
@@ -1186,6 +1287,10 @@ void test_mixed_auth_corpus_fixture_file() {
            "expected ten unknown-timestamp failures");
     expect(failure_category_count(result.quality, loglens::ParserFailureCategory::UnsupportedPamVariant) == 10,
            "expected ten unsupported-PAM-variant failures");
+
+    const auto actual = mixed_auth_coverage_json(result);
+    const auto expected = read_text_file(asset_path("mixed_auth_parser_coverage.json"));
+    expect(actual == expected, "expected mixed auth parser coverage artifact to match fixture");
 }
 
 }  // namespace
