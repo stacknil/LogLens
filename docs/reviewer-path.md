@@ -10,6 +10,7 @@ This path is for reviewers who want to understand LogLens quickly without readin
 | What log formats are supported? | [`docs/parser-contract.md`](./parser-contract.md) | Can name `syslog_legacy` and `journalctl_short_full` behavior |
 | What artifacts does it produce? | [`docs/report-artifacts.md`](./report-artifacts.md) and report-contract fixtures | Can inspect Markdown, JSON, and optional CSV outputs |
 | How do rules use evidence? | [`docs/rule-catalog.md`](./rule-catalog.md) | Can explain grouping keys, windows, thresholds, and unsupported-evidence boundaries |
+| Can I trace one finding end to end? | [`docs/incident-style-case.md`](./incident-style-case.md) | Can follow raw lines through normalization and rule fields to a bounded conclusion |
 | What benign context can match a rule? | [`docs/false-positive-taxonomy.md`](./false-positive-taxonomy.md) | Can distinguish rule-true evidence from compromise, intent, attribution, or authorization claims |
 | Can the parser behavior be trusted? | Parser contract, fixture matrix, and [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json) | Can see known, unknown, and malformed line handling |
 | What proves the main claims? | [`docs/quality-gates.md`](./quality-gates.md) | Can map claims to tests, fixtures, docs, and repeatable commands |
@@ -46,6 +47,7 @@ Inspect:
 - [`docs/parser-contract.md`](./parser-contract.md)
 - [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json)
 - [`docs/quality-gates.md`](./quality-gates.md)
+- [`docs/incident-style-case.md`](./incident-style-case.md)
 - [`docs/rule-catalog.md`](./rule-catalog.md)
 - [`docs/false-positive-taxonomy.md`](./false-positive-taxonomy.md)
 - [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md)
