@@ -25,6 +25,8 @@ All notable user-visible changes should be recorded here.
 
 ### Docs
 
+- Added a one-page incident-style case that traces raw SSH evidence through
+  normalized events and finding fields to a bounded conclusion.
 - Added a rule-by-rule false-positive taxonomy for NAT, bastion, internal scanner,
   lab replay, scheduled admin task, and shared-account contexts.
 - Expanded the parser conformance matrix with explicit Ubuntu / Debian

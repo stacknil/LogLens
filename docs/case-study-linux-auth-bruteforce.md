@@ -1,6 +1,6 @@
 # Linux Auth Brute-Force Case Study
 
-This case study explains how LogLens interprets a sanitized Linux authentication sample as evidence. The emphasis is forensic reasoning: what the records support, what they do not support, and where parser uncertainty remains visible.
+This case study explains how LogLens interprets a sanitized Linux authentication sample as evidence. The emphasis is forensic reasoning: what the records support, what they do not support, and where parser uncertainty remains visible. Reviewers who want the shortest end-to-end trace can start with the [`one-page incident-style case`](./incident-style-case.md).
 
 ## Scenario
 
