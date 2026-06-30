@@ -25,6 +25,8 @@ All notable user-visible changes should be recorded here.
 
 ### Docs
 
+- Added a rule-by-rule false-positive taxonomy for NAT, bastion, internal scanner,
+  lab replay, scheduled admin task, and shared-account contexts.
 - Expanded the parser conformance matrix with explicit Ubuntu / Debian
   `auth.log`, RHEL-family `secure`, `journalctl --output=short-full`, `sshd`,
   `sudo`, `pam_unix`, `pam_faillock`, and `pam_sss` style coverage.
