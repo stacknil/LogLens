@@ -29,6 +29,8 @@ The locked expected coverage summary lives in [`tests/fixtures/parser_matrix/noi
 
 The corpus repeats ten small evidence batches. Each batch includes recognized `sshd`, `sudo`, `su`, `pam_unix`, `pam_faillock`, and `pam_sss` evidence; unsupported `sshd` preauth and `pam_unix` session-close telemetry; an unsupported service program; a malformed source IP; an invalid timestamp; and one blank line.
 
+For reviewer inspection without running the test suite, [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json) captures the deterministic parser coverage view for this corpus: parser-quality counters, normalized event-type counts, unknown-pattern buckets, failure categories, and warning line references.
+
 Locked parser expectations:
 
 - `total_input_lines`: 150
