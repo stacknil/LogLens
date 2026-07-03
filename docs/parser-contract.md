@@ -6,6 +6,12 @@ The guiding rule is:
 
 > Parser observability > silent detection claims.
 
+For the v0.5 Evidence Explainability Release, this contract is part of the
+release-facing reviewer path. Start with [`docs/release-v0.5.0.md`](./release-v0.5.0.md)
+for the release checklist, then use this page to inspect supported inputs,
+unsupported-line handling, parser warning categories, and the detection signal
+boundary.
+
 ## Supported input modes
 
 | Mode | Typical source | Timestamp behavior | Review anchor |

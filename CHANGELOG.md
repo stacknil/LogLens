@@ -49,6 +49,8 @@ All notable user-visible changes should be recorded here.
 ### Docs
 
 - Added release notes for the v0.5 Evidence Explainability Release.
+- Added a release readiness checklist that maps v0.5 requirements to reviewer
+  evidence and stopping points.
 - Added a one-page incident-style case that traces raw SSH evidence through
   normalized events and finding fields to a bounded conclusion.
 - Added a rule-by-rule false-positive taxonomy for NAT, bastion, internal scanner,

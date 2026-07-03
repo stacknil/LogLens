@@ -18,6 +18,19 @@ for reviewers to verify.
 - Added false-positive taxonomy and forensic-style case-study documentation for
   evidence interpretation.
 
+## Release readiness checklist
+
+| Requirement | Release-facing evidence | Reviewer check |
+| --- | --- | --- |
+| Changelog names v0.5.0 | [`CHANGELOG.md`](../CHANGELOG.md) | `v0.5.0` exists with explainability, parser observability, and case-study entries |
+| Release note theme is Evidence Explainability Release | This document | Title and highlights frame v0.5 around explainability and verification, not new rule volume |
+| Finding explainability fields are stable JSON contract | [`docs/report-artifacts.md`](./report-artifacts.md) and [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json) | Finding objects expose `rule_id`, `subject_kind`, `subject`, `grouping_key`, `window_start`, `window_end`, `threshold`, `observed_count`, `evidence_event_ids`, and `verdict_boundary` |
+| Parser contract is release-facing | [`docs/reviewer-path.md`](./reviewer-path.md) and [`docs/parser-contract.md`](./parser-contract.md) | Reviewer path routes v0.5 review through parser behavior, parser warnings, and detection signal boundaries |
+| Mixed corpus and parser coverage artifact are included | [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log) and [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json) | Reviewer can inspect dirty-input coverage without running the tool first |
+| False-positive taxonomy is included | [`docs/false-positive-taxonomy.md`](./false-positive-taxonomy.md) | Rule-true evidence is separated from compromise, intent, attribution, and authorization claims |
+| Forensic-style case study is included | [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md) | Raw evidence, normalization, findings, warnings, and boundaries are explained as evidence interpretation |
+| Non-claims are explicit | [Non-claims](#non-claims) | Release note states no compromise verdict, no attribution, no blocking recommendation, and no cross-host correlation |
+
 ## Stable JSON contract
 
 `report.json` now identifies the report artifact contract with:

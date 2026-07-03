@@ -54,6 +54,10 @@ fields, explain how parser coverage remains visible for unknown lines, and state
 that findings are bounded triage signals with no compromise verdict,
 attribution, blocking recommendation, or cross-host correlation claim.
 
+Use the release note's
+[`Release readiness checklist`](./release-v0.5.0.md#release-readiness-checklist)
+as the compact pass/fail map for the v0.5 scope.
+
 ## 5-minute artifact review
 
 Inspect:
