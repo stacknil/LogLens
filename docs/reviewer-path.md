@@ -7,6 +7,7 @@ This path is for reviewers who want to understand LogLens quickly without readin
 | Review question | Start here | Good stopping point |
 | --- | --- | --- |
 | What is LogLens? | [`README.md`](../README.md) and [`docs/reviewer-brief.md`](./reviewer-brief.md) | Can state scope, supported inputs, outputs, and non-goals |
+| What changed in v0.5? | [`docs/release-v0.5.0.md`](./release-v0.5.0.md) | Can explain the Evidence Explainability Release theme and its non-claims |
 | What log formats are supported? | [`docs/parser-contract.md`](./parser-contract.md) | Can name `syslog_legacy` and `journalctl_short_full` behavior |
 | What artifacts does it produce? | [`docs/report-artifacts.md`](./report-artifacts.md) and report-contract fixtures | Can inspect Markdown, JSON, and optional CSV outputs |
 | How do rules use evidence? | [`docs/rule-catalog.md`](./rule-catalog.md) | Can explain grouping keys, windows, thresholds, and unsupported-evidence boundaries |
@@ -23,6 +24,7 @@ Read:
 
 - [`README.md`](../README.md)
 - [`docs/reviewer-brief.md`](./reviewer-brief.md)
+- [`docs/release-v0.5.0.md`](./release-v0.5.0.md)
 
 Confirm:
 
@@ -35,6 +37,23 @@ Core review lens:
 
 > Parser observability > silent detection claims.
 
+## v0.5 release-facing route
+
+Start with [`docs/release-v0.5.0.md`](./release-v0.5.0.md), then inspect:
+
+- [`docs/parser-contract.md`](./parser-contract.md)
+- [`docs/report-artifacts.md`](./report-artifacts.md)
+- [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json)
+- [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log)
+- [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json)
+- [`docs/false-positive-taxonomy.md`](./false-positive-taxonomy.md)
+- [`docs/case-study-linux-auth-bruteforce.md`](./case-study-linux-auth-bruteforce.md)
+
+Good stopping point: the reviewer can name the stable finding explainability
+fields, explain how parser coverage remains visible for unknown lines, and state
+that findings are bounded triage signals with no compromise verdict,
+attribution, blocking recommendation, or cross-host correlation claim.
+
 ## 5-minute artifact review
 
 Inspect:
@@ -43,8 +62,10 @@ Inspect:
 - [`assets/sample_journalctl_short_full.log`](../assets/sample_journalctl_short_full.log)
 - [`tests/fixtures/report_contracts/syslog_legacy/report.md`](../tests/fixtures/report_contracts/syslog_legacy/report.md)
 - [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json)
+- [`docs/release-v0.5.0.md`](./release-v0.5.0.md)
 - [`docs/report-artifacts.md`](./report-artifacts.md)
 - [`docs/parser-contract.md`](./parser-contract.md)
+- [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log)
 - [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json)
 - [`docs/quality-gates.md`](./quality-gates.md)
 - [`docs/incident-style-case.md`](./incident-style-case.md)
