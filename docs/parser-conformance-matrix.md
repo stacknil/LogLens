@@ -1,7 +1,8 @@
 # Parser Conformance Matrix
 
 This matrix documents the parser behavior that LogLens currently treats as
-reviewable contract surface. It is derived from `src/parser.cpp`,
+reviewable contract surface. It is derived from `src/parser.cpp`, the internal
+`src/parser/` handler registry,
 `src/event.hpp`, `tests/test_parser.cpp`, and the checked-in parser fixture
 corpus.
 

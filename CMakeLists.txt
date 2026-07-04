@@ -9,6 +9,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(loglens_lib
     src/config.cpp
     src/parser.cpp
+    src/parser/failure_classifier.cpp
+    src/parser/pam_handlers.cpp
+    src/parser/program_dispatch.cpp
+    src/parser/source_envelope_parser.cpp
+    src/parser/sshd_handlers.cpp
+    src/parser/su_handlers.cpp
+    src/parser/sudo_handlers.cpp
+    src/parser/text_utils.cpp
+    src/parser/timestamp_parser.cpp
     src/signal.cpp
     src/detector.cpp
     src/report.cpp

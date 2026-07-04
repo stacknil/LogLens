@@ -1315,6 +1315,55 @@ void test_mixed_auth_corpus_fixture_file() {
     expect(actual == expected, "expected mixed auth parser coverage artifact to match fixture");
 }
 
+void test_program_handler_registry_routes_supported_families() {
+    struct RegistryCase {
+        std::string line;
+        std::string program;
+        loglens::EventType event_type;
+    };
+
+    const std::vector<RegistryCase> cases{
+        {"Mar 10 08:20:01 example-host sshd[4101]: Failed password for user-a from 203.0.113.41 port 50101 ssh2",
+         "sshd",
+         loglens::EventType::SshFailedPassword},
+        {"Mar 10 08:20:02 example-host pam_unix(sshd:auth): authentication failure; rhost=203.0.113.42 user=user-b",
+         "pam_unix(sshd:auth)",
+         loglens::EventType::PamAuthFailure},
+        {"Mar 10 08:20:03 example-host pam_faillock(sshd:auth): Authentication failure for user user-c from 203.0.113.43",
+         "pam_faillock(sshd:auth)",
+         loglens::EventType::PamAuthFailure},
+        {"Mar 10 08:20:04 example-host pam_sss(sshd:auth): received for user user-d: 7 (Authentication failure)",
+         "pam_sss(sshd:auth)",
+         loglens::EventType::PamAuthFailure},
+        {"Mar 10 08:20:05 example-host sudo[4105]:    user-e : TTY=pts/1 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/id",
+         "sudo",
+         loglens::EventType::SudoCommand},
+        {"Mar 10 08:20:06 example-host su[4106]: FAILED SU (to root) user-f on pts/2",
+         "su",
+         loglens::EventType::SuAuthFailure},
+    };
+
+    const auto parser = make_syslog_parser();
+    for (std::size_t index = 0; index < cases.size(); ++index) {
+        const auto event = parser.parse_line(cases[index].line, index + 1);
+        expect(event.has_value(), "expected registered program handler to emit an event");
+        expect(event->program == cases[index].program, "expected registry to preserve the source program");
+        expect(event->event_type == cases[index].event_type, "expected registry to select the matching handler");
+    }
+}
+
+void test_parse_stream_accepts_crlf_line_terminator() {
+    std::istringstream input(
+        "Mar 10 08:21:01 example-host pam_faillock(sshd:auth): Authentication failure for user user-a from 203.0.113.51\r\n");
+
+    const auto parser = make_syslog_parser();
+    const auto result = parser.parse_stream(input);
+
+    expect(result.events.size() == 1, "expected CRLF input to emit one event");
+    expect(result.warnings.empty(), "expected CRLF input not to emit a malformed-IP warning");
+    expect(result.events.front().source_ip == "203.0.113.51", "expected CR to be excluded from source IP");
+}
+
 }  // namespace
 
 int main() {
@@ -1368,5 +1417,7 @@ int main() {
     test_journalctl_fixture_matrix_file();
     test_noisy_auth_fixture_matrix_file();
     test_mixed_auth_corpus_fixture_file();
+    test_program_handler_registry_routes_supported_families();
+    test_parse_stream_accepts_crlf_line_terminator();
     return 0;
 }

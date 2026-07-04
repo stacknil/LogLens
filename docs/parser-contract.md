@@ -47,6 +47,24 @@ Recognized success or audit families include accepted password, accepted publick
 
 This is the main trust boundary: unsupported input should remain inspectable, even when it does not produce a finding.
 
+## Internal parsing pipeline
+
+`AuthLogParser` remains the single public parser interface. Its implementation
+is split into internal modules with one-way flow:
+
+1. `timestamp_parser` parses the selected input mode's timestamp and hostname.
+2. `source_envelope_parser` extracts the program tag, optional pid, and raw message.
+3. `program_dispatch` selects a registered `sshd`, PAM, `sudo`, or `su` handler.
+4. The selected handler either emits a normalized event or returns a structured
+   failure result.
+5. `failure_classifier` assigns malformed-source and unsupported-pattern
+   telemetry without turning unsupported evidence into an event.
+
+All registered program handlers return the same internal result shape:
+`matched`, optional `event`, `failure_category`, and `reason`. The registry and
+handler modules are implementation details; callers continue to depend only on
+`AuthLogParser`, `Event`, and the parser telemetry contract.
+
 Parser failure categories are intentionally coarser than unknown-pattern
 buckets:
 
