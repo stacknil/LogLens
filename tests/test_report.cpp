@@ -171,8 +171,12 @@ void test_json_finding_includes_explainability_fields() {
 
     const auto json = loglens::render_json_report(data);
 
+    expect(json.find("\"finding_id\": \"finding:sudo_burst:") != std::string::npos,
+           "expected json finding to include stable finding id");
     expect(json.find("\"rule_id\": \"sudo_burst\"") != std::string::npos,
            "expected json finding to include rule id");
+    expect(json.find("\"episode_index\": 1") != std::string::npos,
+           "expected json finding to include episode index");
     expect(json.find("\"grouping_key\": \"username\"") != std::string::npos,
            "expected json finding to include grouping key");
     expect(json.find("\"threshold\": 3") != std::string::npos,
@@ -190,9 +194,9 @@ void test_json_finding_includes_explainability_fields() {
 void test_json_report_includes_schema_identity() {
     const auto json = loglens::render_json_report(make_report_data());
 
-    expect(json.find("\"schema\": \"loglens.report.v2\"") != std::string::npos,
+    expect(json.find("\"schema\": \"loglens.report.v3\"") != std::string::npos,
            "expected json report to include schema identifier");
-    expect(json.find("\"schema_version\": 2") != std::string::npos,
+    expect(json.find("\"schema_version\": 3") != std::string::npos,
            "expected json report to include schema version");
 }
 

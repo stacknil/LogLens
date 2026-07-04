@@ -149,6 +149,26 @@ std::vector<loglens::Event> build_two_sudo_episode_events() {
         "Mar 10 15:02:00 example-host sudo:    user001 : TTY=pts/0 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/systemctl reload ssh\n");
 }
 
+std::vector<loglens::Event> build_bruteforce_exact_boundary_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 09:00:00 example-host sshd[2201]: Failed password for user001 from 203.0.113.30 port 52001 ssh2\n"
+        "Mar 10 09:02:00 example-host sshd[2202]: Failed password for user001 from 203.0.113.30 port 52002 ssh2\n"
+        "Mar 10 09:04:00 example-host sshd[2203]: Failed password for user001 from 203.0.113.30 port 52003 ssh2\n"
+        "Mar 10 09:06:00 example-host sshd[2204]: Failed password for user001 from 203.0.113.30 port 52004 ssh2\n"
+        "Mar 10 09:10:00 example-host sshd[2205]: Failed password for user001 from 203.0.113.30 port 52005 ssh2\n");
+}
+
+std::vector<loglens::Event> build_bruteforce_over_boundary_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 09:00:00 example-host sshd[2301]: Failed password for user001 from 203.0.113.31 port 52001 ssh2\n"
+        "Mar 10 09:02:00 example-host sshd[2302]: Failed password for user001 from 203.0.113.31 port 52002 ssh2\n"
+        "Mar 10 09:04:00 example-host sshd[2303]: Failed password for user001 from 203.0.113.31 port 52003 ssh2\n"
+        "Mar 10 09:06:00 example-host sshd[2304]: Failed password for user001 from 203.0.113.31 port 52004 ssh2\n"
+        "Mar 10 09:10:01 example-host sshd[2305]: Failed password for user001 from 203.0.113.31 port 52005 ssh2\n");
+}
+
 std::vector<loglens::Event> build_publickey_bruteforce_candidate_events() {
     return parse_events(
         make_syslog_config(),
@@ -310,6 +330,14 @@ void test_bruteforce_emits_multiple_episodes_for_same_source() {
 
     const auto episodes = find_findings(findings, loglens::FindingType::BruteForce, "203.0.113.10");
     expect(episodes.size() == 2, "expected two brute-force episodes for the same source IP");
+    expect(episodes[0]->episode_index == 1, "expected first brute-force episode index");
+    expect(episodes[1]->episode_index == 2, "expected second brute-force episode index");
+    expect(episodes[0]->finding_id.rfind("finding:brute_force:", 0) == 0,
+           "expected first brute-force stable finding id");
+    expect(episodes[1]->finding_id.rfind("finding:brute_force:", 0) == 0,
+           "expected second brute-force stable finding id");
+    expect(episodes[0]->finding_id != episodes[1]->finding_id,
+           "expected separated brute-force episodes to have distinct finding ids");
     expect(episodes[0]->event_count == 5, "expected first brute-force episode count");
     expect(episodes[0]->observed_count == 5, "expected first brute-force observed count");
     expect(loglens::format_timestamp(episodes[0]->first_seen) == "2026-03-10 09:00:00",
@@ -338,6 +366,14 @@ void test_multi_user_emits_multiple_episodes_for_same_source() {
 
     const auto episodes = find_findings(findings, loglens::FindingType::MultiUserProbing, "203.0.113.20");
     expect(episodes.size() == 2, "expected two multi-user probing episodes for the same source IP");
+    expect(episodes[0]->episode_index == 1, "expected first multi-user episode index");
+    expect(episodes[1]->episode_index == 2, "expected second multi-user episode index");
+    expect(episodes[0]->finding_id.rfind("finding:multi_user_probing:", 0) == 0,
+           "expected first multi-user stable finding id");
+    expect(episodes[1]->finding_id.rfind("finding:multi_user_probing:", 0) == 0,
+           "expected second multi-user stable finding id");
+    expect(episodes[0]->finding_id != episodes[1]->finding_id,
+           "expected separated multi-user episodes to have distinct finding ids");
     expect(episodes[0]->event_count == 3, "expected first multi-user episode event count");
     expect(episodes[0]->observed_count == 3, "expected first multi-user episode distinct username count");
     expect((episodes[0]->usernames == std::vector<std::string>{"user001", "user002", "user003"}),
@@ -364,6 +400,14 @@ void test_sudo_burst_emits_multiple_episodes_for_same_user() {
 
     const auto episodes = find_findings(findings, loglens::FindingType::SudoBurst, "user001");
     expect(episodes.size() == 2, "expected two sudo burst episodes for the same user");
+    expect(episodes[0]->episode_index == 1, "expected first sudo episode index");
+    expect(episodes[1]->episode_index == 2, "expected second sudo episode index");
+    expect(episodes[0]->finding_id.rfind("finding:sudo_burst:", 0) == 0,
+           "expected first sudo stable finding id");
+    expect(episodes[1]->finding_id.rfind("finding:sudo_burst:", 0) == 0,
+           "expected second sudo stable finding id");
+    expect(episodes[0]->finding_id != episodes[1]->finding_id,
+           "expected separated sudo episodes to have distinct finding ids");
     expect(episodes[0]->event_count == 3, "expected first sudo episode count");
     expect(episodes[0]->observed_count == 3, "expected first sudo episode observed count");
     expect(loglens::format_timestamp(episodes[0]->first_seen) == "2026-03-10 09:00:00",
@@ -381,6 +425,62 @@ void test_sudo_burst_emits_multiple_episodes_for_same_user() {
            "expected second sudo episode end");
     expect((episodes[1]->evidence_event_ids == std::vector<std::string>{"line:4", "line:5", "line:6"}),
            "expected second sudo episode evidence ids");
+}
+
+void test_episode_identity_is_stable_for_unsorted_input_events() {
+    const auto ordered_events = build_two_bruteforce_episode_events();
+    const std::vector<loglens::Event> shuffled_events{
+        ordered_events[7],
+        ordered_events[0],
+        ordered_events[4],
+        ordered_events[8],
+        ordered_events[1],
+        ordered_events[5],
+        ordered_events[2],
+        ordered_events[9],
+        ordered_events[3],
+        ordered_events[6]};
+
+    const loglens::Detector detector;
+    const auto ordered_findings = detector.analyze(ordered_events);
+    const auto shuffled_findings = detector.analyze(shuffled_events);
+    const auto ordered_episodes = find_findings(ordered_findings, loglens::FindingType::BruteForce, "203.0.113.10");
+    const auto shuffled_episodes = find_findings(shuffled_findings, loglens::FindingType::BruteForce, "203.0.113.10");
+
+    expect(ordered_episodes.size() == 2, "expected ordered input to produce two brute-force episodes");
+    expect(shuffled_episodes.size() == 2, "expected shuffled input to produce two brute-force episodes");
+    for (std::size_t index = 0; index < ordered_episodes.size(); ++index) {
+        expect(ordered_episodes[index]->episode_index == shuffled_episodes[index]->episode_index,
+               "expected shuffled input to preserve episode index");
+        expect(ordered_episodes[index]->finding_id == shuffled_episodes[index]->finding_id,
+               "expected shuffled input to preserve stable finding id");
+        expect(ordered_episodes[index]->first_seen == shuffled_episodes[index]->first_seen,
+               "expected shuffled input to preserve episode start");
+        expect(ordered_episodes[index]->last_seen == shuffled_episodes[index]->last_seen,
+               "expected shuffled input to preserve episode end");
+    }
+
+    auto relabeled_episode = *ordered_episodes[0];
+    relabeled_episode.episode_index = 99;
+    expect(loglens::build_finding_id(relabeled_episode) == ordered_episodes[0]->finding_id,
+           "expected finding id to remain independent of episode index");
+}
+
+void test_bruteforce_window_boundary_is_inclusive() {
+    const loglens::Detector detector;
+
+    const auto exact_findings = detector.analyze(build_bruteforce_exact_boundary_events());
+    const auto exact = find_findings(exact_findings, loglens::FindingType::BruteForce, "203.0.113.30");
+    expect(exact.size() == 1, "expected exact ten-minute boundary to count inside the window");
+    expect(exact[0]->event_count == 5, "expected exact-boundary brute-force count");
+    expect(loglens::format_timestamp(exact[0]->first_seen) == "2026-03-10 09:00:00",
+           "expected exact-boundary window start");
+    expect(loglens::format_timestamp(exact[0]->last_seen) == "2026-03-10 09:10:00",
+           "expected exact-boundary window end");
+
+    const auto over_findings = detector.analyze(build_bruteforce_over_boundary_events());
+    const auto over = find_findings(over_findings, loglens::FindingType::BruteForce, "203.0.113.31");
+    expect(over.empty(), "expected one second over the window to stay below threshold");
 }
 
 void test_auth_signal_defaults() {
@@ -637,6 +737,8 @@ int main() {
     test_bruteforce_emits_multiple_episodes_for_same_source();
     test_multi_user_emits_multiple_episodes_for_same_source();
     test_sudo_burst_emits_multiple_episodes_for_same_user();
+    test_episode_identity_is_stable_for_unsorted_input_events();
+    test_bruteforce_window_boundary_is_inclusive();
     test_auth_signal_defaults();
     test_failed_publickey_contributes_to_bruteforce_by_default();
     test_accepted_publickey_success_stays_out_of_failure_signals();

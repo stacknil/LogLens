@@ -1,6 +1,10 @@
 #include "detector.hpp"
 
 #include <algorithm>
+#include <cstdint>
+#include <iomanip>
+#include <sstream>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -24,6 +28,61 @@ struct MultiUserWindowSelection {
     std::vector<std::string> usernames;
     bool matched = false;
 };
+
+std::string finding_rule_id_for_identity(const Finding& finding) {
+    if (!finding.rule_id.empty()) {
+        return finding.rule_id;
+    }
+    return to_string(finding.type);
+}
+
+std::string finding_subject_kind_for_identity(const Finding& finding) {
+    if (!finding.subject_kind.empty()) {
+        return finding.subject_kind;
+    }
+    return finding.grouping_key;
+}
+
+bool finding_sort_less(const Finding& left, const Finding& right) {
+    if (left.type != right.type) {
+        return to_string(left.type) < to_string(right.type);
+    }
+    if (left.subject_kind != right.subject_kind) {
+        return left.subject_kind < right.subject_kind;
+    }
+    if (left.subject != right.subject) {
+        return left.subject < right.subject;
+    }
+    if (left.first_seen != right.first_seen) {
+        return left.first_seen < right.first_seen;
+    }
+    if (left.last_seen != right.last_seen) {
+        return left.last_seen < right.last_seen;
+    }
+    return left.evidence_event_ids < right.evidence_event_ids;
+}
+
+std::string finding_episode_key(const Finding& finding) {
+    return finding_rule_id_for_identity(finding)
+        + '\x1f' + finding_subject_kind_for_identity(finding)
+        + '\x1f' + finding.subject;
+}
+
+void hash_append(std::uint64_t& hash, std::string_view value) {
+    constexpr std::uint64_t fnv_prime = 1099511628211ULL;
+    for (const unsigned char ch : value) {
+        hash ^= ch;
+        hash *= fnv_prime;
+    }
+    hash ^= 0xffU;
+    hash *= fnv_prime;
+}
+
+std::string hex64(std::uint64_t value) {
+    std::ostringstream output;
+    output << std::hex << std::setfill('0') << std::setw(16) << value;
+    return output.str();
+}
 
 std::vector<const AuthSignal*> sort_signals_by_time(const std::vector<const AuthSignal*>& signals) {
     auto sorted = signals;
@@ -372,6 +431,37 @@ std::string default_verdict_boundary(FindingType type) {
     }
 }
 
+std::string build_finding_id(const Finding& finding) {
+    constexpr std::uint64_t fnv_offset_basis = 14695981039346656037ULL;
+    std::uint64_t hash = fnv_offset_basis;
+
+    hash_append(hash, finding_rule_id_for_identity(finding));
+    hash_append(hash, finding_subject_kind_for_identity(finding));
+    hash_append(hash, finding.subject);
+    hash_append(hash, format_timestamp(finding.first_seen));
+    hash_append(hash, format_timestamp(finding.last_seen));
+    hash_append(hash, std::to_string(finding.threshold));
+    const auto observed_count = finding.observed_count == 0 ? finding.event_count : finding.observed_count;
+    hash_append(hash, std::to_string(observed_count));
+    hash_append(hash, std::to_string(finding.event_count));
+    for (const auto& event_id : finding.evidence_event_ids) {
+        hash_append(hash, event_id);
+    }
+
+    return "finding:" + finding_rule_id_for_identity(finding) + ":" + hex64(hash);
+}
+
+void assign_finding_episode_identity(std::vector<Finding>& findings) {
+    std::unordered_map<std::string, std::size_t> episode_counts;
+
+    for (auto& finding : findings) {
+        auto& episode_count = episode_counts[finding_episode_key(finding)];
+        ++episode_count;
+        finding.episode_index = episode_count;
+        finding.finding_id = build_finding_id(finding);
+    }
+}
+
 Detector::Detector(DetectorConfig config)
     : config_(config) {}
 
@@ -384,15 +474,8 @@ std::vector<Finding> Detector::analyze(const std::vector<Event>& events) const {
     findings.insert(findings.end(), multi_user.begin(), multi_user.end());
     findings.insert(findings.end(), sudo.begin(), sudo.end());
 
-    std::sort(findings.begin(), findings.end(), [](const Finding& left, const Finding& right) {
-        if (left.type != right.type) {
-            return to_string(left.type) < to_string(right.type);
-        }
-        if (left.subject != right.subject) {
-            return left.subject < right.subject;
-        }
-        return left.first_seen < right.first_seen;
-    });
+    std::sort(findings.begin(), findings.end(), finding_sort_less);
+    assign_finding_episode_identity(findings);
 
     return findings;
 }

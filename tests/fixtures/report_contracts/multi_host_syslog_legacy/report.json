@@ -1,7 +1,7 @@
 {
   "tool": "LogLens",
-  "schema": "loglens.report.v2",
-  "schema_version": 2,
+  "schema": "loglens.report.v3",
+  "schema_version": 3,
   "input": "tests/fixtures/report_contracts/multi_host_syslog_legacy/input.log",
   "input_mode": "syslog_legacy",
   "assume_year": 2026,
@@ -63,8 +63,10 @@
   ],
   "findings": [
     {
+      "finding_id": "finding:brute_force:60b8cb14f1f32393",
       "rule_id": "brute_force",
       "rule": "brute_force",
+      "episode_index": 1,
       "subject_kind": "source_ip",
       "subject": "203.0.113.10",
       "grouping_key": "source_ip",
@@ -79,8 +81,10 @@
       "summary": "5 failed SSH attempts from 203.0.113.10 within 10 minutes."
     },
     {
+      "finding_id": "finding:multi_user_probing:2ca1172c80b28d2a",
       "rule_id": "multi_user_probing",
       "rule": "multi_user_probing",
+      "episode_index": 1,
       "subject_kind": "source_ip",
       "subject": "203.0.113.10",
       "grouping_key": "source_ip",
@@ -95,8 +99,10 @@
       "summary": "203.0.113.10 targeted 5 usernames within 15 minutes."
     },
     {
+      "finding_id": "finding:sudo_burst:76fbf33350f4b4fc",
       "rule_id": "sudo_burst",
       "rule": "sudo_burst",
+      "episode_index": 1,
       "subject_kind": "username",
       "subject": "alice",
       "grouping_key": "username",

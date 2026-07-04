@@ -14,7 +14,9 @@ or attribution:
 
 ```json
 {
+  "finding_id": "finding:brute_force:4e6aec401a0d45ca",
   "rule_id": "brute_force",
+  "episode_index": 1,
   "subject_kind": "source_ip",
   "subject": "203.0.113.10",
   "grouping_key": "source_ip",
@@ -31,7 +33,7 @@ or attribution:
 
 **Release posture:** Early reviewer-stable release with a narrow Linux authentication evidence contract. Parser and detection coverage remain intentionally narrow.
 
-Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), and the [`v0.5 Evidence Explainability release note`](./docs/release-v0.5.0.md). The [`quality gates map`](./docs/quality-gates.md) links claims to tests and fixtures. For detection reasoning, follow the [`one-page incident-style case`](./docs/incident-style-case.md), then use the full [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md), [`rule catalog`](./docs/rule-catalog.md), and [`false-positive taxonomy`](./docs/false-positive-taxonomy.md) for depth. For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
+Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), the [`v0.5 Evidence Explainability release note`](./docs/release-v0.5.0.md), and the [`v0.6 Detection Episode Semantics release note`](./docs/release-v0.6.0.md). The [`quality gates map`](./docs/quality-gates.md) links claims to tests and fixtures. For detection reasoning, follow the [`one-page incident-style case`](./docs/incident-style-case.md), then use the full [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md), [`rule catalog`](./docs/rule-catalog.md), and [`false-positive taxonomy`](./docs/false-positive-taxonomy.md) for depth. For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
 
 For a shorter external review entry point focused on uncertainty handling, read
 [How LogLens Treats Parser Uncertainty as Evidence](./docs/case-study-parser-uncertainty-as-evidence.md).
@@ -62,7 +64,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. Regression coverage is backed by sanitized parser fixture matrices plus golden report-contract fixtures for `report.md`, `report.json`, and optional CSV outputs. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), [`docs/release-v0.3.0.md`](./docs/release-v0.3.0.md), [`docs/release-v0.5.0.md`](./docs/release-v0.5.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
+Both workflows are intended to stay stable enough to require on pull requests to `main`. Regression coverage is backed by sanitized parser fixture matrices plus golden report-contract fixtures for `report.md`, `report.json`, and optional CSV outputs. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), [`docs/release-v0.3.0.md`](./docs/release-v0.3.0.md), [`docs/release-v0.5.0.md`](./docs/release-v0.5.0.md), [`docs/release-v0.6.0.md`](./docs/release-v0.6.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
@@ -86,8 +88,9 @@ LogLens currently detects:
 
 Each rule can emit multiple findings for the same subject when matching
 evidence appears in time-separated detector episodes. Report consumers should
-use `window_start`, `window_end`, and `evidence_event_ids` rather than assuming
-one finding per `rule_id` and subject.
+use `finding_id`, `episode_index`, `window_start`, `window_end`, and
+`evidence_event_ids` rather than assuming one finding per `rule_id` and
+subject.
 
 LogLens currently parses and reports these additional auth patterns beyond the core detector inputs:
 

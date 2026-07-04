@@ -40,11 +40,13 @@ The JSON report keeps parser observability visible next to findings:
 - `findings`
 - `warnings`
 
-Finding objects contain `rule_id`, `rule`, `subject_kind`, `subject`, `grouping_key`, `threshold`, `observed_count`, `event_count`, `window_start`, `window_end`, `evidence_event_ids`, `verdict_boundary`, `usernames`, and `summary`.
+Finding objects contain `finding_id`, `rule_id`, `rule`, `episode_index`, `subject_kind`, `subject`, `grouping_key`, `threshold`, `observed_count`, `event_count`, `window_start`, `window_end`, `evidence_event_ids`, `verdict_boundary`, `usernames`, and `summary`.
 
-The stable finding explainability surface for `loglens.report.v2` is:
+The stable finding explainability surface for `loglens.report.v3` is:
 
+- `finding_id`
 - `rule_id`
+- `episode_index`
 - `subject_kind`
 - `subject`
 - `grouping_key`
@@ -61,10 +63,20 @@ fixtures explicitly.
 
 `evidence_event_ids` are deterministic local event identifiers derived from the source line number, formatted as `line:<number>`. They let reviewers trace a finding back to the normalized input events that satisfied the rule window without implying global event identity.
 
+`finding_id` is a deterministic report-local finding identifier derived from
+the rule, subject, selected window, counts, and evidence event IDs. It is
+stable for the same normalized evidence and rule output, but it is not a global
+case identifier.
+
+`episode_index` is a 1-based sequence number within one `rule_id`,
+`subject_kind`, and `subject`. It is meant for reviewer navigation when a rule
+emits more than one finding for the same subject.
+
 Consumers should not assume that `rule_id` plus `subject` is unique within a
 report. A rule can emit multiple findings for the same subject when matching
-evidence appears in time-separated detector episodes. Use `window_start`,
-`window_end`, and `evidence_event_ids` to distinguish episode-level findings.
+evidence appears in time-separated detector episodes. Use `finding_id`,
+`episode_index`, `window_start`, `window_end`, and `evidence_event_ids` to
+distinguish episode-level findings.
 
 `verdict_boundary` is a stable token that states what the finding must not be
 read as. It keeps machine-readable findings aligned with LogLens's triage
@@ -79,7 +91,20 @@ Warning objects contain the original `line_number`, parser `category`, and parse
 `schema` and `schema_version` identify the report artifact contract, not the
 application release. They are intended for downstream tooling that needs a
 stable way to reject incompatible report shapes. The current JSON contract is
-`loglens.report.v2` with `schema_version` set to `2`.
+`loglens.report.v3` with `schema_version` set to `3`.
+
+### Schema v2 to v3 Migration
+
+`loglens.report.v3` keeps the v2 finding explainability fields and adds:
+
+- `finding_id`
+- `episode_index`
+
+Downstream consumers should treat `schema` and `schema_version` as the report
+shape gate. Consumers that keyed findings by `rule_id` and `subject` should
+move to `finding_id`, or include `episode_index`, `window_start`, `window_end`,
+and `evidence_event_ids` in their own composite key. The optional CSV contract
+is unchanged in v3.
 
 Parser failure categories are stable reviewer-facing buckets for unsupported
 lines: `unknown_timestamp`, `unknown_program`,
@@ -111,6 +136,7 @@ The report contracts are backed by generated fixture artifacts:
 | [`journalctl_short_full`](../tests/fixtures/report_contracts/journalctl_short_full) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 | [`multi_host_syslog_legacy`](../tests/fixtures/report_contracts/multi_host_syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 | [`multi_host_journalctl_short_full`](../tests/fixtures/report_contracts/multi_host_journalctl_short_full) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
+| [`separated_bursts_syslog`](../tests/fixtures/report_contracts/separated_bursts_syslog) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 
 The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). Parser or rule changes that alter report artifacts must update these snapshots explicitly. This includes changes to stable finding explainability fields, parser coverage fields, warning categories, CSV columns, or Markdown report layout. The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
 

@@ -30,10 +30,18 @@ Metadata equivalent:
 
 Within each rule grouping key, LogLens sorts matching signals by timestamp and
 source line number. Consecutive signals separated by an idle gap greater than
-the rule window start a new episode candidate.
+the rule window start a new episode candidate. The policy is
+cooldown-separated maximal-window episodes:
 
-Inside each episode candidate, the detector keeps the best sliding window for
-the rule:
+| Policy point | LogLens v0.6 behavior |
+| --- | --- |
+| First threshold crossing | Used only to determine that an episode candidate is eligible to emit a finding. The first crossing is not necessarily the reported window. |
+| Maximal window | Within each episode candidate, the detector reports the highest-signal window for the rule. |
+| Non-overlapping windows | One rule and subject can emit multiple findings, but their selected episode candidates do not reuse the same matching signals. |
+| Cooldown merge | Signals separated by an idle gap less than or equal to the rule window stay in the same episode candidate. A larger idle gap starts a new candidate. |
+
+For the maximal-window step, the detector keeps the best sliding window for the
+rule:
 
 - `brute_force` and `sudo_burst`: highest event count
 - `multi_user_probing`: highest distinct username count, with event count as
@@ -42,8 +50,8 @@ the rule:
 Each episode candidate that reaches the configured threshold emits one finding.
 The same `rule_id` and `subject` can therefore appear more than once in one
 report when the evidence contains time-separated bursts. Review
-`window_start`, `window_end`, and `evidence_event_ids` to distinguish those
-episodes.
+`finding_id`, `episode_index`, `window_start`, `window_end`, and
+`evidence_event_ids` to distinguish those episodes.
 
 Episode splitting is a detector reporting model, not an incident boundary. It
 does not infer compromise, attribution, causality between rules, or cross-host
@@ -53,7 +61,9 @@ correlation.
 
 JSON findings include both the finding conclusion and the rule context used to reach it:
 
+- `finding_id`: deterministic report-local identifier for the selected finding
 - `rule_id`: stable rule identifier
+- `episode_index`: 1-based sequence within the same `rule_id`, `subject_kind`, and `subject`
 - `grouping_key`: the normalized field used to group evidence
 - `threshold`: configured threshold for the rule
 - `observed_count`: observed value compared against the threshold
