@@ -35,6 +35,7 @@ Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/revie
 
 For a shorter external review entry point focused on uncertainty handling, read
 [How LogLens Treats Parser Uncertainty as Evidence](./docs/case-study-parser-uncertainty-as-evidence.md).
+Near-term review boundaries are tracked in the [roadmap](./ROADMAP.md).
 
 ## Why This Project Exists
 
@@ -289,5 +290,8 @@ Tue 2026-03-10 08:31:18 UTC example-host sshd[2245]: Connection closed by authen
 
 ## Future Roadmap
 
-- Additional auth patterns and PAM coverage
-- Larger sanitized test corpus
+- Keep parser uncertainty visible through deterministic warning buckets.
+- Add additional auth patterns only with a sanitized sample input, expected
+  event or warning output, and focused tests.
+- Expand the sanitized corpus only when it answers a distinct parser coverage
+  question.
