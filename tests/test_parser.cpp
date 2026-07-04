@@ -926,6 +926,28 @@ void test_parser_failure_taxonomy() {
            "expected fifth warning category");
 }
 
+void test_malformed_source_ip_token_corpus() {
+    const auto parser = make_syslog_parser();
+    const std::vector<std::string> malformed_tokens{
+        "not_an_ip",
+        "999.0.113.10",
+        "203.0.113.300",
+        "203.0.113.10,"};
+
+    for (std::size_t index = 0; index < malformed_tokens.size(); ++index) {
+        const auto line = "Mar 10 08:00:20 example-host sshd[1002]: Failed password for root from "
+            + malformed_tokens[index] + " port 50101 ssh2";
+        std::string error;
+        loglens::ParserFailureCategory category = loglens::ParserFailureCategory::KnownProgramUnknownMessage;
+        const auto event = parser.parse_line(line, index + 1, &error, &category);
+
+        expect(!event.has_value(), "expected malformed source token to stay out of normalized events");
+        expect(category == loglens::ParserFailureCategory::MalformedSourceIp,
+               "expected malformed source token to use malformed_source_ip category");
+        expect(error == "malformed source IP", "expected malformed source token reason");
+    }
+}
+
 void test_unknown_auth_patterns_are_warnings_only() {
     const auto parser = make_syslog_parser();
     std::istringstream input(
@@ -1336,6 +1358,7 @@ int main() {
     test_journalctl_auth_family_fixture_file();
     test_malformed_line();
     test_parser_failure_taxonomy();
+    test_malformed_source_ip_token_corpus();
     test_unknown_auth_patterns_are_warnings_only();
     test_stream_warnings_and_metadata();
     test_stream_tracks_skipped_blank_lines();

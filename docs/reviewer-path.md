@@ -8,6 +8,7 @@ This path is for reviewers who want to understand LogLens quickly without readin
 | --- | --- | --- |
 | What is LogLens? | [`README.md`](../README.md) and [`docs/reviewer-brief.md`](./reviewer-brief.md) | Can state scope, supported inputs, outputs, and non-goals |
 | What changed in v0.5? | [`docs/release-v0.5.0.md`](./release-v0.5.0.md) | Can explain the Evidence Explainability Release theme and its non-claims |
+| What changed in v0.6? | [`docs/release-v0.6.0.md`](./release-v0.6.0.md) | Can explain repeated detection episodes, `finding_id`, `episode_index`, and schema v3 migration |
 | What log formats are supported? | [`docs/parser-contract.md`](./parser-contract.md) | Can name `syslog_legacy` and `journalctl_short_full` behavior |
 | What artifacts does it produce? | [`docs/report-artifacts.md`](./report-artifacts.md) and report-contract fixtures | Can inspect Markdown, JSON, and optional CSV outputs |
 | How do rules use evidence? | [`docs/rule-catalog.md`](./rule-catalog.md) | Can explain grouping keys, windows, thresholds, and unsupported-evidence boundaries |
@@ -25,6 +26,7 @@ Read:
 - [`README.md`](../README.md)
 - [`docs/reviewer-brief.md`](./reviewer-brief.md)
 - [`docs/release-v0.5.0.md`](./release-v0.5.0.md)
+- [`docs/release-v0.6.0.md`](./release-v0.6.0.md)
 
 Confirm:
 
@@ -58,6 +60,21 @@ Use the release note's
 [`Release readiness checklist`](./release-v0.5.0.md#release-readiness-checklist)
 as the compact pass/fail map for the v0.5 scope.
 
+## v0.6 release-facing route
+
+Start with [`docs/release-v0.6.0.md`](./release-v0.6.0.md), then inspect:
+
+- [`docs/report-artifacts.md`](./report-artifacts.md)
+- [`docs/rule-catalog.md`](./rule-catalog.md#detection-episode-semantics)
+- [`tests/fixtures/report_contracts/separated_bursts_syslog/input.log`](../tests/fixtures/report_contracts/separated_bursts_syslog/input.log)
+- [`tests/fixtures/report_contracts/separated_bursts_syslog/report.json`](../tests/fixtures/report_contracts/separated_bursts_syslog/report.json)
+- [`tests/test_detector.cpp`](../tests/test_detector.cpp)
+- [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp)
+
+Good stopping point: the reviewer can explain why one rule and subject can emit
+multiple findings, how `finding_id` and `episode_index` distinguish them, and
+why the schema moved from `loglens.report.v2` to `loglens.report.v3`.
+
 ## 5-minute artifact review
 
 Inspect:
@@ -66,7 +83,9 @@ Inspect:
 - [`assets/sample_journalctl_short_full.log`](../assets/sample_journalctl_short_full.log)
 - [`tests/fixtures/report_contracts/syslog_legacy/report.md`](../tests/fixtures/report_contracts/syslog_legacy/report.md)
 - [`tests/fixtures/report_contracts/syslog_legacy/report.json`](../tests/fixtures/report_contracts/syslog_legacy/report.json)
+- [`tests/fixtures/report_contracts/separated_bursts_syslog/report.json`](../tests/fixtures/report_contracts/separated_bursts_syslog/report.json)
 - [`docs/release-v0.5.0.md`](./release-v0.5.0.md)
+- [`docs/release-v0.6.0.md`](./release-v0.6.0.md)
 - [`docs/report-artifacts.md`](./report-artifacts.md)
 - [`docs/parser-contract.md`](./parser-contract.md)
 - [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log)

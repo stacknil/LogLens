@@ -29,7 +29,9 @@ struct DetectorConfig {
 
 struct Finding {
     FindingType type = FindingType::BruteForce;
+    std::string finding_id;
     std::string rule_id;
+    std::size_t episode_index = 0;
     std::string subject_kind;
     std::string subject;
     std::string grouping_key;
@@ -46,6 +48,8 @@ struct Finding {
 
 std::string to_string(FindingType type);
 std::string default_verdict_boundary(FindingType type);
+std::string build_finding_id(const Finding& finding);
+void assign_finding_episode_identity(std::vector<Finding>& findings);
 
 class Detector {
   public:

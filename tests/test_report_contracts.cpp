@@ -159,8 +159,10 @@ std::vector<std::string> extract_json_contract_lines(const std::string& json) {
             || starts_with(line, "{\"pattern\": ")
             || starts_with(line, "{\"category\": ")
             || starts_with(line, "{\"event_type\": ")
+            || starts_with(line, "\"finding_id\": ")
             || starts_with(line, "\"rule_id\": ")
             || starts_with(line, "\"rule\": ")
+            || starts_with(line, "\"episode_index\": ")
             || starts_with(line, "\"subject_kind\": ")
             || starts_with(line, "\"subject\": ")
             || starts_with(line, "\"grouping_key\": ")
@@ -339,6 +341,12 @@ int main(int argc, char* argv[]) {
             "journalctl-short-full");
         run_report_contract_case(
             loglens_exe,
+            fixture_root / "separated_bursts_syslog",
+            output_root,
+            "syslog",
+            "--year 2026");
+        run_report_contract_case(
+            loglens_exe,
             fixture_root / "syslog_legacy",
             output_root,
             "syslog",
@@ -364,6 +372,13 @@ int main(int argc, char* argv[]) {
             output_root,
             "journalctl-short-full",
             "--csv",
+            true);
+        run_report_contract_case(
+            loglens_exe,
+            fixture_root / "separated_bursts_syslog",
+            output_root,
+            "syslog",
+            "--year 2026 --csv",
             true);
     } catch (...) {
         std::filesystem::current_path(original_cwd);

@@ -1,0 +1,67 @@
+{
+  "tool": "LogLens",
+  "schema": "loglens.report.v3",
+  "schema_version": 3,
+  "input": "tests/fixtures/report_contracts/separated_bursts_syslog/input.log",
+  "input_mode": "syslog_legacy",
+  "assume_year": 2026,
+  "timezone_present": false,
+  "parser_quality": {
+    "total_input_lines": 10,
+    "total_lines": 10,
+    "skipped_blank_lines": 0,
+    "parsed_lines": 10,
+    "unparsed_lines": 0,
+    "parse_success_rate": 1.0000,
+    "top_unknown_patterns": [
+    ],
+    "failure_categories": [
+    ]
+  },
+  "parsed_event_count": 10,
+  "warning_count": 0,
+  "finding_count": 2,
+  "event_counts": [
+    {"event_type": "ssh_failed_password", "count": 10}
+  ],
+  "findings": [
+    {
+      "finding_id": "finding:brute_force:de1640e1c994e851",
+      "rule_id": "brute_force",
+      "rule": "brute_force",
+      "episode_index": 1,
+      "subject_kind": "source_ip",
+      "subject": "203.0.113.40",
+      "grouping_key": "source_ip",
+      "threshold": 5,
+      "observed_count": 5,
+      "event_count": 5,
+      "window_start": "2026-03-10 09:00:00",
+      "window_end": "2026-03-10 09:04:00",
+      "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+      "verdict_boundary": "triage_signal_not_compromise_or_attribution",
+      "usernames": [],
+      "summary": "5 failed SSH attempts from 203.0.113.40 within 10 minutes."
+    },
+    {
+      "finding_id": "finding:brute_force:d5c73d8bf41cdc59",
+      "rule_id": "brute_force",
+      "rule": "brute_force",
+      "episode_index": 2,
+      "subject_kind": "source_ip",
+      "subject": "203.0.113.40",
+      "grouping_key": "source_ip",
+      "threshold": 5,
+      "observed_count": 5,
+      "event_count": 5,
+      "window_start": "2026-03-10 15:00:00",
+      "window_end": "2026-03-10 15:04:00",
+      "evidence_event_ids": ["line:6", "line:7", "line:8", "line:9", "line:10"],
+      "verdict_boundary": "triage_signal_not_compromise_or_attribution",
+      "usernames": [],
+      "summary": "5 failed SSH attempts from 203.0.113.40 within 10 minutes."
+    }
+  ],
+  "warnings": [
+  ]
+}

@@ -1,0 +1,10 @@
+Mar 10 09:00:00 example-host sshd[3001]: Failed password for user001 from 203.0.113.40 port 52001 ssh2
+Mar 10 09:01:00 example-host sshd[3002]: Failed password for user001 from 203.0.113.40 port 52002 ssh2
+Mar 10 09:02:00 example-host sshd[3003]: Failed password for user001 from 203.0.113.40 port 52003 ssh2
+Mar 10 09:03:00 example-host sshd[3004]: Failed password for user001 from 203.0.113.40 port 52004 ssh2
+Mar 10 09:04:00 example-host sshd[3005]: Failed password for user001 from 203.0.113.40 port 52005 ssh2
+Mar 10 15:00:00 example-host sshd[3006]: Failed password for user001 from 203.0.113.40 port 53001 ssh2
+Mar 10 15:01:00 example-host sshd[3007]: Failed password for user001 from 203.0.113.40 port 53002 ssh2
+Mar 10 15:02:00 example-host sshd[3008]: Failed password for user001 from 203.0.113.40 port 53003 ssh2
+Mar 10 15:03:00 example-host sshd[3009]: Failed password for user001 from 203.0.113.40 port 53004 ssh2
+Mar 10 15:04:00 example-host sshd[3010]: Failed password for user001 from 203.0.113.40 port 53005 ssh2

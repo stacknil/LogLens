@@ -215,11 +215,21 @@ std::vector<Finding> sorted_findings(const std::vector<Finding>& findings) {
         if (left.type != right.type) {
             return to_string(left.type) < to_string(right.type);
         }
+        if (left.subject_kind != right.subject_kind) {
+            return left.subject_kind < right.subject_kind;
+        }
         if (left.subject != right.subject) {
             return left.subject < right.subject;
         }
-        return left.first_seen < right.first_seen;
+        if (left.first_seen != right.first_seen) {
+            return left.first_seen < right.first_seen;
+        }
+        if (left.last_seen != right.last_seen) {
+            return left.last_seen < right.last_seen;
+        }
+        return left.evidence_event_ids < right.evidence_event_ids;
     });
+    assign_finding_episode_identity(ordered);
     return ordered;
 }
 
@@ -644,8 +654,8 @@ std::string render_json_report(const ReportData& data) {
 
     output << "{\n";
     output << "  \"tool\": \"LogLens\",\n";
-    output << "  \"schema\": \"loglens.report.v2\",\n";
-    output << "  \"schema_version\": 2,\n";
+    output << "  \"schema\": \"loglens.report.v3\",\n";
+    output << "  \"schema_version\": 3,\n";
     output << "  \"input\": \"" << escape_json(data.input_path.generic_string()) << "\",\n";
     output << "  \"input_mode\": \"" << to_string(data.parse_metadata.input_mode) << "\",\n";
     if (data.parse_metadata.assume_year.has_value()) {
@@ -712,8 +722,10 @@ std::string render_json_report(const ReportData& data) {
     for (std::size_t index = 0; index < findings.size(); ++index) {
         const auto& finding = findings[index];
         output << "    {\n";
+        output << "      \"finding_id\": \"" << escape_json(finding.finding_id) << "\",\n";
         output << "      \"rule_id\": \"" << escape_json(finding_rule_id(finding)) << "\",\n";
         output << "      \"rule\": \"" << to_string(finding.type) << "\",\n";
+        output << "      \"episode_index\": " << finding.episode_index << ",\n";
         output << "      \"subject_kind\": \"" << escape_json(finding.subject_kind) << "\",\n";
         output << "      \"subject\": \"" << escape_json(finding.subject) << "\",\n";
         output << "      \"grouping_key\": \"" << escape_json(finding_grouping_key(finding)) << "\",\n";

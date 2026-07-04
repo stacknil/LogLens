@@ -6,13 +6,23 @@ All notable user-visible changes should be recorded here.
 
 ### Added
 
-- None yet.
+- Added stable JSON finding identity fields: `finding_id` and
+  `episode_index`.
+- Added a separated-burst syslog report-contract fixture where one source IP
+  produces two time-separated brute-force findings.
+- Added detector regression coverage for stable episode identity under unsorted
+  input order and inclusive window-boundary behavior.
+- Added parser regression coverage for malformed source-IP token
+  classification.
 
 ### Changed
 
 - Detector rules now emit separate findings for time-separated detection
   episodes within the same rule subject instead of collapsing each subject to a
   single best window.
+- Bumped the JSON report artifact contract from `loglens.report.v2` /
+  `schema_version` 2 to `loglens.report.v3` / `schema_version` 3 for finding
+  identity fields.
 
 ### Fixed
 
@@ -22,6 +32,8 @@ All notable user-visible changes should be recorded here.
 
 - Documented detection episode semantics in the rule catalog and report artifact
   contract notes.
+- Added the v0.6 Detection Episode Semantics release note and schema v2 to v3
+  migration guidance.
 
 ## v0.5.0
 
