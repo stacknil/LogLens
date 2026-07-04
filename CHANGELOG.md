@@ -17,6 +17,9 @@ All notable user-visible changes should be recorded here.
 
 ### Changed
 
+- Refactored parser internals into timestamp, source-envelope, program-dispatch,
+  program-handler, and failure-classifier modules behind the unchanged
+  `AuthLogParser` interface.
 - Detector rules now emit separate findings for time-separated detection
   episodes within the same rule subject instead of collapsing each subject to a
   single best window.
