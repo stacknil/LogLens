@@ -9,17 +9,21 @@ It parses `auth.log` / `secure`-style syslog input and `journalctl --output=shor
 
 ## Example Finding
 
-A compact finding summary is a bounded triage signal, not attribution:
+A compact finding summary is a bounded triage signal, not a compromise verdict
+or attribution:
 
 ```json
 {
   "rule_id": "brute_force",
   "subject_kind": "source_ip",
-  "subject": "198.51.100.23",
-  "window": "10m",
+  "subject": "203.0.113.10",
+  "grouping_key": "source_ip",
+  "window_start": "2026-03-10 08:11:22",
+  "window_end": "2026-03-10 08:18:05",
   "threshold": 5,
-  "observed": 8,
-  "verdict_boundary": "triage_signal_not_attribution"
+  "observed_count": 5,
+  "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+  "verdict_boundary": "triage_signal_not_compromise_or_attribution"
 }
 ```
 
@@ -27,7 +31,10 @@ A compact finding summary is a bounded triage signal, not attribution:
 
 LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
 
-Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), and the [`quality gates map`](./docs/quality-gates.md). For detection reasoning, read the forensic-style [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md) and the [`rule catalog`](./docs/rule-catalog.md). For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
+Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), and the [`v0.5 Evidence Explainability release note`](./docs/release-v0.5.0.md). The [`quality gates map`](./docs/quality-gates.md) links claims to tests and fixtures. For detection reasoning, follow the [`one-page incident-style case`](./docs/incident-style-case.md), then use the full [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md), [`rule catalog`](./docs/rule-catalog.md), and [`false-positive taxonomy`](./docs/false-positive-taxonomy.md) for depth. For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
+
+For a shorter external review entry point focused on uncertainty handling, read
+[How LogLens Treats Parser Uncertainty as Evidence](./docs/case-study-parser-uncertainty-as-evidence.md).
 
 ## Why This Project Exists
 
@@ -54,7 +61,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. Regression coverage is backed by sanitized parser fixture matrices plus golden report-contract fixtures for `report.md`, `report.json`, and optional CSV outputs. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), [`docs/release-v0.3.0.md`](./docs/release-v0.3.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
+Both workflows are intended to stay stable enough to require on pull requests to `main`. Regression coverage is backed by sanitized parser fixture matrices plus golden report-contract fixtures for `report.md`, `report.json`, and optional CSV outputs. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), [`docs/release-v0.3.0.md`](./docs/release-v0.3.0.md), [`docs/release-v0.5.0.md`](./docs/release-v0.5.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
@@ -111,7 +118,7 @@ classes: `unknown_timestamp`, `unknown_program`,
 `known_program_unknown_message`, `malformed_source_ip`, and
 `unsupported_pam_variant`.
 
-For rule-by-rule semantics and signal boundaries, see [`docs/rule-catalog.md`](./docs/rule-catalog.md). For a forensic-style evidence walkthrough, see [`docs/case-study-linux-auth-bruteforce.md`](./docs/case-study-linux-auth-bruteforce.md). For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
+For a compact raw-log-to-conclusion trace, see [`docs/incident-style-case.md`](./docs/incident-style-case.md). For rule-by-rule semantics and signal boundaries, see [`docs/rule-catalog.md`](./docs/rule-catalog.md). For benign-context hypotheses and the evidence needed to support them, see [`docs/false-positive-taxonomy.md`](./docs/false-positive-taxonomy.md). For a full forensic-style evidence walkthrough, see [`docs/case-study-linux-auth-bruteforce.md`](./docs/case-study-linux-auth-bruteforce.md). For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
 
 LogLens does not currently detect:
 

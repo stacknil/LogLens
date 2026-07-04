@@ -40,16 +40,41 @@ The JSON report keeps parser observability visible next to findings:
 - `findings`
 - `warnings`
 
-Finding objects contain `rule_id`, `rule`, `subject_kind`, `subject`, `grouping_key`, `threshold`, `observed_count`, `event_count`, `window_start`, `window_end`, `evidence_event_ids`, `usernames`, and `summary`.
+Finding objects contain `rule_id`, `rule`, `subject_kind`, `subject`, `grouping_key`, `threshold`, `observed_count`, `event_count`, `window_start`, `window_end`, `evidence_event_ids`, `verdict_boundary`, `usernames`, and `summary`.
+
+The stable finding explainability surface for `loglens.report.v2` is:
+
+- `rule_id`
+- `subject_kind`
+- `subject`
+- `grouping_key`
+- `window_start`
+- `window_end`
+- `threshold`
+- `observed_count`
+- `evidence_event_ids`
+- `verdict_boundary`
+
+These fields are release-facing contract fields. Parser or rule changes that
+alter their names, meanings, values, or presence must update the golden report
+fixtures explicitly.
 
 `evidence_event_ids` are deterministic local event identifiers derived from the source line number, formatted as `line:<number>`. They let reviewers trace a finding back to the normalized input events that satisfied the rule window without implying global event identity.
+
+`verdict_boundary` is a stable token that states what the finding must not be
+read as. It keeps machine-readable findings aligned with LogLens's triage
+scope:
+
+- `triage_signal_not_compromise_or_attribution`
+- `triage_signal_not_intent_or_attribution`
+- `triage_signal_not_maliciousness_or_authorization`
 
 Warning objects contain the original `line_number`, parser `category`, and parser `reason`.
 
 `schema` and `schema_version` identify the report artifact contract, not the
 application release. They are intended for downstream tooling that needs a
 stable way to reject incompatible report shapes. The current JSON contract is
-`loglens.report.v1` with `schema_version` set to `1`.
+`loglens.report.v2` with `schema_version` set to `2`.
 
 Parser failure categories are stable reviewer-facing buckets for unsupported
 lines: `unknown_timestamp`, `unknown_program`,
@@ -82,7 +107,7 @@ The report contracts are backed by generated fixture artifacts:
 | [`multi_host_syslog_legacy`](../tests/fixtures/report_contracts/multi_host_syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 | [`multi_host_journalctl_short_full`](../tests/fixtures/report_contracts/multi_host_journalctl_short_full) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 
-The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). Parser or rule changes that alter report artifacts must update these snapshots explicitly. The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
+The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). Parser or rule changes that alter report artifacts must update these snapshots explicitly. This includes changes to stable finding explainability fields, parser coverage fields, warning categories, CSV columns, or Markdown report layout. The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
 
 ## Boundaries
 

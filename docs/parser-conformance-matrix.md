@@ -18,9 +18,37 @@ The parser contract is intentionally conservative:
 | `syslog_legacy` | `Mar 10 09:00:01 example-host program[pid]: message` | Requires `--year` or `timestamp.assume_year`; the supplied year is injected into the parsed timestamp | `input_mode = syslog_legacy`, `assume_year = <year>`, `timezone_present = false` | [`assets/parser_fixture_matrix_syslog.log`](../assets/parser_fixture_matrix_syslog.log) |
 | `journalctl_short_full` | `Tue 2026-03-10 09:00:01 UTC example-host program[pid]: message` | Uses the embedded date and supported timezone token; supported tokens are `UTC`, `GMT`, `Z`, `+HHMM`, and `+HH:MM` style offsets | `input_mode = journalctl_short_full`, no assumed year, `timezone_present = true` | [`assets/parser_fixture_matrix_journalctl_short_full.log`](../assets/parser_fixture_matrix_journalctl_short_full.log) |
 
+## Source Style Matrix
+
+These source labels describe common Linux log locations and command output
+styles. They are not distro-detection claims. LogLens chooses a parser mode
+from the line header shape, then applies the same authentication message
+classifier to the message body.
+
+| Source style | Typical source | Parser mode | Header contract | Supported message families | Primary fixtures |
+| --- | --- | --- | --- | --- | --- |
+| Ubuntu / Debian `auth.log` style | `/var/log/auth.log` lines collected offline | `syslog_legacy` | BSD syslog-style timestamp without a year, followed by hostname and `program[pid]: message`; caller supplies the year | `sshd`, `sudo`, `su`, `pam_unix`, selected `pam_faillock`, selected `pam_sss` | [`assets/parser_fixture_matrix_syslog.log`](../assets/parser_fixture_matrix_syslog.log), [`assets/parser_auth_families_syslog.log`](../assets/parser_auth_families_syslog.log) |
+| RHEL-family `secure` style | `/var/log/secure` lines collected offline | `syslog_legacy` | Same syslog header contract as Ubuntu / Debian `auth.log`; LogLens does not branch on distro name | `sshd`, `sudo`, `su`, `pam_unix`, selected `pam_faillock`, selected `pam_sss` | [`assets/parser_fixture_matrix_syslog.log`](../assets/parser_fixture_matrix_syslog.log), [`assets/parser_auth_families_syslog.log`](../assets/parser_auth_families_syslog.log) |
+| `journalctl` short-full style | `journalctl --output=short-full` output collected offline | `journalctl_short_full` | Weekday, full date, time, timezone token, hostname, and `program[pid]: message`; embedded year is used | Same message families as `syslog_legacy` after the header is parsed | [`assets/parser_fixture_matrix_journalctl_short_full.log`](../assets/parser_fixture_matrix_journalctl_short_full.log), [`assets/parser_auth_families_journalctl_short_full.log`](../assets/parser_auth_families_journalctl_short_full.log) |
+
 After the header is parsed, both input formats use the same authentication
 message classifier. A supported message should therefore normalize to the same
 event type in both formats.
+
+## Program And PAM Family Style Matrix
+
+This matrix lists the supported program and PAM-family styles at the message
+classifier layer. "Supported" means fixture-backed selected variants, not full
+coverage of every distro or PAM module wording.
+
+| Style family | Program or tag shape | Supported variants | Expected normalized events | Unsupported boundary |
+| --- | --- | --- | --- | --- |
+| `sshd` | `sshd[pid]: message` or `sshd: message` | Failed password, failed password for invalid/illegal user, failed none for invalid/illegal user, direct invalid/illegal user, `input_userauth_request` invalid/illegal user, accepted password, accepted publickey, accepted keyboard-interactive/pam, failed publickey, failed keyboard-interactive/pam, maximum-authentication-attempts exceeded, and `sshd`-owned `PAM: Authentication failure` lines | `ssh_failed_password`, `ssh_invalid_user`, `ssh_accepted_password`, `ssh_accepted_publickey`, `ssh_accepted_keyboard_interactive`, `ssh_failed_publickey`, `ssh_failed_keyboard_interactive`, `ssh_max_auth_tries`, `pam_auth_failure` | Preauth close/reset, timeout/disconnection, negotiation failure, and other unsupported `sshd` messages remain parser warnings such as `sshd_connection_closed_preauth`, `sshd_timeout_or_disconnection`, `sshd_negotiation_failure`, or `sshd_other` |
+| `sudo` | `sudo[pid]:    <actor> : ...` or `sudo:    <actor> : ...` | Command audit lines with `COMMAND=`, incorrect-password audit lines, user-not-in-sudoers denials, and command-not-allowed denials | `sudo_command`, `sudo_auth_failure`, `sudo_policy_denied` | Other well-formed sudo-like messages remain `sudo_other` parser warnings and do not count as sudo burst evidence |
+| `su` | `su[pid]: message` or `su: message` | `FAILED SU (to <target>) <actor> on <tty>` and `Successful su for <target> by <actor>` | `su_auth_failure`, `session_opened` | Other well-formed `su` messages remain `su_other` parser warnings |
+| `pam_unix` | `pam_unix(<service>:auth): ...` or `pam_unix(<service>:session): ...` | Auth failures carrying `authentication failure` plus selected session-opened lines such as sudo/su session opens | `pam_auth_failure`, `session_opened` | Session-closed and other unsupported `pam_unix` messages remain `pam_unix_session_closed` or `pam_unix_other` parser warnings |
+| `pam_faillock` | `pam_faillock(<service>:auth): ...` | Selected auth failure variants: `Consecutive login failures for user ... from <ip>` and `Authentication failure for user ... from <ip>` | `pam_auth_failure` | Account-lock telemetry, auth-success telemetry, and other unmodeled variants remain `pam_faillock_account_locked`, `pam_faillock_authsucc`, or `pam_faillock_other` warnings |
+| `pam_sss` | `pam_sss(<service>:auth): ...` | Selected SSSD auth failure variant: `received for user <user>: 7 (Authentication failure)` | `pam_auth_failure` | Unknown-user, auth-info-unavailable, and other unmodeled variants remain `pam_sss_unknown_user`, `pam_sss_authinfo_unavail`, or `pam_sss_other` warnings |
 
 ## Supported Event Matrix
 
@@ -104,6 +132,7 @@ coverage telemetry path.
 | [`assets/parser_auth_families_syslog.log`](../assets/parser_auth_families_syslog.log) | Selected `sshd`, `pam_unix`, `pam_faillock`, `pam_sss`, and session-opened auth-family support, plus five unsupported PAM-family telemetry buckets |
 | [`assets/parser_auth_families_journalctl_short_full.log`](../assets/parser_auth_families_journalctl_short_full.log) | Same auth-family event and warning shape as the syslog auth-family fixture, with journalctl timestamp parsing |
 | [`assets/noisy_auth_sample.log`](../assets/noisy_auth_sample.log) and [`tests/fixtures/parser_matrix/noisy_auth_expected.json`](../tests/fixtures/parser_matrix/noisy_auth_expected.json) | Noisy syslog coverage fixture with malformed lines, blank lines, unsupported auth-family evidence, irrelevant service lines, and locked parser quality counts |
+| [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log) and [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json) | 150-line sanitized mixed syslog corpus with Ubuntu / Debian-style `auth.log` and RHEL-family `secure` host labels, 90 parsed events, 50 parser warnings, 10 blank lines, and locked unknown-pattern and failure-category coverage |
 
 ## Review Rule
 

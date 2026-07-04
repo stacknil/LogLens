@@ -1,7 +1,7 @@
 {
   "tool": "LogLens",
-  "schema": "loglens.report.v1",
-  "schema_version": 1,
+  "schema": "loglens.report.v2",
+  "schema_version": 2,
   "input": "tests/fixtures/report_contracts/multi_host_syslog_legacy/input.log",
   "input_mode": "syslog_legacy",
   "assume_year": 2026,
@@ -74,6 +74,7 @@
       "window_start": "2026-03-11 09:00:00",
       "window_end": "2026-03-11 09:04:05",
       "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+      "verdict_boundary": "triage_signal_not_compromise_or_attribution",
       "usernames": [],
       "summary": "5 failed SSH attempts from 203.0.113.10 within 10 minutes."
     },
@@ -89,6 +90,7 @@
       "window_start": "2026-03-11 09:00:00",
       "window_end": "2026-03-11 09:04:05",
       "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+      "verdict_boundary": "triage_signal_not_intent_or_attribution",
       "usernames": ["admin", "deploy", "guest", "root", "test"],
       "summary": "203.0.113.10 targeted 5 usernames within 15 minutes."
     },
@@ -104,6 +106,7 @@
       "window_start": "2026-03-11 09:11:00",
       "window_end": "2026-03-11 09:14:15",
       "evidence_event_ids": ["line:9", "line:10", "line:13"],
+      "verdict_boundary": "triage_signal_not_maliciousness_or_authorization",
       "usernames": [],
       "summary": "alice ran 3 sudo commands within 5 minutes."
     }

@@ -1,5 +1,6 @@
 #include "parser.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -7,6 +8,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -77,6 +80,70 @@ std::size_t total_input_lines(const loglens::ParseReport& result) {
     return result.quality.total_lines + result.quality.skipped_blank_lines;
 }
 
+std::size_t event_count(const std::vector<loglens::Event>& events, loglens::EventType type) {
+    return static_cast<std::size_t>(
+        std::count_if(events.begin(), events.end(), [type](const loglens::Event& event) {
+            return event.event_type == type;
+        }));
+}
+
+std::size_t unknown_pattern_count(const loglens::ParserQualityMetrics& quality, std::string_view pattern) {
+    const auto it = std::find_if(
+        quality.top_unknown_patterns.begin(),
+        quality.top_unknown_patterns.end(),
+        [pattern](const loglens::UnknownPatternCount& entry) {
+            return entry.pattern == pattern;
+        });
+    return it == quality.top_unknown_patterns.end() ? 0 : it->count;
+}
+
+std::size_t failure_category_count(const loglens::ParserQualityMetrics& quality,
+                                   loglens::ParserFailureCategory category) {
+    const auto it = std::find_if(
+        quality.failure_categories.begin(),
+        quality.failure_categories.end(),
+        [category](const loglens::ParserFailureCategoryCount& entry) {
+            return entry.category == category;
+        });
+    return it == quality.failure_categories.end() ? 0 : it->count;
+}
+
+std::vector<std::pair<loglens::EventType, std::size_t>> parser_event_type_counts(
+    const std::vector<loglens::Event>& events) {
+    std::vector<std::pair<loglens::EventType, std::size_t>> counts{
+        {loglens::EventType::SshFailedPassword, 0},
+        {loglens::EventType::SshAcceptedPassword, 0},
+        {loglens::EventType::SshAcceptedPublicKey, 0},
+        {loglens::EventType::SshAcceptedKeyboardInteractive, 0},
+        {loglens::EventType::SshInvalidUser, 0},
+        {loglens::EventType::SshFailedPublicKey, 0},
+        {loglens::EventType::SshFailedKeyboardInteractive, 0},
+        {loglens::EventType::SshMaxAuthTries, 0},
+        {loglens::EventType::PamAuthFailure, 0},
+        {loglens::EventType::SessionOpened, 0},
+        {loglens::EventType::SudoCommand, 0},
+        {loglens::EventType::SudoAuthFailure, 0},
+        {loglens::EventType::SudoPolicyDenied, 0},
+        {loglens::EventType::SuAuthFailure, 0}};
+
+    for (const auto& event : events) {
+        for (auto& [type, count] : counts) {
+            if (type == event.event_type) {
+                ++count;
+                break;
+            }
+        }
+    }
+
+    counts.erase(
+        std::remove_if(counts.begin(), counts.end(), [](const auto& entry) {
+            return entry.second == 0;
+        }),
+        counts.end());
+
+    return counts;
+}
+
 std::string noisy_auth_coverage_json(const loglens::ParseReport& result) {
     std::ostringstream output;
     output << "{\n"
@@ -108,6 +175,70 @@ std::string noisy_auth_coverage_json(const loglens::ParseReport& result) {
         output << "    {\"category\": \"" << loglens::to_string(entry.category)
                << "\", \"count\": " << entry.count << "}";
         output << (index + 1 == result.quality.failure_categories.size() ? "\n" : ",\n");
+    }
+
+    output << "  ],\n"
+           << "  \"warnings\": [\n";
+
+    for (std::size_t index = 0; index < result.warnings.size(); ++index) {
+        const auto& warning = result.warnings[index];
+        output << "    {\"line_number\": " << warning.line_number
+               << ", \"category\": \"" << loglens::to_string(warning.category) << "\""
+               << ", \"reason\": \"" << warning.reason << "\"}";
+        output << (index + 1 == result.warnings.size() ? "\n" : ",\n");
+    }
+
+    output << "  ]\n"
+           << "}\n";
+    return output.str();
+}
+
+std::string mixed_auth_coverage_json(const loglens::ParseReport& result) {
+    std::ostringstream output;
+    const auto event_counts = parser_event_type_counts(result.events);
+
+    output << "{\n"
+           << "  \"artifact\": \"loglens.parser_coverage_sample\",\n"
+           << "  \"schema_version\": 1,\n"
+           << "  \"fixture\": \"assets/mixed_auth_corpus.log\",\n"
+           << "  \"input_mode\": \"" << loglens::to_string(result.metadata.input_mode) << "\",\n"
+           << "  \"assume_year\": " << *result.metadata.assume_year << ",\n"
+           << "  \"parser_quality\": {\n"
+           << "    \"total_input_lines\": " << total_input_lines(result) << ",\n"
+           << "    \"total_lines\": " << result.quality.total_lines << ",\n"
+           << "    \"skipped_blank_lines\": " << result.quality.skipped_blank_lines << ",\n"
+           << "    \"parsed_lines\": " << result.quality.parsed_lines << ",\n"
+           << "    \"unparsed_lines\": " << result.quality.unparsed_lines << ",\n"
+           << "    \"parse_success_rate\": " << std::fixed << std::setprecision(10)
+           << result.quality.parse_success_rate << ",\n"
+           << "    \"top_unknown_patterns\": [\n";
+
+    for (std::size_t index = 0; index < result.quality.top_unknown_patterns.size(); ++index) {
+        const auto& entry = result.quality.top_unknown_patterns[index];
+        output << "      {\"pattern\": \"" << entry.pattern << "\", \"count\": " << entry.count << "}";
+        output << (index + 1 == result.quality.top_unknown_patterns.size() ? "\n" : ",\n");
+    }
+
+    output << "    ],\n"
+           << "    \"failure_categories\": [\n";
+
+    for (std::size_t index = 0; index < result.quality.failure_categories.size(); ++index) {
+        const auto& entry = result.quality.failure_categories[index];
+        output << "      {\"category\": \"" << loglens::to_string(entry.category)
+               << "\", \"count\": " << entry.count << "}";
+        output << (index + 1 == result.quality.failure_categories.size() ? "\n" : ",\n");
+    }
+
+    output << "    ]\n"
+           << "  },\n"
+           << "  \"parsed_event_count\": " << result.events.size() << ",\n"
+           << "  \"warning_count\": " << result.warnings.size() << ",\n"
+           << "  \"event_type_counts\": [\n";
+
+    for (std::size_t index = 0; index < event_counts.size(); ++index) {
+        const auto& [type, count] = event_counts[index];
+        output << "    {\"event_type\": \"" << loglens::to_string(type) << "\", \"count\": " << count << "}";
+        output << (index + 1 == event_counts.size() ? "\n" : ",\n");
     }
 
     output << "  ],\n"
@@ -1106,6 +1237,62 @@ void test_noisy_auth_fixture_matrix_file() {
     expect(actual == expected, "expected noisy auth coverage summary to match fixture");
 }
 
+void test_mixed_auth_corpus_fixture_file() {
+    const auto parser = make_syslog_parser();
+    const auto result = parser.parse_file(asset_path("mixed_auth_corpus.log"));
+
+    expect(total_input_lines(result) == 150, "expected mixed auth corpus total input line count");
+    expect(result.quality.total_lines == 140, "expected mixed auth corpus nonblank line count");
+    expect(result.quality.skipped_blank_lines == 10, "expected mixed auth corpus skipped blank line count");
+    expect(result.events.size() == 90, "expected ninety mixed auth corpus parsed events");
+    expect(result.warnings.size() == 50, "expected fifty mixed auth corpus warnings");
+    expect(result.quality.parsed_lines == 90, "expected mixed auth corpus parsed line count");
+    expect(result.quality.unparsed_lines == 50, "expected mixed auth corpus unparsed line count");
+    expect_close(result.quality.parse_success_rate, 90.0 / 140.0, 1e-9,
+                 "expected mixed auth corpus parse success rate");
+
+    expect(event_count(result.events, loglens::EventType::SshInvalidUser) == 10,
+           "expected ten mixed corpus invalid-user events");
+    expect(event_count(result.events, loglens::EventType::SshFailedPublicKey) == 10,
+           "expected ten mixed corpus failed-publickey events");
+    expect(event_count(result.events, loglens::EventType::SshAcceptedPublicKey) == 10,
+           "expected ten mixed corpus accepted-publickey events");
+    expect(event_count(result.events, loglens::EventType::SudoCommand) == 10,
+           "expected ten mixed corpus sudo command events");
+    expect(event_count(result.events, loglens::EventType::SudoAuthFailure) == 10,
+           "expected ten mixed corpus sudo auth-failure events");
+    expect(event_count(result.events, loglens::EventType::PamAuthFailure) == 30,
+           "expected thirty mixed corpus PAM auth-failure events");
+    expect(event_count(result.events, loglens::EventType::SuAuthFailure) == 10,
+           "expected ten mixed corpus su auth-failure events");
+
+    expect(unknown_pattern_count(result.quality, "invalid_month_token") == 10,
+           "expected ten invalid-month telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "malformed_source_ip") == 10,
+           "expected ten malformed-source-IP telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "pam_unix_session_closed") == 10,
+           "expected ten pam_unix session-closed telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "program_cron") == 10,
+           "expected ten unsupported-program telemetry buckets");
+    expect(unknown_pattern_count(result.quality, "sshd_connection_closed_preauth") == 10,
+           "expected ten sshd preauth-close telemetry buckets");
+
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::KnownProgramUnknownMessage) == 10,
+           "expected ten known-program unknown-message failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::MalformedSourceIp) == 10,
+           "expected ten malformed-source-IP failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::UnknownProgram) == 10,
+           "expected ten unknown-program failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::UnknownTimestamp) == 10,
+           "expected ten unknown-timestamp failures");
+    expect(failure_category_count(result.quality, loglens::ParserFailureCategory::UnsupportedPamVariant) == 10,
+           "expected ten unsupported-PAM-variant failures");
+
+    const auto actual = mixed_auth_coverage_json(result);
+    const auto expected = read_text_file(asset_path("mixed_auth_parser_coverage.json"));
+    expect(actual == expected, "expected mixed auth parser coverage artifact to match fixture");
+}
+
 }  // namespace
 
 int main() {
@@ -1157,5 +1344,6 @@ int main() {
     test_syslog_fixture_matrix_file();
     test_journalctl_fixture_matrix_file();
     test_noisy_auth_fixture_matrix_file();
+    test_mixed_auth_corpus_fixture_file();
     return 0;
 }

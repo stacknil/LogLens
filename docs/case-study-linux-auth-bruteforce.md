@@ -1,6 +1,6 @@
 # Linux Auth Brute-Force Case Study
 
-This case study explains how LogLens interprets a sanitized Linux authentication sample as evidence. The emphasis is forensic reasoning: what the records support, what they do not support, and where parser uncertainty remains visible.
+This case study explains how LogLens interprets a sanitized Linux authentication sample as evidence. The emphasis is forensic reasoning: what the records support, what they do not support, and where parser uncertainty remains visible. Reviewers who want the shortest end-to-end trace can start with the [`one-page incident-style case`](./incident-style-case.md).
 
 ## Scenario
 
@@ -119,7 +119,7 @@ These warnings are useful because they prevent silent overconfidence. A reviewer
 
 ## False-positive boundary
 
-The findings should be read as triage statements and checked against the rule-by-rule taxonomy in [`rule-catalog.md`](./rule-catalog.md):
+The findings should be read as triage statements and checked against the rule semantics in [`rule-catalog.md`](./rule-catalog.md) and the evidence-review matrices in [`false-positive-taxonomy.md`](./false-positive-taxonomy.md):
 
 - `203.0.113.10` is a documentation-range placeholder; in a real case, the same pattern could be an external scanner, shared gateway, internal test, or replayed lab traffic.
 - Username spread supports a probing interpretation, but intent is not observable from these lines alone.
