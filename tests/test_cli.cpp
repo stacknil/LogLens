@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
         &version_stderr)
                                              .c_str());
     expect(version_exit == 0, "expected --version to succeed");
-    expect(read_file(version_stdout) == "LogLens 0.1.0\n",
+    expect(read_file(version_stdout) == "LogLens 0.5.0\n",
            "expected --version to print project version to stdout");
     expect(read_file(version_stderr).empty(), "expected --version to keep stderr empty");
 
