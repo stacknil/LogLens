@@ -26,6 +26,29 @@ Metadata equivalent:
 - Default values below match the built-in detector configuration.
 - The checked-in `assets/sample_config.json` is a tested default-equivalent fixture.
 
+## Detection Episode Semantics
+
+Within each rule grouping key, LogLens sorts matching signals by timestamp and
+source line number. Consecutive signals separated by an idle gap greater than
+the rule window start a new episode candidate.
+
+Inside each episode candidate, the detector keeps the best sliding window for
+the rule:
+
+- `brute_force` and `sudo_burst`: highest event count
+- `multi_user_probing`: highest distinct username count, with event count as
+  the tie-breaker
+
+Each episode candidate that reaches the configured threshold emits one finding.
+The same `rule_id` and `subject` can therefore appear more than once in one
+report when the evidence contains time-separated bursts. Review
+`window_start`, `window_end`, and `evidence_event_ids` to distinguish those
+episodes.
+
+Episode splitting is a detector reporting model, not an incident boundary. It
+does not infer compromise, attribution, causality between rules, or cross-host
+correlation.
+
 ## Finding Explainability Fields
 
 JSON findings include both the finding conclusion and the rule context used to reach it:
@@ -89,7 +112,7 @@ Signals without a source IP are not grouped for this rule.
 
 10 minutes by default.
 
-The detector uses a sliding timestamp window within each source-IP group.
+The detector uses the episode semantics above within each source-IP group.
 
 ### Threshold
 
@@ -155,7 +178,7 @@ Signals without a source IP are not grouped for this rule. Distinct username cou
 
 15 minutes by default.
 
-The detector uses a sliding timestamp window within each source-IP group.
+The detector uses the episode semantics above within each source-IP group.
 
 ### Threshold
 
@@ -224,7 +247,7 @@ Signals without a username are not grouped for this rule.
 
 5 minutes by default.
 
-The detector uses a sliding timestamp window within each username group.
+The detector uses the episode semantics above within each username group.
 
 ### Threshold
 

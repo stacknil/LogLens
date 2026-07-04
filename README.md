@@ -84,6 +84,11 @@ LogLens currently detects:
 - One IP trying multiple usernames within 15 minutes
 - Bursty sudo activity from the same user within 5 minutes
 
+Each rule can emit multiple findings for the same subject when matching
+evidence appears in time-separated detector episodes. Report consumers should
+use `window_start`, `window_end`, and `evidence_event_ids` rather than assuming
+one finding per `rule_id` and subject.
+
 LogLens currently parses and reports these additional auth patterns beyond the core detector inputs:
 
 - `Accepted publickey` SSH successes
