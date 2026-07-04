@@ -29,7 +29,7 @@ or attribution:
 
 ## Project Status
 
-LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
+**Release posture:** Early reviewer-stable release with a narrow Linux authentication evidence contract. Parser and detection coverage remain intentionally narrow.
 
 Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), and the [`v0.5 Evidence Explainability release note`](./docs/release-v0.5.0.md). The [`quality gates map`](./docs/quality-gates.md) links claims to tests and fixtures. For detection reasoning, follow the [`one-page incident-style case`](./docs/incident-style-case.md), then use the full [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md), [`rule catalog`](./docs/rule-catalog.md), and [`false-positive taxonomy`](./docs/false-positive-taxonomy.md) for depth. For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
 
