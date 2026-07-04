@@ -61,6 +61,11 @@ fixtures explicitly.
 
 `evidence_event_ids` are deterministic local event identifiers derived from the source line number, formatted as `line:<number>`. They let reviewers trace a finding back to the normalized input events that satisfied the rule window without implying global event identity.
 
+Consumers should not assume that `rule_id` plus `subject` is unique within a
+report. A rule can emit multiple findings for the same subject when matching
+evidence appears in time-separated detector episodes. Use `window_start`,
+`window_end`, and `evidence_event_ids` to distinguish episode-level findings.
+
 `verdict_boundary` is a stable token that states what the finding must not be
 read as. It keeps machine-readable findings aligned with LogLens's triage
 scope:

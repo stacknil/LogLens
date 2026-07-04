@@ -29,6 +29,18 @@ const loglens::Finding* find_finding(const std::vector<loglens::Finding>& findin
     return it == findings.end() ? nullptr : &(*it);
 }
 
+std::vector<const loglens::Finding*> find_findings(const std::vector<loglens::Finding>& findings,
+                                                   loglens::FindingType type,
+                                                   const std::string& subject) {
+    std::vector<const loglens::Finding*> matches;
+    for (const auto& finding : findings) {
+        if (finding.type == type && finding.subject == subject) {
+            matches.push_back(&finding);
+        }
+    }
+    return matches;
+}
+
 const loglens::AuthSignal* find_signal(const std::vector<loglens::AuthSignal>& signals,
                                        loglens::AuthSignalKind signal_kind) {
     const auto it = std::find_if(signals.begin(), signals.end(), [&](const loglens::AuthSignal& signal) {
@@ -98,6 +110,43 @@ std::vector<loglens::Event> build_events() {
         "Mar 10 08:21:00 example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/systemctl restart ssh\n"
         "Mar 10 08:22:10 example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/journalctl -xe\n"
         "Mar 10 08:24:15 example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/vi /etc/ssh/sshd_config\n");
+}
+
+std::vector<loglens::Event> build_two_bruteforce_episode_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 09:00:00 example-host sshd[2001]: Failed password for user001 from 203.0.113.10 port 52001 ssh2\n"
+        "Mar 10 09:01:00 example-host sshd[2002]: Failed password for user001 from 203.0.113.10 port 52002 ssh2\n"
+        "Mar 10 09:02:00 example-host sshd[2003]: Failed password for user001 from 203.0.113.10 port 52003 ssh2\n"
+        "Mar 10 09:03:00 example-host sshd[2004]: Failed password for user001 from 203.0.113.10 port 52004 ssh2\n"
+        "Mar 10 09:04:00 example-host sshd[2005]: Failed password for user001 from 203.0.113.10 port 52005 ssh2\n"
+        "Mar 10 15:00:00 example-host sshd[2006]: Failed password for user001 from 203.0.113.10 port 53001 ssh2\n"
+        "Mar 10 15:01:00 example-host sshd[2007]: Failed password for user001 from 203.0.113.10 port 53002 ssh2\n"
+        "Mar 10 15:02:00 example-host sshd[2008]: Failed password for user001 from 203.0.113.10 port 53003 ssh2\n"
+        "Mar 10 15:03:00 example-host sshd[2009]: Failed password for user001 from 203.0.113.10 port 53004 ssh2\n"
+        "Mar 10 15:04:00 example-host sshd[2010]: Failed password for user001 from 203.0.113.10 port 53005 ssh2\n");
+}
+
+std::vector<loglens::Event> build_two_multi_user_episode_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 09:00:00 example-host sshd[2101]: Failed password for user001 from 203.0.113.20 port 52001 ssh2\n"
+        "Mar 10 09:01:00 example-host sshd[2102]: Failed password for user002 from 203.0.113.20 port 52002 ssh2\n"
+        "Mar 10 09:02:00 example-host sshd[2103]: Failed password for user003 from 203.0.113.20 port 52003 ssh2\n"
+        "Mar 10 15:00:00 example-host sshd[2104]: Failed password for user004 from 203.0.113.20 port 53001 ssh2\n"
+        "Mar 10 15:01:00 example-host sshd[2105]: Failed password for user005 from 203.0.113.20 port 53002 ssh2\n"
+        "Mar 10 15:02:00 example-host sshd[2106]: Failed password for user006 from 203.0.113.20 port 53003 ssh2\n");
+}
+
+std::vector<loglens::Event> build_two_sudo_episode_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 09:00:00 example-host sudo:    user001 : TTY=pts/0 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/systemctl status ssh\n"
+        "Mar 10 09:01:00 example-host sudo:    user001 : TTY=pts/0 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/journalctl -u ssh\n"
+        "Mar 10 09:02:00 example-host sudo:    user001 : TTY=pts/0 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/systemctl reload ssh\n"
+        "Mar 10 15:00:00 example-host sudo:    user001 : TTY=pts/0 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/systemctl status ssh\n"
+        "Mar 10 15:01:00 example-host sudo:    user001 : TTY=pts/0 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/journalctl -u ssh\n"
+        "Mar 10 15:02:00 example-host sudo:    user001 : TTY=pts/0 ; PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/systemctl reload ssh\n");
 }
 
 std::vector<loglens::Event> build_publickey_bruteforce_candidate_events() {
@@ -252,6 +301,86 @@ void test_custom_thresholds() {
     const loglens::Detector detector(config);
     const auto findings = detector.analyze(events);
     expect(findings.empty(), "expected custom thresholds to suppress findings");
+}
+
+void test_bruteforce_emits_multiple_episodes_for_same_source() {
+    const auto events = build_two_bruteforce_episode_events();
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(events);
+
+    const auto episodes = find_findings(findings, loglens::FindingType::BruteForce, "203.0.113.10");
+    expect(episodes.size() == 2, "expected two brute-force episodes for the same source IP");
+    expect(episodes[0]->event_count == 5, "expected first brute-force episode count");
+    expect(episodes[0]->observed_count == 5, "expected first brute-force observed count");
+    expect(loglens::format_timestamp(episodes[0]->first_seen) == "2026-03-10 09:00:00",
+           "expected first brute-force episode start");
+    expect(loglens::format_timestamp(episodes[0]->last_seen) == "2026-03-10 09:04:00",
+           "expected first brute-force episode end");
+    expect((episodes[0]->evidence_event_ids == std::vector<std::string>{
+               "line:1", "line:2", "line:3", "line:4", "line:5"}),
+           "expected first brute-force episode evidence ids");
+
+    expect(episodes[1]->event_count == 5, "expected second brute-force episode count");
+    expect(episodes[1]->observed_count == 5, "expected second brute-force observed count");
+    expect(loglens::format_timestamp(episodes[1]->first_seen) == "2026-03-10 15:00:00",
+           "expected second brute-force episode start");
+    expect(loglens::format_timestamp(episodes[1]->last_seen) == "2026-03-10 15:04:00",
+           "expected second brute-force episode end");
+    expect((episodes[1]->evidence_event_ids == std::vector<std::string>{
+               "line:6", "line:7", "line:8", "line:9", "line:10"}),
+           "expected second brute-force episode evidence ids");
+}
+
+void test_multi_user_emits_multiple_episodes_for_same_source() {
+    const auto events = build_two_multi_user_episode_events();
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(events);
+
+    const auto episodes = find_findings(findings, loglens::FindingType::MultiUserProbing, "203.0.113.20");
+    expect(episodes.size() == 2, "expected two multi-user probing episodes for the same source IP");
+    expect(episodes[0]->event_count == 3, "expected first multi-user episode event count");
+    expect(episodes[0]->observed_count == 3, "expected first multi-user episode distinct username count");
+    expect((episodes[0]->usernames == std::vector<std::string>{"user001", "user002", "user003"}),
+           "expected first multi-user episode usernames");
+    expect(loglens::format_timestamp(episodes[0]->first_seen) == "2026-03-10 09:00:00",
+           "expected first multi-user episode start");
+    expect(loglens::format_timestamp(episodes[0]->last_seen) == "2026-03-10 09:02:00",
+           "expected first multi-user episode end");
+
+    expect(episodes[1]->event_count == 3, "expected second multi-user episode event count");
+    expect(episodes[1]->observed_count == 3, "expected second multi-user episode distinct username count");
+    expect((episodes[1]->usernames == std::vector<std::string>{"user004", "user005", "user006"}),
+           "expected second multi-user episode usernames");
+    expect(loglens::format_timestamp(episodes[1]->first_seen) == "2026-03-10 15:00:00",
+           "expected second multi-user episode start");
+    expect(loglens::format_timestamp(episodes[1]->last_seen) == "2026-03-10 15:02:00",
+           "expected second multi-user episode end");
+}
+
+void test_sudo_burst_emits_multiple_episodes_for_same_user() {
+    const auto events = build_two_sudo_episode_events();
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(events);
+
+    const auto episodes = find_findings(findings, loglens::FindingType::SudoBurst, "user001");
+    expect(episodes.size() == 2, "expected two sudo burst episodes for the same user");
+    expect(episodes[0]->event_count == 3, "expected first sudo episode count");
+    expect(episodes[0]->observed_count == 3, "expected first sudo episode observed count");
+    expect(loglens::format_timestamp(episodes[0]->first_seen) == "2026-03-10 09:00:00",
+           "expected first sudo episode start");
+    expect(loglens::format_timestamp(episodes[0]->last_seen) == "2026-03-10 09:02:00",
+           "expected first sudo episode end");
+    expect((episodes[0]->evidence_event_ids == std::vector<std::string>{"line:1", "line:2", "line:3"}),
+           "expected first sudo episode evidence ids");
+
+    expect(episodes[1]->event_count == 3, "expected second sudo episode count");
+    expect(episodes[1]->observed_count == 3, "expected second sudo episode observed count");
+    expect(loglens::format_timestamp(episodes[1]->first_seen) == "2026-03-10 15:00:00",
+           "expected second sudo episode start");
+    expect(loglens::format_timestamp(episodes[1]->last_seen) == "2026-03-10 15:02:00",
+           "expected second sudo episode end");
+    expect((episodes[1]->evidence_event_ids == std::vector<std::string>{"line:4", "line:5", "line:6"}),
+           "expected second sudo episode evidence ids");
 }
 
 void test_auth_signal_defaults() {
@@ -505,6 +634,9 @@ void test_reject_invalid_config() {
 int main() {
     test_default_thresholds();
     test_custom_thresholds();
+    test_bruteforce_emits_multiple_episodes_for_same_source();
+    test_multi_user_emits_multiple_episodes_for_same_source();
+    test_sudo_burst_emits_multiple_episodes_for_same_user();
     test_auth_signal_defaults();
     test_failed_publickey_contributes_to_bruteforce_by_default();
     test_accepted_publickey_success_stays_out_of_failure_signals();

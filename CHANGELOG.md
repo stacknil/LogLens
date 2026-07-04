@@ -10,7 +10,9 @@ All notable user-visible changes should be recorded here.
 
 ### Changed
 
-- None yet.
+- Detector rules now emit separate findings for time-separated detection
+  episodes within the same rule subject instead of collapsing each subject to a
+  single best window.
 
 ### Fixed
 
@@ -18,7 +20,8 @@ All notable user-visible changes should be recorded here.
 
 ### Docs
 
-- None yet.
+- Documented detection episode semantics in the rule catalog and report artifact
+  contract notes.
 
 ## v0.5.0
 

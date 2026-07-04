@@ -2,11 +2,28 @@
 
 #include <algorithm>
 #include <unordered_map>
+#include <utility>
 
 namespace loglens {
 namespace {
 
 using SignalGroup = std::unordered_map<std::string, std::vector<const AuthSignal*>>;
+
+struct CountWindowSelection {
+    std::size_t start = 0;
+    std::size_t end = 0;
+    std::size_t count = 0;
+    bool matched = false;
+};
+
+struct MultiUserWindowSelection {
+    std::size_t start = 0;
+    std::size_t end = 0;
+    std::size_t event_count = 0;
+    std::size_t distinct_username_count = 0;
+    std::vector<std::string> usernames;
+    bool matched = false;
+};
 
 std::vector<const AuthSignal*> sort_signals_by_time(const std::vector<const AuthSignal*>& signals) {
     auto sorted = signals;
@@ -17,6 +34,99 @@ std::vector<const AuthSignal*> sort_signals_by_time(const std::vector<const Auth
         return left->line_number < right->line_number;
     });
     return sorted;
+}
+
+std::vector<std::pair<std::size_t, std::size_t>> activity_segments(const std::vector<const AuthSignal*>& ordered,
+                                                                   std::chrono::minutes window) {
+    std::vector<std::pair<std::size_t, std::size_t>> segments;
+    if (ordered.empty()) {
+        return segments;
+    }
+
+    std::size_t segment_start = 0;
+    for (std::size_t index = 1; index < ordered.size(); ++index) {
+        if (ordered[index]->timestamp - ordered[index - 1]->timestamp > window) {
+            segments.emplace_back(segment_start, index - 1);
+            segment_start = index;
+        }
+    }
+
+    segments.emplace_back(segment_start, ordered.size() - 1);
+    return segments;
+}
+
+CountWindowSelection best_count_window(const std::vector<const AuthSignal*>& ordered,
+                                       std::size_t segment_start,
+                                       std::size_t segment_end,
+                                       std::chrono::minutes window) {
+    CountWindowSelection selection;
+    std::size_t start = segment_start;
+
+    for (std::size_t end = segment_start; end <= segment_end; ++end) {
+        while (start < end && ordered[end]->timestamp - ordered[start]->timestamp > window) {
+            ++start;
+        }
+
+        const auto count = end - start + 1;
+        if (!selection.matched || count > selection.count) {
+            selection.start = start;
+            selection.end = end;
+            selection.count = count;
+            selection.matched = true;
+        }
+    }
+
+    return selection;
+}
+
+MultiUserWindowSelection best_multi_user_window(const std::vector<const AuthSignal*>& ordered,
+                                                std::size_t segment_start,
+                                                std::size_t segment_end,
+                                                std::chrono::minutes window) {
+    MultiUserWindowSelection selection;
+    std::size_t start = segment_start;
+    std::unordered_map<std::string, std::size_t> username_counts;
+
+    for (std::size_t end = segment_start; end <= segment_end; ++end) {
+        if (!ordered[end]->username.empty()) {
+            ++username_counts[ordered[end]->username];
+        }
+
+        while (start < end && ordered[end]->timestamp - ordered[start]->timestamp > window) {
+            if (!ordered[start]->username.empty()) {
+                auto count_it = username_counts.find(ordered[start]->username);
+                if (count_it != username_counts.end()) {
+                    if (count_it->second == 1) {
+                        username_counts.erase(count_it);
+                    } else {
+                        --count_it->second;
+                    }
+                }
+            }
+            ++start;
+        }
+
+        const auto distinct_username_count = username_counts.size();
+        const auto event_count = end - start + 1;
+        if (!selection.matched
+            || distinct_username_count > selection.distinct_username_count
+            || (distinct_username_count == selection.distinct_username_count
+                && event_count > selection.event_count)) {
+            selection.start = start;
+            selection.end = end;
+            selection.event_count = event_count;
+            selection.distinct_username_count = distinct_username_count;
+            selection.usernames.clear();
+            selection.usernames.reserve(username_counts.size());
+            for (const auto& [username, _] : username_counts) {
+                selection.usernames.push_back(username);
+            }
+            std::sort(selection.usernames.begin(), selection.usernames.end());
+            selection.matched = true;
+        }
+    }
+
+    return selection;
 }
 
 std::vector<std::string> evidence_event_ids_for_window(const std::vector<const AuthSignal*>& ordered,
@@ -153,34 +263,23 @@ std::vector<Finding> detect_brute_force(const std::vector<AuthSignal>& signals, 
 
     for (const auto& [ip, group] : grouped) {
         const auto ordered = sort_signals_by_time(group);
-        std::size_t start = 0;
-        std::size_t best_count = 0;
-        std::size_t best_start = 0;
-        std::size_t best_end = 0;
+        for (const auto& [segment_start, segment_end] : activity_segments(ordered, config.brute_force.window)) {
+            const auto episode = best_count_window(
+                ordered,
+                segment_start,
+                segment_end,
+                config.brute_force.window);
 
-        for (std::size_t end = 0; end < ordered.size(); ++end) {
-            while (start < end
-                   && ordered[end]->timestamp - ordered[start]->timestamp > config.brute_force.window) {
-                ++start;
+            if (episode.matched && episode.count >= config.brute_force.threshold) {
+                findings.push_back(make_brute_force_finding(
+                    ip,
+                    episode.count,
+                    config.brute_force.threshold,
+                    ordered[episode.start]->timestamp,
+                    ordered[episode.end]->timestamp,
+                    config.brute_force.window,
+                    evidence_event_ids_for_window(ordered, episode.start, episode.end)));
             }
-
-            const auto count = end - start + 1;
-            if (count > best_count) {
-                best_count = count;
-                best_start = start;
-                best_end = end;
-            }
-        }
-
-        if (best_count >= config.brute_force.threshold) {
-            findings.push_back(make_brute_force_finding(
-                ip,
-                best_count,
-                config.brute_force.threshold,
-                ordered[best_start]->timestamp,
-                ordered[best_end]->timestamp,
-                config.brute_force.window,
-                evidence_event_ids_for_window(ordered, best_start, best_end)));
         }
     }
 
@@ -193,62 +292,25 @@ std::vector<Finding> detect_multi_user(const std::vector<AuthSignal>& signals, c
 
     for (const auto& [ip, group] : grouped) {
         const auto ordered = sort_signals_by_time(group);
-        std::size_t start = 0;
-        std::unordered_map<std::string, std::size_t> username_counts;
-        std::size_t best_distinct = 0;
-        std::size_t best_count = 0;
-        std::size_t best_start = 0;
-        std::size_t best_end = 0;
-        std::vector<std::string> best_usernames;
+        for (const auto& [segment_start, segment_end] : activity_segments(ordered, config.multi_user_probing.window)) {
+            auto episode = best_multi_user_window(
+                ordered,
+                segment_start,
+                segment_end,
+                config.multi_user_probing.window);
 
-        for (std::size_t end = 0; end < ordered.size(); ++end) {
-            if (!ordered[end]->username.empty()) {
-                ++username_counts[ordered[end]->username];
+            if (episode.matched && episode.distinct_username_count >= config.multi_user_probing.threshold) {
+                findings.push_back(make_multi_user_finding(
+                    ip,
+                    episode.event_count,
+                    config.multi_user_probing.threshold,
+                    episode.distinct_username_count,
+                    ordered[episode.start]->timestamp,
+                    ordered[episode.end]->timestamp,
+                    std::move(episode.usernames),
+                    config.multi_user_probing.window,
+                    evidence_event_ids_for_window(ordered, episode.start, episode.end)));
             }
-
-            while (start < end
-                   && ordered[end]->timestamp - ordered[start]->timestamp > config.multi_user_probing.window) {
-                if (!ordered[start]->username.empty()) {
-                    auto count_it = username_counts.find(ordered[start]->username);
-                    if (count_it != username_counts.end()) {
-                        if (count_it->second == 1) {
-                            username_counts.erase(count_it);
-                        } else {
-                            --count_it->second;
-                        }
-                    }
-                }
-                ++start;
-            }
-
-            const auto distinct_count = username_counts.size();
-            const auto event_count = end - start + 1;
-            if (distinct_count > best_distinct
-                || (distinct_count == best_distinct && event_count > best_count)) {
-                best_distinct = distinct_count;
-                best_count = event_count;
-                best_start = start;
-                best_end = end;
-                best_usernames.clear();
-                best_usernames.reserve(username_counts.size());
-                for (const auto& [username, _] : username_counts) {
-                    best_usernames.push_back(username);
-                }
-                std::sort(best_usernames.begin(), best_usernames.end());
-            }
-        }
-
-        if (best_distinct >= config.multi_user_probing.threshold) {
-            findings.push_back(make_multi_user_finding(
-                ip,
-                best_count,
-                config.multi_user_probing.threshold,
-                best_distinct,
-                ordered[best_start]->timestamp,
-                ordered[best_end]->timestamp,
-                best_usernames,
-                config.multi_user_probing.window,
-                evidence_event_ids_for_window(ordered, best_start, best_end)));
         }
     }
 
@@ -261,34 +323,23 @@ std::vector<Finding> detect_sudo_burst(const std::vector<AuthSignal>& signals, c
 
     for (const auto& [username, group] : grouped) {
         const auto ordered = sort_signals_by_time(group);
-        std::size_t start = 0;
-        std::size_t best_count = 0;
-        std::size_t best_start = 0;
-        std::size_t best_end = 0;
+        for (const auto& [segment_start, segment_end] : activity_segments(ordered, config.sudo_burst.window)) {
+            const auto episode = best_count_window(
+                ordered,
+                segment_start,
+                segment_end,
+                config.sudo_burst.window);
 
-        for (std::size_t end = 0; end < ordered.size(); ++end) {
-            while (start < end
-                   && ordered[end]->timestamp - ordered[start]->timestamp > config.sudo_burst.window) {
-                ++start;
+            if (episode.matched && episode.count >= config.sudo_burst.threshold) {
+                findings.push_back(make_sudo_finding(
+                    username,
+                    episode.count,
+                    config.sudo_burst.threshold,
+                    ordered[episode.start]->timestamp,
+                    ordered[episode.end]->timestamp,
+                    config.sudo_burst.window,
+                    evidence_event_ids_for_window(ordered, episode.start, episode.end)));
             }
-
-            const auto count = end - start + 1;
-            if (count > best_count) {
-                best_count = count;
-                best_start = start;
-                best_end = end;
-            }
-        }
-
-        if (best_count >= config.sudo_burst.threshold) {
-            findings.push_back(make_sudo_finding(
-                username,
-                best_count,
-                config.sudo_burst.threshold,
-                ordered[best_start]->timestamp,
-                ordered[best_end]->timestamp,
-                config.sudo_burst.window,
-                evidence_event_ids_for_window(ordered, best_start, best_end)));
         }
     }
 
