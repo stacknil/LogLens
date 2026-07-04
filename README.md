@@ -7,11 +7,34 @@ C++20 defensive log analysis CLI for Linux authentication logs, with parser cove
 
 It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports, with optional CSV exports for findings and warnings.
 
+## Example Finding
+
+A compact finding summary is a bounded triage signal, not a compromise verdict
+or attribution:
+
+```json
+{
+  "rule_id": "brute_force",
+  "subject_kind": "source_ip",
+  "subject": "203.0.113.10",
+  "grouping_key": "source_ip",
+  "window_start": "2026-03-10 08:11:22",
+  "window_end": "2026-03-10 08:18:05",
+  "threshold": 5,
+  "observed_count": 5,
+  "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+  "verdict_boundary": "triage_signal_not_compromise_or_attribution"
+}
+```
+
 ## Project Status
 
 LogLens is an MVP / early release. The repository is stable enough for public review, local experimentation, and extension, but the parser and detection coverage are intentionally narrow.
 
-Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md) and [`docs/reviewer-brief.md`](./docs/reviewer-brief.md).
+Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), and the [`v0.5 Evidence Explainability release note`](./docs/release-v0.5.0.md). The [`quality gates map`](./docs/quality-gates.md) links claims to tests and fixtures. For detection reasoning, follow the [`one-page incident-style case`](./docs/incident-style-case.md), then use the full [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md), [`rule catalog`](./docs/rule-catalog.md), and [`false-positive taxonomy`](./docs/false-positive-taxonomy.md) for depth. For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
+
+For a shorter external review entry point focused on uncertainty handling, read
+[How LogLens Treats Parser Uncertainty as Evidence](./docs/case-study-parser-uncertainty-as-evidence.md).
 
 ## Why This Project Exists
 
@@ -38,7 +61,7 @@ LogLens includes two minimal GitHub Actions workflows:
 - `CI` builds and tests the project on `ubuntu-latest` and `windows-latest`
 - `CodeQL` runs GitHub code scanning for C/C++ on pushes, pull requests, and a weekly schedule
 
-Both workflows are intended to stay stable enough to require on pull requests to `main`. Regression coverage is backed by sanitized parser fixture matrices plus golden report-contract fixtures for `report.md`, `report.json`, and optional CSV outputs. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), [`docs/release-v0.3.0.md`](./docs/release-v0.3.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
+Both workflows are intended to stay stable enough to require on pull requests to `main`. Regression coverage is backed by sanitized parser fixture matrices plus golden report-contract fixtures for `report.md`, `report.json`, and optional CSV outputs. Release-facing documentation is split across [`CHANGELOG.md`](./CHANGELOG.md), [`docs/release-process.md`](./docs/release-process.md), [`docs/release-v0.1.0.md`](./docs/release-v0.1.0.md), [`docs/release-v0.3.0.md`](./docs/release-v0.3.0.md), [`docs/release-v0.5.0.md`](./docs/release-v0.5.0.md), and the repository's GitHub release notes. The repository hardening note is in [`docs/repo-hardening.md`](./docs/repo-hardening.md), and vulnerability reporting guidance is in [`SECURITY.md`](./SECURITY.md).
 
 ## Threat Model
 
@@ -66,7 +89,8 @@ LogLens currently parses and reports these additional auth patterns beyond the c
 - `Accepted keyboard-interactive/pam` SSH successes
 - `Failed publickey` SSH failures, which count toward SSH brute-force detection by default
 - `Failed keyboard-interactive/pam` and `maximum authentication attempts exceeded` SSH failures, which count toward SSH brute-force detection by default
-- `sshd`-owned `PAM: Authentication failure ...` lines, with invalid/illegal-user variants normalized to `ssh_invalid_user`
+- `input_userauth_request: invalid/illegal user ...` preauth SSH traces normalized to `ssh_invalid_user`
+- `sshd`-owned `PAM: Authentication failure ...` lines, including OpenSSH's optional leading `error:` marker, with invalid/illegal-user variants normalized to `ssh_invalid_user`
 - `sudo` command, password-failure, and sudoers policy-denial audit lines
 - `su` success and failure audit lines
 - `pam_unix(...:auth): authentication failure`
@@ -82,14 +106,19 @@ LogLens also tracks parser coverage telemetry for unsupported or malformed lines
 - `parsed_lines`
 - `unparsed_lines`
 - `parse_success_rate`
+- `failure_categories`
 - `top_unknown_patterns`
 
 Common unsupported-pattern buckets include `sshd_connection_closed_preauth`,
-`sshd_timeout_or_disconnection`, `sshd_negotiation_failure`, and
-`pam_unix_session_closed`. These buckets keep non-finding evidence reviewable
-without counting it as detector evidence.
+`sshd_timeout_or_disconnection`, `sshd_negotiation_failure`,
+`pam_faillock_account_locked`, and `pam_unix_session_closed`. These buckets keep
+non-finding evidence reviewable without counting it as detector evidence.
+Failure categories group unsupported lines into reviewer-facing parser boundary
+classes: `unknown_timestamp`, `unknown_program`,
+`known_program_unknown_message`, `malformed_source_ip`, and
+`unsupported_pam_variant`.
 
-For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md).
+For a compact raw-log-to-conclusion trace, see [`docs/incident-style-case.md`](./docs/incident-style-case.md). For rule-by-rule semantics and signal boundaries, see [`docs/rule-catalog.md`](./docs/rule-catalog.md). For benign-context hypotheses and the evidence needed to support them, see [`docs/false-positive-taxonomy.md`](./docs/false-positive-taxonomy.md). For a full forensic-style evidence walkthrough, see [`docs/case-study-linux-auth-bruteforce.md`](./docs/case-study-linux-auth-bruteforce.md). For the parser behavior contract, supported modes, and fixture map, see [`docs/parser-contract.md`](./docs/parser-contract.md). For the deliberately noisy parser-coverage sample, see [`docs/parser-coverage-notes.md`](./docs/parser-coverage-notes.md).
 
 LogLens does not currently detect:
 
@@ -105,6 +134,12 @@ LogLens does not currently detect:
 cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
+```
+
+For Visual Studio or other multi-config generators, pass the built configuration to CTest:
+
+```bash
+ctest --test-dir build -C Debug --output-on-failure
 ```
 
 For fresh-machine setup and repeatable local presets, see [`docs/dev-setup.md`](./docs/dev-setup.md).
@@ -135,7 +170,7 @@ When you add `--csv`, LogLens also writes:
 The CSV schema is intentionally small and stable:
 
 - `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
-- `warnings.csv`: `kind`, `line_number`, `message`
+- `warnings.csv`: `kind`, `line_number`, `category`, `message`
 
 Without `--csv`, LogLens does not create, overwrite, or delete any existing CSV files in the output directory.
 
@@ -211,6 +246,8 @@ The config file schema is intentionally small and strict:
 ```
 
 This mapping lets LogLens normalize parsed events into detection signals before applying brute-force or multi-user rules. By default, `pam_auth_failure` is treated as lower-confidence attempt evidence and does not count as a terminal authentication failure unless the config explicitly upgrades it. The `ssh_failed_keyboard_interactive` and `ssh_max_auth_tries` mapping keys are optional in older configs and default to terminal failure evidence.
+
+The checked-in [`assets/sample_config.json`](./assets/sample_config.json) is tested as a runnable default-equivalent config fixture. If default detector thresholds or signal mappings change, update that file and the related tests together.
 
 Timestamp handling is now explicit:
 

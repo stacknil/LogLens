@@ -19,6 +19,23 @@ std::vector<const AuthSignal*> sort_signals_by_time(const std::vector<const Auth
     return sorted;
 }
 
+std::vector<std::string> evidence_event_ids_for_window(const std::vector<const AuthSignal*>& ordered,
+                                                       std::size_t start,
+                                                       std::size_t end) {
+    std::vector<std::string> event_ids;
+    event_ids.reserve(end - start + 1);
+
+    for (std::size_t index = start; index <= end; ++index) {
+        if (!ordered[index]->event_id.empty()) {
+            event_ids.push_back(ordered[index]->event_id);
+        } else {
+            event_ids.push_back("line:" + std::to_string(ordered[index]->line_number));
+        }
+    }
+
+    return event_ids;
+}
+
 SignalGroup group_terminal_auth_failures_by_ip(const std::vector<AuthSignal>& signals) {
     SignalGroup grouped;
     for (const auto& signal : signals) {
@@ -54,16 +71,24 @@ SignalGroup group_sudo_burst_evidence_by_user(const std::vector<AuthSignal>& sig
 
 Finding make_brute_force_finding(const std::string& ip,
                                  std::size_t count,
+                                 std::size_t threshold,
                                  std::chrono::sys_seconds first_seen,
                                  std::chrono::sys_seconds last_seen,
-                                 std::chrono::minutes window) {
+                                 std::chrono::minutes window,
+                                 std::vector<std::string> evidence_event_ids) {
     Finding finding;
     finding.type = FindingType::BruteForce;
+    finding.rule_id = to_string(finding.type);
     finding.subject_kind = "source_ip";
     finding.subject = ip;
+    finding.grouping_key = "source_ip";
+    finding.threshold = threshold;
+    finding.observed_count = count;
     finding.event_count = count;
     finding.first_seen = first_seen;
     finding.last_seen = last_seen;
+    finding.evidence_event_ids = std::move(evidence_event_ids);
+    finding.verdict_boundary = default_verdict_boundary(finding.type);
     finding.summary = std::to_string(count) + " failed SSH attempts from " + ip
         + " within " + std::to_string(window.count()) + " minutes.";
     return finding;
@@ -71,17 +96,26 @@ Finding make_brute_force_finding(const std::string& ip,
 
 Finding make_multi_user_finding(const std::string& ip,
                                 std::size_t count,
+                                std::size_t threshold,
+                                std::size_t distinct_username_count,
                                 std::chrono::sys_seconds first_seen,
                                 std::chrono::sys_seconds last_seen,
                                 std::vector<std::string> usernames,
-                                std::chrono::minutes window) {
+                                std::chrono::minutes window,
+                                std::vector<std::string> evidence_event_ids) {
     Finding finding;
     finding.type = FindingType::MultiUserProbing;
+    finding.rule_id = to_string(finding.type);
     finding.subject_kind = "source_ip";
     finding.subject = ip;
+    finding.grouping_key = "source_ip";
+    finding.threshold = threshold;
+    finding.observed_count = distinct_username_count;
     finding.event_count = count;
     finding.first_seen = first_seen;
     finding.last_seen = last_seen;
+    finding.evidence_event_ids = std::move(evidence_event_ids);
+    finding.verdict_boundary = default_verdict_boundary(finding.type);
     finding.usernames = std::move(usernames);
     finding.summary = ip + " targeted " + std::to_string(finding.usernames.size())
         + " usernames within " + std::to_string(window.count()) + " minutes.";
@@ -90,16 +124,24 @@ Finding make_multi_user_finding(const std::string& ip,
 
 Finding make_sudo_finding(const std::string& user,
                           std::size_t count,
+                          std::size_t threshold,
                           std::chrono::sys_seconds first_seen,
                           std::chrono::sys_seconds last_seen,
-                          std::chrono::minutes window) {
+                          std::chrono::minutes window,
+                          std::vector<std::string> evidence_event_ids) {
     Finding finding;
     finding.type = FindingType::SudoBurst;
+    finding.rule_id = to_string(finding.type);
     finding.subject_kind = "username";
     finding.subject = user;
+    finding.grouping_key = "username";
+    finding.threshold = threshold;
+    finding.observed_count = count;
     finding.event_count = count;
     finding.first_seen = first_seen;
     finding.last_seen = last_seen;
+    finding.evidence_event_ids = std::move(evidence_event_ids);
+    finding.verdict_boundary = default_verdict_boundary(finding.type);
     finding.summary = user + " ran " + std::to_string(count)
         + " sudo commands within " + std::to_string(window.count()) + " minutes.";
     return finding;
@@ -134,9 +176,11 @@ std::vector<Finding> detect_brute_force(const std::vector<AuthSignal>& signals, 
             findings.push_back(make_brute_force_finding(
                 ip,
                 best_count,
+                config.brute_force.threshold,
                 ordered[best_start]->timestamp,
                 ordered[best_end]->timestamp,
-                config.brute_force.window));
+                config.brute_force.window,
+                evidence_event_ids_for_window(ordered, best_start, best_end)));
         }
     }
 
@@ -198,10 +242,13 @@ std::vector<Finding> detect_multi_user(const std::vector<AuthSignal>& signals, c
             findings.push_back(make_multi_user_finding(
                 ip,
                 best_count,
+                config.multi_user_probing.threshold,
+                best_distinct,
                 ordered[best_start]->timestamp,
                 ordered[best_end]->timestamp,
                 best_usernames,
-                config.multi_user_probing.window));
+                config.multi_user_probing.window,
+                evidence_event_ids_for_window(ordered, best_start, best_end)));
         }
     }
 
@@ -237,9 +284,11 @@ std::vector<Finding> detect_sudo_burst(const std::vector<AuthSignal>& signals, c
             findings.push_back(make_sudo_finding(
                 username,
                 best_count,
+                config.sudo_burst.threshold,
                 ordered[best_start]->timestamp,
                 ordered[best_end]->timestamp,
-                config.sudo_burst.window));
+                config.sudo_burst.window,
+                evidence_event_ids_for_window(ordered, best_start, best_end)));
         }
     }
 
@@ -257,6 +306,18 @@ std::string to_string(FindingType type) {
     case FindingType::SudoBurst:
     default:
         return "sudo_burst";
+    }
+}
+
+std::string default_verdict_boundary(FindingType type) {
+    switch (type) {
+    case FindingType::BruteForce:
+        return "triage_signal_not_compromise_or_attribution";
+    case FindingType::MultiUserProbing:
+        return "triage_signal_not_intent_or_attribution";
+    case FindingType::SudoBurst:
+    default:
+        return "triage_signal_not_maliciousness_or_authorization";
     }
 }
 

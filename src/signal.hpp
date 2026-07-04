@@ -43,6 +43,7 @@ struct AuthSignal {
     bool counts_as_terminal_auth_failure = false;
     bool counts_as_sudo_burst_evidence = false;
     std::size_t line_number = 0;
+    std::string event_id;
 };
 
 std::vector<AuthSignal> build_auth_signals(const std::vector<Event>& events, const AuthSignalConfig& config);

@@ -6,10 +6,7 @@ All notable user-visible changes should be recorded here.
 
 ### Added
 
-- Added sanitized golden `report.md` / `report.json` regression fixtures to lock report contracts.
-- Expanded parser coverage for `Accepted publickey` and selected `pam_faillock` / `pam_sss` variants.
-- Added compact host-level summaries for multi-host reports.
-- Added optional CSV export for findings and warnings when explicitly requested.
+- None yet.
 
 ### Changed
 
@@ -22,6 +19,47 @@ All notable user-visible changes should be recorded here.
 ### Docs
 
 - None yet.
+
+## v0.5.0
+
+### Added
+
+- Stabilized the JSON report artifact contract as `loglens.report.v2` with
+  `schema_version` set to `2`.
+- Added finding explainability fields to JSON findings, including `rule_id`,
+  `subject_kind`, `subject`, `grouping_key`, `window_start`, `window_end`,
+  `threshold`, `observed_count`, `evidence_event_ids`, and `verdict_boundary`.
+- Added sanitized golden `report.md`, `report.json`, `findings.csv`, and
+  `warnings.csv` regression fixtures to lock report contracts.
+- Added a 150-line sanitized mixed auth corpus fixture covering Ubuntu /
+  Debian-style `auth.log`, RHEL-family `secure`-style syslog, unknown lines,
+  malformed source IPs, and blank-line handling.
+- Added a reviewer-facing parser coverage JSON artifact for the mixed auth
+  corpus.
+
+### Changed
+
+- Made parser coverage telemetry and finding explainability part of the
+  release-facing review path instead of internal-only implementation detail.
+
+### Fixed
+
+- None.
+
+### Docs
+
+- Added release notes for the v0.5 Evidence Explainability Release.
+- Added a release readiness checklist that maps v0.5 requirements to reviewer
+  evidence and stopping points.
+- Added a one-page incident-style case that traces raw SSH evidence through
+  normalized events and finding fields to a bounded conclusion.
+- Added a rule-by-rule false-positive taxonomy for NAT, bastion, internal scanner,
+  lab replay, scheduled admin task, and shared-account contexts.
+- Added forensic-style case-study coverage for Linux auth brute-force evidence
+  interpretation.
+- Expanded the parser conformance matrix with explicit Ubuntu / Debian
+  `auth.log`, RHEL-family `secure`, `journalctl --output=short-full`, `sshd`,
+  `sudo`, `pam_unix`, `pam_faillock`, and `pam_sss` style coverage.
 
 ## v0.4.0
 

@@ -1,6 +1,7 @@
 Tue 2026-03-10 09:00:01 UTC example-host sshd[3000]: Failed password for invalid user admin from 203.0.113.10 port 52000 ssh2
 Tue 2026-03-10 09:00:40 UTC example-host sshd[3001]: Failed publickey for alice from 203.0.113.11 port 52001 ssh2
 Tue 2026-03-10 09:01:15 UTC example-host sshd[3002]: Invalid user backup from 203.0.113.12 port 52002
+Tue 2026-03-10 09:01:24 UTC example-host sshd[3027]: input_userauth_request: invalid user svc-verbose [preauth]
 Tue 2026-03-10 09:01:52 UTC example-host pam_unix(sshd:auth): authentication failure; user=alice euid=0 tty=ssh rhost=203.0.113.40
 Tue 2026-03-10 09:02:30 UTC example-host pam_unix(sudo:session): session opened for user root(uid=0) by alice(uid=1000)
 Tue 2026-03-10 09:03:05 UTC example-host pam_unix(su-l:session): session opened for user root by bob(uid=1001)

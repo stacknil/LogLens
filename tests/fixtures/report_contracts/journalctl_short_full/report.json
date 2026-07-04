@@ -1,5 +1,7 @@
 {
   "tool": "LogLens",
+  "schema": "loglens.report.v2",
+  "schema_version": 2,
   "input": "tests/fixtures/report_contracts/journalctl_short_full/input.log",
   "input_mode": "journalctl_short_full",
   "timezone_present": true,
@@ -13,6 +15,9 @@
     "top_unknown_patterns": [
       {"pattern": "sshd_connection_closed_preauth", "count": 1},
       {"pattern": "sshd_timeout_or_disconnection", "count": 1}
+    ],
+    "failure_categories": [
+      {"category": "known_program_unknown_message", "count": 2}
     ]
   },
   "parsed_event_count": 14,
@@ -29,38 +34,56 @@
   ],
   "findings": [
     {
+      "rule_id": "brute_force",
       "rule": "brute_force",
       "subject_kind": "source_ip",
       "subject": "203.0.113.10",
+      "grouping_key": "source_ip",
+      "threshold": 5,
+      "observed_count": 5,
       "event_count": 5,
       "window_start": "2026-03-10 08:11:22",
       "window_end": "2026-03-10 08:18:05",
+      "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+      "verdict_boundary": "triage_signal_not_compromise_or_attribution",
       "usernames": [],
       "summary": "5 failed SSH attempts from 203.0.113.10 within 10 minutes."
     },
     {
+      "rule_id": "multi_user_probing",
       "rule": "multi_user_probing",
       "subject_kind": "source_ip",
       "subject": "203.0.113.10",
+      "grouping_key": "source_ip",
+      "threshold": 3,
+      "observed_count": 5,
       "event_count": 5,
       "window_start": "2026-03-10 08:11:22",
       "window_end": "2026-03-10 08:18:05",
+      "evidence_event_ids": ["line:1", "line:2", "line:3", "line:4", "line:5"],
+      "verdict_boundary": "triage_signal_not_intent_or_attribution",
       "usernames": ["admin", "deploy", "guest", "root", "test"],
       "summary": "203.0.113.10 targeted 5 usernames within 15 minutes."
     },
     {
+      "rule_id": "sudo_burst",
       "rule": "sudo_burst",
       "subject_kind": "username",
       "subject": "alice",
+      "grouping_key": "username",
+      "threshold": 3,
+      "observed_count": 3,
       "event_count": 3,
       "window_start": "2026-03-10 08:21:00",
       "window_end": "2026-03-10 08:24:15",
+      "evidence_event_ids": ["line:7", "line:8", "line:9"],
+      "verdict_boundary": "triage_signal_not_maliciousness_or_authorization",
       "usernames": [],
       "summary": "alice ran 3 sudo commands within 5 minutes."
     }
   ],
   "warnings": [
-    {"line_number": 15, "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
-    {"line_number": 16, "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"}
+    {"line_number": 15, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_connection_closed_preauth"},
+    {"line_number": 16, "category": "known_program_unknown_message", "reason": "unrecognized auth pattern: sshd_timeout_or_disconnection"}
   ]
 }

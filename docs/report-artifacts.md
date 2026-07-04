@@ -18,6 +18,8 @@ Without `--csv`, LogLens does not create, overwrite, or delete existing CSV file
 The JSON report keeps parser observability visible next to findings:
 
 - `tool`
+- `schema`
+- `schema_version`
 - `input`
 - `input_mode`
 - `assume_year` for syslog-style input when a year is supplied
@@ -28,6 +30,7 @@ The JSON report keeps parser observability visible next to findings:
 - `parser_quality.parsed_lines`
 - `parser_quality.unparsed_lines`
 - `parser_quality.parse_success_rate`
+- `parser_quality.failure_categories`
 - `parser_quality.top_unknown_patterns`
 - `parsed_event_count`
 - `warning_count`
@@ -37,16 +40,55 @@ The JSON report keeps parser observability visible next to findings:
 - `findings`
 - `warnings`
 
-Finding objects contain `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, and `summary`.
+Finding objects contain `rule_id`, `rule`, `subject_kind`, `subject`, `grouping_key`, `threshold`, `observed_count`, `event_count`, `window_start`, `window_end`, `evidence_event_ids`, `verdict_boundary`, `usernames`, and `summary`.
 
-Warning objects contain the original `line_number` and the parser `reason`.
+The stable finding explainability surface for `loglens.report.v2` is:
+
+- `rule_id`
+- `subject_kind`
+- `subject`
+- `grouping_key`
+- `window_start`
+- `window_end`
+- `threshold`
+- `observed_count`
+- `evidence_event_ids`
+- `verdict_boundary`
+
+These fields are release-facing contract fields. Parser or rule changes that
+alter their names, meanings, values, or presence must update the golden report
+fixtures explicitly.
+
+`evidence_event_ids` are deterministic local event identifiers derived from the source line number, formatted as `line:<number>`. They let reviewers trace a finding back to the normalized input events that satisfied the rule window without implying global event identity.
+
+`verdict_boundary` is a stable token that states what the finding must not be
+read as. It keeps machine-readable findings aligned with LogLens's triage
+scope:
+
+- `triage_signal_not_compromise_or_attribution`
+- `triage_signal_not_intent_or_attribution`
+- `triage_signal_not_maliciousness_or_authorization`
+
+Warning objects contain the original `line_number`, parser `category`, and parser `reason`.
+
+`schema` and `schema_version` identify the report artifact contract, not the
+application release. They are intended for downstream tooling that needs a
+stable way to reject incompatible report shapes. The current JSON contract is
+`loglens.report.v2` with `schema_version` set to `2`.
+
+Parser failure categories are stable reviewer-facing buckets for unsupported
+lines: `unknown_timestamp`, `unknown_program`,
+`known_program_unknown_message`, `malformed_source_ip`, and
+`unsupported_pam_variant`. They complement `top_unknown_patterns`: categories
+explain the parser boundary class, while unknown-pattern buckets preserve the
+more specific unsupported message shape.
 
 ## CSV Contract
 
 The optional CSV exports intentionally stay small:
 
 - `findings.csv`: `rule`, `subject_kind`, `subject`, `event_count`, `window_start`, `window_end`, `usernames`, `summary`
-- `warnings.csv`: `kind`, `line_number`, `message`
+- `warnings.csv`: `kind`, `line_number`, `category`, `message`
 
 Formula-like CSV text fields are neutralized with a leading single quote so spreadsheet tools treat them as text.
 
@@ -61,11 +103,11 @@ The report contracts are backed by generated fixture artifacts:
 | Fixture case | Golden artifacts |
 | --- | --- |
 | [`syslog_legacy`](../tests/fixtures/report_contracts/syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
-| [`journalctl_short_full`](../tests/fixtures/report_contracts/journalctl_short_full) | `report.md`, `report.json` |
+| [`journalctl_short_full`](../tests/fixtures/report_contracts/journalctl_short_full) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 | [`multi_host_syslog_legacy`](../tests/fixtures/report_contracts/multi_host_syslog_legacy) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
-| [`multi_host_journalctl_short_full`](../tests/fixtures/report_contracts/multi_host_journalctl_short_full) | `report.md`, `report.json` |
+| [`multi_host_journalctl_short_full`](../tests/fixtures/report_contracts/multi_host_journalctl_short_full) | `report.md`, `report.json`, `findings.csv`, `warnings.csv` |
 
-The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
+The enforcement lives in [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp). Parser or rule changes that alter report artifacts must update these snapshots explicitly. This includes changes to stable finding explainability fields, parser coverage fields, warning categories, CSV columns, or Markdown report layout. The focused report writer tests live in [`tests/test_report.cpp`](../tests/test_report.cpp).
 
 ## Boundaries
 

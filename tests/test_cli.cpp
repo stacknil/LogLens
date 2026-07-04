@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -8,6 +9,7 @@ namespace {
 
 void expect(bool condition, const std::string& message) {
     if (!condition) {
+        std::cerr << "test_cli assertion failed: " << message << '\n';
         throw std::runtime_error(message);
     }
 }
@@ -187,8 +189,8 @@ int main(int argc, char* argv[]) {
     expect(findings_csv.find("brute_force,source_ip,203.0.113.10,5,2026-03-10 08:11:22,2026-03-10 08:18:05,,5 failed SSH attempts from 203.0.113.10 within 10 minutes.")
                != std::string::npos,
            "expected brute-force findings csv row");
-    expect(warnings_csv.find("kind,line_number,message") == 0, "expected warnings csv header");
-    expect(warnings_csv.find("parse_warning,15,unrecognized auth pattern: sshd_connection_closed_preauth")
+    expect(warnings_csv.find("kind,line_number,category,message") == 0, "expected warnings csv header");
+    expect(warnings_csv.find("parse_warning,15,known_program_unknown_message,unrecognized auth pattern: sshd_connection_closed_preauth")
                != std::string::npos,
            "expected warning csv row");
 
@@ -223,6 +225,12 @@ int main(int argc, char* argv[]) {
         + " " + quote_argument(config_run_out))
                                                 .c_str());
     expect(config_run_exit == 0, "expected sample config run to succeed");
+    expect_report_core_fields(
+        read_file(config_run_out / "report.md"),
+        read_file(config_run_out / "report.json"),
+        "syslog_legacy",
+        true,
+        false);
 
     const auto journalctl_out = output_dir / "journalctl_cli";
     std::filesystem::create_directories(journalctl_out);

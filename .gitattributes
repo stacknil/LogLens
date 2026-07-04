@@ -1,12 +1,15 @@
 * text=auto
+.gitattributes text eol=lf
 *.cpp text eol=lf
 *.hpp text eol=lf
 *.h text eol=lf
 *.md text eol=lf
 *.json text eol=lf
+*.toml text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 *.txt text eol=lf
 *.csv text eol=lf
+*.log text eol=lf
 CMakeLists.txt text eol=lf
 CMakePresets.json text eol=lf

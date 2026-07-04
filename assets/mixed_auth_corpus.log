@@ -1,0 +1,150 @@
+Mar 12 08:00:01 ubuntu-auth-01 sshd[4101]: Failed password for invalid user user001 from 203.0.113.10 port 51001 ssh2
+Mar 12 08:00:05 ubuntu-auth-01 sshd[4102]: Failed publickey for svc001 from 203.0.113.11 port 51002 ssh2
+Mar 12 08:00:09 ubuntu-auth-01 sshd[4103]: Accepted publickey for admin001 from 203.0.113.12 port 51003 ssh2: ED25519 SHA256:SANITIZED001
+Mar 12 08:00:13 ubuntu-auth-01 sudo[4104]:    user001 : TTY=pts/0 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:00:17 ubuntu-auth-01 sudo[4105]:    user001 : 1 incorrect password attempt ; TTY=pts/0 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:00:21 ubuntu-auth-01 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.13  user=user001
+Mar 12 08:00:25 ubuntu-auth-01 pam_faillock(sshd:auth): Authentication failure for user user001 from 203.0.113.14
+Mar 12 08:00:29 ubuntu-auth-01 pam_sss(sshd:auth): received for user user001: 7 (Authentication failure)
+Mar 12 08:00:33 ubuntu-auth-01 su[4106]: FAILED SU (to root) user001 on pts/0
+Mar 12 08:00:37 ubuntu-auth-01 sshd[4107]: Connection closed by authenticating user user001 203.0.113.15 port 51004 [preauth]
+Mar 12 08:00:41 ubuntu-auth-01 pam_unix(sshd:session): session closed for user user001
+Mar 12 08:00:45 ubuntu-auth-01 cron[4108]: (root) CMD (/usr/bin/true)
+Mar 12 08:00:49 ubuntu-auth-01 sshd[4109]: Failed password for invalid user user001 from 999.0.113.16 port 51005 ssh2
+Foo 12 08:00:53 ubuntu-auth-01 sshd[4110]: Failed password for invalid user user001 from 203.0.113.17 port 51006 ssh2
+
+Mar 12 08:01:01 debian-auth-02 sshd[4201]: Failed password for invalid user user002 from 203.0.113.20 port 51101 ssh2
+Mar 12 08:01:05 debian-auth-02 sshd[4202]: Failed publickey for svc002 from 203.0.113.21 port 51102 ssh2
+Mar 12 08:01:09 debian-auth-02 sshd[4203]: Accepted publickey for admin002 from 203.0.113.22 port 51103 ssh2: ED25519 SHA256:SANITIZED002
+Mar 12 08:01:13 debian-auth-02 sudo[4204]:    user002 : TTY=pts/1 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:01:17 debian-auth-02 sudo[4205]:    user002 : 1 incorrect password attempt ; TTY=pts/1 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:01:21 debian-auth-02 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.23  user=user002
+Mar 12 08:01:25 debian-auth-02 pam_faillock(sshd:auth): Authentication failure for user user002 from 203.0.113.24
+Mar 12 08:01:29 debian-auth-02 pam_sss(sshd:auth): received for user user002: 7 (Authentication failure)
+Mar 12 08:01:33 debian-auth-02 su[4206]: FAILED SU (to root) user002 on pts/1
+Mar 12 08:01:37 debian-auth-02 sshd[4207]: Connection closed by authenticating user user002 203.0.113.25 port 51104 [preauth]
+Mar 12 08:01:41 debian-auth-02 pam_unix(sshd:session): session closed for user user002
+Mar 12 08:01:45 debian-auth-02 cron[4208]: (root) CMD (/usr/bin/true)
+Mar 12 08:01:49 debian-auth-02 sshd[4209]: Failed password for invalid user user002 from 999.0.113.26 port 51105 ssh2
+Foo 12 08:01:53 debian-auth-02 sshd[4210]: Failed password for invalid user user002 from 203.0.113.27 port 51106 ssh2
+
+Mar 12 08:02:01 rhel-secure-03 sshd[4301]: Failed password for invalid user user003 from 203.0.113.30 port 51201 ssh2
+Mar 12 08:02:05 rhel-secure-03 sshd[4302]: Failed publickey for svc003 from 203.0.113.31 port 51202 ssh2
+Mar 12 08:02:09 rhel-secure-03 sshd[4303]: Accepted publickey for admin003 from 203.0.113.32 port 51203 ssh2: ED25519 SHA256:SANITIZED003
+Mar 12 08:02:13 rhel-secure-03 sudo[4304]:    user003 : TTY=pts/2 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:02:17 rhel-secure-03 sudo[4305]:    user003 : 1 incorrect password attempt ; TTY=pts/2 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:02:21 rhel-secure-03 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.33  user=user003
+Mar 12 08:02:25 rhel-secure-03 pam_faillock(sshd:auth): Authentication failure for user user003 from 203.0.113.34
+Mar 12 08:02:29 rhel-secure-03 pam_sss(sshd:auth): received for user user003: 7 (Authentication failure)
+Mar 12 08:02:33 rhel-secure-03 su[4306]: FAILED SU (to root) user003 on pts/2
+Mar 12 08:02:37 rhel-secure-03 sshd[4307]: Connection closed by authenticating user user003 203.0.113.35 port 51204 [preauth]
+Mar 12 08:02:41 rhel-secure-03 pam_unix(sshd:session): session closed for user user003
+Mar 12 08:02:45 rhel-secure-03 cron[4308]: (root) CMD (/usr/bin/true)
+Mar 12 08:02:49 rhel-secure-03 sshd[4309]: Failed password for invalid user user003 from 999.0.113.36 port 51205 ssh2
+Foo 12 08:02:53 rhel-secure-03 sshd[4310]: Failed password for invalid user user003 from 203.0.113.37 port 51206 ssh2
+
+Mar 12 08:03:01 ubuntu-auth-04 sshd[4401]: Failed password for invalid user user004 from 203.0.113.40 port 51301 ssh2
+Mar 12 08:03:05 ubuntu-auth-04 sshd[4402]: Failed publickey for svc004 from 203.0.113.41 port 51302 ssh2
+Mar 12 08:03:09 ubuntu-auth-04 sshd[4403]: Accepted publickey for admin004 from 203.0.113.42 port 51303 ssh2: ED25519 SHA256:SANITIZED004
+Mar 12 08:03:13 ubuntu-auth-04 sudo[4404]:    user004 : TTY=pts/3 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:03:17 ubuntu-auth-04 sudo[4405]:    user004 : 1 incorrect password attempt ; TTY=pts/3 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:03:21 ubuntu-auth-04 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.43  user=user004
+Mar 12 08:03:25 ubuntu-auth-04 pam_faillock(sshd:auth): Authentication failure for user user004 from 203.0.113.44
+Mar 12 08:03:29 ubuntu-auth-04 pam_sss(sshd:auth): received for user user004: 7 (Authentication failure)
+Mar 12 08:03:33 ubuntu-auth-04 su[4406]: FAILED SU (to root) user004 on pts/3
+Mar 12 08:03:37 ubuntu-auth-04 sshd[4407]: Connection closed by authenticating user user004 203.0.113.45 port 51304 [preauth]
+Mar 12 08:03:41 ubuntu-auth-04 pam_unix(sshd:session): session closed for user user004
+Mar 12 08:03:45 ubuntu-auth-04 cron[4408]: (root) CMD (/usr/bin/true)
+Mar 12 08:03:49 ubuntu-auth-04 sshd[4409]: Failed password for invalid user user004 from 999.0.113.46 port 51305 ssh2
+Foo 12 08:03:53 ubuntu-auth-04 sshd[4410]: Failed password for invalid user user004 from 203.0.113.47 port 51306 ssh2
+
+Mar 12 08:04:01 debian-auth-05 sshd[4501]: Failed password for invalid user user005 from 203.0.113.50 port 51401 ssh2
+Mar 12 08:04:05 debian-auth-05 sshd[4502]: Failed publickey for svc005 from 203.0.113.51 port 51402 ssh2
+Mar 12 08:04:09 debian-auth-05 sshd[4503]: Accepted publickey for admin005 from 203.0.113.52 port 51403 ssh2: ED25519 SHA256:SANITIZED005
+Mar 12 08:04:13 debian-auth-05 sudo[4504]:    user005 : TTY=pts/4 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:04:17 debian-auth-05 sudo[4505]:    user005 : 1 incorrect password attempt ; TTY=pts/4 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:04:21 debian-auth-05 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.53  user=user005
+Mar 12 08:04:25 debian-auth-05 pam_faillock(sshd:auth): Authentication failure for user user005 from 203.0.113.54
+Mar 12 08:04:29 debian-auth-05 pam_sss(sshd:auth): received for user user005: 7 (Authentication failure)
+Mar 12 08:04:33 debian-auth-05 su[4506]: FAILED SU (to root) user005 on pts/4
+Mar 12 08:04:37 debian-auth-05 sshd[4507]: Connection closed by authenticating user user005 203.0.113.55 port 51404 [preauth]
+Mar 12 08:04:41 debian-auth-05 pam_unix(sshd:session): session closed for user user005
+Mar 12 08:04:45 debian-auth-05 cron[4508]: (root) CMD (/usr/bin/true)
+Mar 12 08:04:49 debian-auth-05 sshd[4509]: Failed password for invalid user user005 from 999.0.113.56 port 51405 ssh2
+Foo 12 08:04:53 debian-auth-05 sshd[4510]: Failed password for invalid user user005 from 203.0.113.57 port 51406 ssh2
+
+Mar 12 08:05:01 rhel-secure-06 sshd[4601]: Failed password for invalid user user006 from 203.0.113.60 port 51501 ssh2
+Mar 12 08:05:05 rhel-secure-06 sshd[4602]: Failed publickey for svc006 from 203.0.113.61 port 51502 ssh2
+Mar 12 08:05:09 rhel-secure-06 sshd[4603]: Accepted publickey for admin006 from 203.0.113.62 port 51503 ssh2: ED25519 SHA256:SANITIZED006
+Mar 12 08:05:13 rhel-secure-06 sudo[4604]:    user006 : TTY=pts/5 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:05:17 rhel-secure-06 sudo[4605]:    user006 : 1 incorrect password attempt ; TTY=pts/5 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:05:21 rhel-secure-06 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.63  user=user006
+Mar 12 08:05:25 rhel-secure-06 pam_faillock(sshd:auth): Authentication failure for user user006 from 203.0.113.64
+Mar 12 08:05:29 rhel-secure-06 pam_sss(sshd:auth): received for user user006: 7 (Authentication failure)
+Mar 12 08:05:33 rhel-secure-06 su[4606]: FAILED SU (to root) user006 on pts/5
+Mar 12 08:05:37 rhel-secure-06 sshd[4607]: Connection closed by authenticating user user006 203.0.113.65 port 51504 [preauth]
+Mar 12 08:05:41 rhel-secure-06 pam_unix(sshd:session): session closed for user user006
+Mar 12 08:05:45 rhel-secure-06 cron[4608]: (root) CMD (/usr/bin/true)
+Mar 12 08:05:49 rhel-secure-06 sshd[4609]: Failed password for invalid user user006 from 999.0.113.66 port 51505 ssh2
+Foo 12 08:05:53 rhel-secure-06 sshd[4610]: Failed password for invalid user user006 from 203.0.113.67 port 51506 ssh2
+
+Mar 12 08:06:01 ubuntu-auth-07 sshd[4701]: Failed password for invalid user user007 from 203.0.113.70 port 51601 ssh2
+Mar 12 08:06:05 ubuntu-auth-07 sshd[4702]: Failed publickey for svc007 from 203.0.113.71 port 51602 ssh2
+Mar 12 08:06:09 ubuntu-auth-07 sshd[4703]: Accepted publickey for admin007 from 203.0.113.72 port 51603 ssh2: ED25519 SHA256:SANITIZED007
+Mar 12 08:06:13 ubuntu-auth-07 sudo[4704]:    user007 : TTY=pts/6 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:06:17 ubuntu-auth-07 sudo[4705]:    user007 : 1 incorrect password attempt ; TTY=pts/6 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:06:21 ubuntu-auth-07 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.73  user=user007
+Mar 12 08:06:25 ubuntu-auth-07 pam_faillock(sshd:auth): Authentication failure for user user007 from 203.0.113.74
+Mar 12 08:06:29 ubuntu-auth-07 pam_sss(sshd:auth): received for user user007: 7 (Authentication failure)
+Mar 12 08:06:33 ubuntu-auth-07 su[4706]: FAILED SU (to root) user007 on pts/6
+Mar 12 08:06:37 ubuntu-auth-07 sshd[4707]: Connection closed by authenticating user user007 203.0.113.75 port 51604 [preauth]
+Mar 12 08:06:41 ubuntu-auth-07 pam_unix(sshd:session): session closed for user user007
+Mar 12 08:06:45 ubuntu-auth-07 cron[4708]: (root) CMD (/usr/bin/true)
+Mar 12 08:06:49 ubuntu-auth-07 sshd[4709]: Failed password for invalid user user007 from 999.0.113.76 port 51605 ssh2
+Foo 12 08:06:53 ubuntu-auth-07 sshd[4710]: Failed password for invalid user user007 from 203.0.113.77 port 51606 ssh2
+
+Mar 12 08:07:01 debian-auth-08 sshd[4801]: Failed password for invalid user user008 from 203.0.113.80 port 51701 ssh2
+Mar 12 08:07:05 debian-auth-08 sshd[4802]: Failed publickey for svc008 from 203.0.113.81 port 51702 ssh2
+Mar 12 08:07:09 debian-auth-08 sshd[4803]: Accepted publickey for admin008 from 203.0.113.82 port 51703 ssh2: ED25519 SHA256:SANITIZED008
+Mar 12 08:07:13 debian-auth-08 sudo[4804]:    user008 : TTY=pts/7 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:07:17 debian-auth-08 sudo[4805]:    user008 : 1 incorrect password attempt ; TTY=pts/7 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:07:21 debian-auth-08 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.83  user=user008
+Mar 12 08:07:25 debian-auth-08 pam_faillock(sshd:auth): Authentication failure for user user008 from 203.0.113.84
+Mar 12 08:07:29 debian-auth-08 pam_sss(sshd:auth): received for user user008: 7 (Authentication failure)
+Mar 12 08:07:33 debian-auth-08 su[4806]: FAILED SU (to root) user008 on pts/7
+Mar 12 08:07:37 debian-auth-08 sshd[4807]: Connection closed by authenticating user user008 203.0.113.85 port 51704 [preauth]
+Mar 12 08:07:41 debian-auth-08 pam_unix(sshd:session): session closed for user user008
+Mar 12 08:07:45 debian-auth-08 cron[4808]: (root) CMD (/usr/bin/true)
+Mar 12 08:07:49 debian-auth-08 sshd[4809]: Failed password for invalid user user008 from 999.0.113.86 port 51705 ssh2
+Foo 12 08:07:53 debian-auth-08 sshd[4810]: Failed password for invalid user user008 from 203.0.113.87 port 51706 ssh2
+
+Mar 12 08:08:01 rhel-secure-09 sshd[4901]: Failed password for invalid user user009 from 203.0.113.90 port 51801 ssh2
+Mar 12 08:08:05 rhel-secure-09 sshd[4902]: Failed publickey for svc009 from 203.0.113.91 port 51802 ssh2
+Mar 12 08:08:09 rhel-secure-09 sshd[4903]: Accepted publickey for admin009 from 203.0.113.92 port 51803 ssh2: ED25519 SHA256:SANITIZED009
+Mar 12 08:08:13 rhel-secure-09 sudo[4904]:    user009 : TTY=pts/8 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:08:17 rhel-secure-09 sudo[4905]:    user009 : 1 incorrect password attempt ; TTY=pts/8 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:08:21 rhel-secure-09 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.93  user=user009
+Mar 12 08:08:25 rhel-secure-09 pam_faillock(sshd:auth): Authentication failure for user user009 from 203.0.113.94
+Mar 12 08:08:29 rhel-secure-09 pam_sss(sshd:auth): received for user user009: 7 (Authentication failure)
+Mar 12 08:08:33 rhel-secure-09 su[4906]: FAILED SU (to root) user009 on pts/8
+Mar 12 08:08:37 rhel-secure-09 sshd[4907]: Connection closed by authenticating user user009 203.0.113.95 port 51804 [preauth]
+Mar 12 08:08:41 rhel-secure-09 pam_unix(sshd:session): session closed for user user009
+Mar 12 08:08:45 rhel-secure-09 cron[4908]: (root) CMD (/usr/bin/true)
+Mar 12 08:08:49 rhel-secure-09 sshd[4909]: Failed password for invalid user user009 from 999.0.113.96 port 51805 ssh2
+Foo 12 08:08:53 rhel-secure-09 sshd[4910]: Failed password for invalid user user009 from 203.0.113.97 port 51806 ssh2
+
+Mar 12 08:09:01 mixed-auth-10 sshd[5001]: Failed password for invalid user user010 from 203.0.113.100 port 51901 ssh2
+Mar 12 08:09:05 mixed-auth-10 sshd[5002]: Failed publickey for svc010 from 203.0.113.101 port 51902 ssh2
+Mar 12 08:09:09 mixed-auth-10 sshd[5003]: Accepted publickey for admin010 from 203.0.113.102 port 51903 ssh2: ED25519 SHA256:SANITIZED010
+Mar 12 08:09:13 mixed-auth-10 sudo[5004]:    user010 : TTY=pts/9 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/id
+Mar 12 08:09:17 mixed-auth-10 sudo[5005]:    user010 : 1 incorrect password attempt ; TTY=pts/9 ; PWD=/srv/example ; USER=root ; COMMAND=/usr/bin/systemctl status ssh
+Mar 12 08:09:21 mixed-auth-10 pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.103  user=user010
+Mar 12 08:09:25 mixed-auth-10 pam_faillock(sshd:auth): Authentication failure for user user010 from 203.0.113.104
+Mar 12 08:09:29 mixed-auth-10 pam_sss(sshd:auth): received for user user010: 7 (Authentication failure)
+Mar 12 08:09:33 mixed-auth-10 su[5006]: FAILED SU (to root) user010 on pts/9
+Mar 12 08:09:37 mixed-auth-10 sshd[5007]: Connection closed by authenticating user user010 203.0.113.105 port 51904 [preauth]
+Mar 12 08:09:41 mixed-auth-10 pam_unix(sshd:session): session closed for user user010
+Mar 12 08:09:45 mixed-auth-10 cron[5008]: (root) CMD (/usr/bin/true)
+Mar 12 08:09:49 mixed-auth-10 sshd[5009]: Failed password for invalid user user010 from 999.0.113.106 port 51905 ssh2
+
+Foo 12 08:09:53 mixed-auth-10 sshd[5010]: Failed password for invalid user user010 from 203.0.113.107 port 51906 ssh2

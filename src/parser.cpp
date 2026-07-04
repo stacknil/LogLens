@@ -21,6 +21,18 @@ struct ClockTime {
     int second = 0;
 };
 
+void set_failure(std::string* error,
+                 ParserFailureCategory* category,
+                 std::string reason,
+                 ParserFailureCategory failure_category) {
+    if (error != nullptr) {
+        *error = std::move(reason);
+    }
+    if (category != nullptr) {
+        *category = failure_category;
+    }
+}
+
 std::string_view trim_left(std::string_view value) {
     while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front())) != 0) {
         value.remove_prefix(1);
@@ -59,6 +71,55 @@ bool parse_int(std::string_view token, int& value) {
     const auto* end = token.data() + token.size();
     const auto result = std::from_chars(begin, end, value);
     return result.ec == std::errc{} && result.ptr == end;
+}
+
+bool is_valid_ipv4_token(std::string_view token) {
+    int parts = 0;
+    while (!token.empty()) {
+        const auto dot = token.find('.');
+        const auto part = dot == std::string_view::npos ? token : token.substr(0, dot);
+        if (part.empty()) {
+            return false;
+        }
+
+        int value = 0;
+        if (!parse_int(part, value) || value < 0 || value > 255) {
+            return false;
+        }
+
+        ++parts;
+        if (dot == std::string_view::npos) {
+            token = {};
+        } else {
+            token.remove_prefix(dot + 1);
+        }
+    }
+
+    return parts == 4;
+}
+
+bool is_valid_ipv6_like_token(std::string_view token) {
+    if (token.find(':') == std::string_view::npos) {
+        return false;
+    }
+
+    bool saw_hex = false;
+    for (const char character : token) {
+        if (std::isxdigit(static_cast<unsigned char>(character)) != 0) {
+            saw_hex = true;
+            continue;
+        }
+        if (character == ':' || character == '.') {
+            continue;
+        }
+        return false;
+    }
+
+    return saw_hex;
+}
+
+bool is_valid_source_ip_token(std::string_view token) {
+    return is_valid_ipv4_token(token) || is_valid_ipv6_like_token(token);
 }
 
 bool parse_month(std::string_view token, unsigned& month_index) {
@@ -260,6 +321,65 @@ std::string extract_kv_value(std::string_view input, std::string_view key) {
     return {};
 }
 
+std::string extract_source_ip_after_from(std::string_view message) {
+    const auto marker_position = message.find(" from ");
+    if (marker_position == std::string_view::npos) {
+        return {};
+    }
+
+    auto remaining = message.substr(marker_position + std::string_view{" from "}.size());
+    const auto first = consume_token(remaining);
+    if (first.empty()) {
+        return {};
+    }
+
+    if (first == "authenticating") {
+        const auto second = consume_token(remaining);
+        if (second == "user") {
+            static_cast<void>(consume_token(remaining));
+            return std::string(consume_token(remaining));
+        }
+    }
+
+    if (first == "invalid" || first == "illegal") {
+        const auto second = consume_token(remaining);
+        if (second == "user") {
+            static_cast<void>(consume_token(remaining));
+            return std::string(consume_token(remaining));
+        }
+    }
+
+    if (first == "user") {
+        static_cast<void>(consume_token(remaining));
+        return std::string(consume_token(remaining));
+    }
+
+    return std::string(first);
+}
+
+std::string extract_source_ip_candidate(const Event& event) {
+    auto candidate = extract_source_ip_after_from(event.message);
+    if (!candidate.empty()) {
+        return candidate;
+    }
+
+    candidate = extract_kv_value(event.message, "rhost=");
+    if (!candidate.empty()) {
+        return candidate;
+    }
+
+    if (event.program == "sshd" && event.message.starts_with("Unable to negotiate with ")) {
+        candidate = extract_token_after(event.message, " with ");
+    }
+
+    return candidate;
+}
+
+bool has_malformed_source_ip(const Event& event) {
+    const auto candidate = extract_source_ip_candidate(event);
+    return !candidate.empty() && !is_valid_source_ip_token(candidate);
+}
+
 std::string sanitize_pattern_label(std::string_view value) {
     std::string normalized;
     normalized.reserve(value.size());
@@ -454,7 +574,13 @@ bool parse_ssh_max_auth_tries_message(std::string_view message, Event& event) {
 }
 
 bool parse_ssh_pam_auth_failure_message(std::string_view message, Event& event) {
+    static constexpr std::string_view error_prefix = "error: ";
     static constexpr std::string_view pam_auth_prefix = "PAM: Authentication failure for ";
+
+    if (message.starts_with(error_prefix)) {
+        message.remove_prefix(error_prefix.size());
+    }
+
     if (!message.starts_with(pam_auth_prefix)) {
         return false;
     }
@@ -470,6 +596,27 @@ bool parse_ssh_pam_auth_failure_message(std::string_view message, Event& event) 
     event.username.assign(username);
     event.source_ip = extract_token_after(message, " from ");
     event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::PamAuthFailure;
+    return true;
+}
+
+bool parse_ssh_input_userauth_request_message(std::string_view message, Event& event) {
+    static constexpr std::string_view input_userauth_prefix = "input_userauth_request: ";
+    if (!message.starts_with(input_userauth_prefix)) {
+        return false;
+    }
+
+    auto remaining = message.substr(input_userauth_prefix.size());
+    if (!consume_invalid_or_illegal_user_prefix(remaining)) {
+        return false;
+    }
+
+    const auto username = consume_token(remaining);
+    if (username.empty()) {
+        return false;
+    }
+
+    event.username.assign(username);
+    event.event_type = EventType::SshInvalidUser;
     return true;
 }
 
@@ -673,6 +820,10 @@ bool parse_pam_faillock_message(std::string_view message, Event& event) {
 }
 
 std::string classify_unknown_pam_faillock_pattern(std::string_view message) {
+    if (message.starts_with("Account temporarily locked for user ")) {
+        return "pam_faillock_account_locked";
+    }
+
     if (message.starts_with("User ") && message.find("successfully authenticated") != std::string_view::npos) {
         return "pam_faillock_authsucc";
     }
@@ -741,6 +892,29 @@ std::string classify_unknown_auth_pattern(const Event& event) {
     return "program_" + sanitize_pattern_label(event.program);
 }
 
+bool is_pam_program(std::string_view program) {
+    return program.starts_with("pam_unix(")
+        || program.starts_with("pam_faillock(")
+        || program.starts_with("pam_sss(");
+}
+
+bool is_known_auth_program(std::string_view program) {
+    return program == "sshd"
+        || program == "sudo"
+        || program == "su"
+        || is_pam_program(program);
+}
+
+ParserFailureCategory failure_category_for_unrecognized_event(const Event& event) {
+    if (is_pam_program(event.program)) {
+        return ParserFailureCategory::UnsupportedPamVariant;
+    }
+    if (is_known_auth_program(event.program)) {
+        return ParserFailureCategory::KnownProgramUnknownMessage;
+    }
+    return ParserFailureCategory::UnknownProgram;
+}
+
 bool classify_event(Event& event) {
     const auto message = std::string_view{event.message};
     if (event.program == "sshd") {
@@ -766,6 +940,9 @@ bool classify_event(Event& event) {
             return true;
         }
         if (parse_ssh_pam_auth_failure_message(message, event)) {
+            return true;
+        }
+        if (parse_ssh_input_userauth_request_message(message, event)) {
             return true;
         }
         if (parse_ssh_invalid_user_message(message, event)) {
@@ -821,11 +998,14 @@ std::string extract_unknown_pattern_key(std::string_view error) {
 std::optional<Event> parse_syslog_legacy_line(const ParserConfig& config,
                                               std::string_view line,
                                               std::size_t line_number,
-                                              std::string* error) {
+                                              std::string* error,
+                                              ParserFailureCategory* category) {
     if (!config.assumed_year.has_value()) {
-        if (error != nullptr) {
-            *error = "syslog_legacy mode requires assume_year";
-        }
+        set_failure(
+            error,
+            category,
+            "syslog_legacy mode requires assume_year",
+            ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
@@ -836,9 +1016,7 @@ std::optional<Event> parse_syslog_legacy_line(const ParserConfig& config,
     const auto hostname_token = consume_token(remaining);
 
     if (month_token.empty() || day_token.empty() || time_token.empty() || hostname_token.empty()) {
-        if (error != nullptr) {
-            *error = "missing syslog header fields";
-        }
+        set_failure(error, category, "missing syslog header fields", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
@@ -847,31 +1025,23 @@ std::optional<Event> parse_syslog_legacy_line(const ParserConfig& config,
     ClockTime time;
 
     if (!parse_month(month_token, month_index)) {
-        if (error != nullptr) {
-            *error = "invalid month token";
-        }
+        set_failure(error, category, "invalid month token", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
     if (!parse_int(day_token, day_value)) {
-        if (error != nullptr) {
-            *error = "invalid day token";
-        }
+        set_failure(error, category, "invalid day token", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
     if (!parse_clock_token(time_token, time)) {
-        if (error != nullptr) {
-            *error = "invalid time token";
-        }
+        set_failure(error, category, "invalid time token", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
     const auto timestamp = build_timestamp(*config.assumed_year, month_index, day_value, time);
     if (!timestamp.has_value()) {
-        if (error != nullptr) {
-            *error = "invalid calendar date";
-        }
+        set_failure(error, category, "invalid calendar date", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
@@ -881,13 +1051,23 @@ std::optional<Event> parse_syslog_legacy_line(const ParserConfig& config,
     event.line_number = line_number;
 
     if (!parse_program_and_message(remaining, event, error)) {
+        if (category != nullptr) {
+            *category = ParserFailureCategory::UnknownProgram;
+        }
+        return std::nullopt;
+    }
+
+    if (has_malformed_source_ip(event)) {
+        set_failure(error, category, "malformed source IP", ParserFailureCategory::MalformedSourceIp);
         return std::nullopt;
     }
 
     if (!classify_event(event)) {
-        if (error != nullptr) {
-            *error = "unrecognized auth pattern: " + classify_unknown_auth_pattern(event);
-        }
+        set_failure(
+            error,
+            category,
+            "unrecognized auth pattern: " + classify_unknown_auth_pattern(event),
+            failure_category_for_unrecognized_event(event));
         return std::nullopt;
     }
 
@@ -896,7 +1076,8 @@ std::optional<Event> parse_syslog_legacy_line(const ParserConfig& config,
 
 std::optional<Event> parse_journalctl_short_full_line(std::string_view line,
                                                       std::size_t line_number,
-                                                      std::string* error) {
+                                                      std::string* error,
+                                                      ParserFailureCategory* category) {
     auto remaining = line;
     const auto weekday_token = consume_token(remaining);
     const auto date_token = consume_token(remaining);
@@ -906,9 +1087,11 @@ std::optional<Event> parse_journalctl_short_full_line(std::string_view line,
 
     if (weekday_token.empty() || date_token.empty() || time_token.empty()
         || timezone_token.empty() || hostname_token.empty()) {
-        if (error != nullptr) {
-            *error = "missing journalctl short-full header fields";
-        }
+        set_failure(
+            error,
+            category,
+            "missing journalctl short-full header fields",
+            ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
@@ -919,31 +1102,23 @@ std::optional<Event> parse_journalctl_short_full_line(std::string_view line,
     std::chrono::minutes timezone_offset{0};
 
     if (!parse_calendar_date_parts(date_token, year_value, month_index, day_value)) {
-        if (error != nullptr) {
-            *error = "invalid journalctl date token";
-        }
+        set_failure(error, category, "invalid journalctl date token", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
     if (!parse_clock_token(time_token, time)) {
-        if (error != nullptr) {
-            *error = "invalid time token";
-        }
+        set_failure(error, category, "invalid time token", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
     if (!parse_timezone_token(timezone_token, timezone_offset)) {
-        if (error != nullptr) {
-            *error = "invalid timezone token";
-        }
+        set_failure(error, category, "invalid timezone token", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
     const auto timestamp = build_timestamp(year_value, month_index, day_value, time, timezone_offset);
     if (!timestamp.has_value()) {
-        if (error != nullptr) {
-            *error = "invalid calendar date";
-        }
+        set_failure(error, category, "invalid calendar date", ParserFailureCategory::UnknownTimestamp);
         return std::nullopt;
     }
 
@@ -953,13 +1128,23 @@ std::optional<Event> parse_journalctl_short_full_line(std::string_view line,
     event.line_number = line_number;
 
     if (!parse_program_and_message(remaining, event, error)) {
+        if (category != nullptr) {
+            *category = ParserFailureCategory::UnknownProgram;
+        }
+        return std::nullopt;
+    }
+
+    if (has_malformed_source_ip(event)) {
+        set_failure(error, category, "malformed source IP", ParserFailureCategory::MalformedSourceIp);
         return std::nullopt;
     }
 
     if (!classify_event(event)) {
-        if (error != nullptr) {
-            *error = "unrecognized auth pattern: " + classify_unknown_auth_pattern(event);
-        }
+        set_failure(
+            error,
+            category,
+            "unrecognized auth pattern: " + classify_unknown_auth_pattern(event),
+            failure_category_for_unrecognized_event(event));
         return std::nullopt;
     }
 
@@ -992,25 +1177,43 @@ std::optional<InputMode> parse_input_mode(std::string_view value) {
     return std::nullopt;
 }
 
+std::string to_string(ParserFailureCategory category) {
+    switch (category) {
+    case ParserFailureCategory::UnknownTimestamp:
+        return "unknown_timestamp";
+    case ParserFailureCategory::UnknownProgram:
+        return "unknown_program";
+    case ParserFailureCategory::KnownProgramUnknownMessage:
+        return "known_program_unknown_message";
+    case ParserFailureCategory::MalformedSourceIp:
+        return "malformed_source_ip";
+    case ParserFailureCategory::UnsupportedPamVariant:
+    default:
+        return "unsupported_pam_variant";
+    }
+}
+
 AuthLogParser::AuthLogParser(ParserConfig config)
     : config_(config) {}
 
 std::optional<Event> AuthLogParser::parse_line(std::string_view line,
                                                std::size_t line_number,
-                                               std::string* error) const {
+                                               std::string* error,
+                                               ParserFailureCategory* category) const {
     if (error != nullptr) {
         error->clear();
+    }
+    if (category != nullptr) {
+        *category = ParserFailureCategory::KnownProgramUnknownMessage;
     }
 
     switch (config_.input_mode) {
     case InputMode::SyslogLegacy:
-        return parse_syslog_legacy_line(config_, line, line_number, error);
+        return parse_syslog_legacy_line(config_, line, line_number, error, category);
     case InputMode::JournalctlShortFull:
-        return parse_journalctl_short_full_line(line, line_number, error);
+        return parse_journalctl_short_full_line(line, line_number, error, category);
     default:
-        if (error != nullptr) {
-            *error = "unsupported input mode";
-        }
+        set_failure(error, category, "unsupported input mode", ParserFailureCategory::UnknownProgram);
         return std::nullopt;
     }
 }
@@ -1023,6 +1226,7 @@ ParseReport AuthLogParser::parse_stream(std::istream& input) const {
         result.metadata.assume_year = config_.assumed_year;
     }
     std::unordered_map<std::string, std::size_t> unknown_pattern_counts;
+    std::unordered_map<std::string, std::pair<ParserFailureCategory, std::size_t>> failure_category_counts;
 
     std::string line;
     std::size_t line_number = 0;
@@ -1037,16 +1241,21 @@ ParseReport AuthLogParser::parse_stream(std::istream& input) const {
         ++result.quality.total_lines;
 
         std::string error;
-        auto event = parse_line(line, line_number, &error);
+        ParserFailureCategory category = ParserFailureCategory::KnownProgramUnknownMessage;
+        auto event = parse_line(line, line_number, &error, &category);
         if (event.has_value()) {
             result.events.push_back(std::move(*event));
             ++result.quality.parsed_lines;
             continue;
         }
 
-        result.warnings.push_back(ParseWarning{line_number, error.empty() ? "unrecognized line" : error});
+        const auto reason = error.empty() ? "unrecognized line" : error;
+        result.warnings.push_back(ParseWarning{line_number, reason, category});
         ++result.quality.unparsed_lines;
-        ++unknown_pattern_counts[extract_unknown_pattern_key(error.empty() ? "unrecognized line" : error)];
+        ++unknown_pattern_counts[extract_unknown_pattern_key(reason)];
+        auto& category_count = failure_category_counts[to_string(category)];
+        category_count.first = category;
+        ++category_count.second;
     }
 
     if (result.quality.total_lines != 0) {
@@ -1070,6 +1279,20 @@ ParseReport AuthLogParser::parse_stream(std::istream& input) const {
     if (result.quality.top_unknown_patterns.size() > 5) {
         result.quality.top_unknown_patterns.resize(5);
     }
+
+    result.quality.failure_categories.reserve(failure_category_counts.size());
+    for (const auto& [_, entry] : failure_category_counts) {
+        result.quality.failure_categories.push_back(ParserFailureCategoryCount{entry.first, entry.second});
+    }
+
+    std::sort(result.quality.failure_categories.begin(),
+              result.quality.failure_categories.end(),
+              [](const ParserFailureCategoryCount& left, const ParserFailureCategoryCount& right) {
+                  if (left.count != right.count) {
+                      return left.count > right.count;
+                  }
+                  return to_string(left.category) < to_string(right.category);
+              });
 
     return result;
 }

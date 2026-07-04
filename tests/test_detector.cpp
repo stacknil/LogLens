@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -47,6 +48,31 @@ std::vector<loglens::Event> parse_events(loglens::ParserConfig config, std::stri
     const loglens::AuthLogParser parser(config);
     std::istringstream input(std::string{input_text});
     return parser.parse_stream(input).events;
+}
+
+std::filesystem::path repo_root() {
+    const std::filesystem::path source_path{__FILE__};
+    std::vector<std::filesystem::path> candidates;
+
+    if (source_path.is_absolute()) {
+        candidates.push_back(source_path);
+    } else {
+        const auto cwd = std::filesystem::current_path();
+        candidates.push_back(cwd / source_path);
+        candidates.push_back(cwd.parent_path() / source_path);
+    }
+
+    for (const auto& candidate : candidates) {
+        if (std::filesystem::exists(candidate)) {
+            return candidate.parent_path().parent_path();
+        }
+    }
+
+    throw std::runtime_error("unable to resolve repository root from test source path");
+}
+
+std::filesystem::path asset_path(std::string_view filename) {
+    return repo_root() / "assets" / std::string(filename);
 }
 
 loglens::ParserConfig make_syslog_config() {
@@ -121,6 +147,54 @@ std::vector<loglens::Event> build_sudo_burst_preservation_events() {
         "Mar 10 08:24:15 example-host sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/vi /etc/ssh/sshd_config\n");
 }
 
+void expect_same_rule_threshold(const loglens::RuleThreshold& actual,
+                                const loglens::RuleThreshold& expected,
+                                const std::string& rule_name) {
+    expect(actual.threshold == expected.threshold, "expected " + rule_name + " threshold to match default");
+    expect(actual.window == expected.window, "expected " + rule_name + " window to match default");
+}
+
+void expect_same_auth_signal_behavior(const loglens::AuthSignalBehavior& actual,
+                                      const loglens::AuthSignalBehavior& expected,
+                                      const std::string& signal_name) {
+    expect(actual.counts_as_attempt_evidence == expected.counts_as_attempt_evidence,
+           "expected " + signal_name + " attempt-evidence mapping to match default");
+    expect(actual.counts_as_terminal_auth_failure == expected.counts_as_terminal_auth_failure,
+           "expected " + signal_name + " terminal-failure mapping to match default");
+}
+
+void expect_same_detector_config(const loglens::DetectorConfig& actual,
+                                 const loglens::DetectorConfig& expected) {
+    expect_same_rule_threshold(actual.brute_force, expected.brute_force, "brute_force");
+    expect_same_rule_threshold(actual.multi_user_probing, expected.multi_user_probing, "multi_user_probing");
+    expect_same_rule_threshold(actual.sudo_burst, expected.sudo_burst, "sudo_burst");
+
+    expect_same_auth_signal_behavior(
+        actual.auth_signal_mappings.ssh_failed_password,
+        expected.auth_signal_mappings.ssh_failed_password,
+        "ssh_failed_password");
+    expect_same_auth_signal_behavior(
+        actual.auth_signal_mappings.ssh_invalid_user,
+        expected.auth_signal_mappings.ssh_invalid_user,
+        "ssh_invalid_user");
+    expect_same_auth_signal_behavior(
+        actual.auth_signal_mappings.ssh_failed_publickey,
+        expected.auth_signal_mappings.ssh_failed_publickey,
+        "ssh_failed_publickey");
+    expect_same_auth_signal_behavior(
+        actual.auth_signal_mappings.ssh_failed_keyboard_interactive,
+        expected.auth_signal_mappings.ssh_failed_keyboard_interactive,
+        "ssh_failed_keyboard_interactive");
+    expect_same_auth_signal_behavior(
+        actual.auth_signal_mappings.ssh_max_auth_tries,
+        expected.auth_signal_mappings.ssh_max_auth_tries,
+        "ssh_max_auth_tries");
+    expect_same_auth_signal_behavior(
+        actual.auth_signal_mappings.pam_auth_failure,
+        expected.auth_signal_mappings.pam_auth_failure,
+        "pam_auth_failure");
+}
+
 void test_default_thresholds() {
     const auto events = build_events();
     const loglens::Detector detector;
@@ -130,15 +204,42 @@ void test_default_thresholds() {
 
     const auto* brute_force = find_finding(findings, loglens::FindingType::BruteForce, "203.0.113.10");
     expect(brute_force != nullptr, "expected brute force finding");
+    expect(brute_force->rule_id == "brute_force", "expected brute force rule id");
+    expect(brute_force->grouping_key == "source_ip", "expected brute force grouping key");
+    expect(brute_force->threshold == 5, "expected brute force threshold");
+    expect(brute_force->observed_count == 5, "expected brute force observed count");
     expect(brute_force->event_count == 5, "expected brute force count");
+    expect((brute_force->evidence_event_ids == std::vector<std::string>{
+               "line:1", "line:2", "line:3", "line:4", "line:5"}),
+           "expected brute force evidence event ids");
+    expect(brute_force->verdict_boundary == "triage_signal_not_compromise_or_attribution",
+           "expected brute force verdict boundary");
 
     const auto* multi_user = find_finding(findings, loglens::FindingType::MultiUserProbing, "203.0.113.10");
     expect(multi_user != nullptr, "expected multi-user finding");
+    expect(multi_user->rule_id == "multi_user_probing", "expected multi-user rule id");
+    expect(multi_user->grouping_key == "source_ip", "expected multi-user grouping key");
+    expect(multi_user->threshold == 3, "expected multi-user threshold");
+    expect(multi_user->observed_count == 5, "expected multi-user observed username count");
+    expect(multi_user->event_count == 5, "expected multi-user event count");
+    expect((multi_user->evidence_event_ids == std::vector<std::string>{
+               "line:1", "line:2", "line:3", "line:4", "line:5"}),
+           "expected multi-user evidence event ids");
+    expect(multi_user->verdict_boundary == "triage_signal_not_intent_or_attribution",
+           "expected multi-user verdict boundary");
     expect(multi_user->usernames.size() == 5, "expected five usernames");
 
     const auto* sudo = find_finding(findings, loglens::FindingType::SudoBurst, "alice");
     expect(sudo != nullptr, "expected sudo finding");
+    expect(sudo->rule_id == "sudo_burst", "expected sudo rule id");
+    expect(sudo->grouping_key == "username", "expected sudo grouping key");
+    expect(sudo->threshold == 3, "expected sudo threshold");
+    expect(sudo->observed_count == 3, "expected sudo observed count");
     expect(sudo->event_count == 3, "expected sudo count");
+    expect((sudo->evidence_event_ids == std::vector<std::string>{"line:6", "line:7", "line:8"}),
+           "expected sudo evidence event ids");
+    expect(sudo->verdict_boundary == "triage_signal_not_maliciousness_or_authorization",
+           "expected sudo verdict boundary");
 }
 
 void test_custom_thresholds() {
@@ -341,6 +442,30 @@ void test_load_valid_config() {
     expect(findings.size() == 3, "expected loaded config to preserve default findings");
 }
 
+void test_sample_config_matches_default_detector_contract() {
+    const auto config = loglens::load_app_config(asset_path("sample_config.json"));
+    expect(config.input_mode == loglens::InputMode::SyslogLegacy,
+           "expected sample config to use syslog legacy input");
+    expect(config.timestamp.assume_year == 2026,
+           "expected sample config to provide the sample syslog year");
+    expect_same_detector_config(config.detector, loglens::DetectorConfig{});
+
+    const auto events = build_events();
+    const loglens::Detector default_detector;
+    const loglens::Detector sample_config_detector(config.detector);
+    const auto default_findings = default_detector.analyze(events);
+    const auto sample_config_findings = sample_config_detector.analyze(events);
+
+    expect(sample_config_findings.size() == default_findings.size(),
+           "expected sample config to preserve default finding count");
+    expect(find_finding(sample_config_findings, loglens::FindingType::BruteForce, "203.0.113.10") != nullptr,
+           "expected sample config to preserve brute-force finding");
+    expect(find_finding(sample_config_findings, loglens::FindingType::MultiUserProbing, "203.0.113.10") != nullptr,
+           "expected sample config to preserve multi-user finding");
+    expect(find_finding(sample_config_findings, loglens::FindingType::SudoBurst, "alice") != nullptr,
+           "expected sample config to preserve sudo-burst finding");
+}
+
 void test_reject_invalid_config() {
     const auto temp_path = std::filesystem::current_path() / "invalid_config_test.json";
     {
@@ -389,6 +514,7 @@ int main() {
     test_pam_auth_failure_does_not_trigger_bruteforce_by_default();
     test_equivalent_attack_scenario_yields_same_finding_count_across_modes();
     test_load_valid_config();
+    test_sample_config_matches_default_detector_contract();
     test_reject_invalid_config();
     return 0;
 }

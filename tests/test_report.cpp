@@ -29,6 +29,31 @@ std::string read_file(const std::filesystem::path& path) {
     return std::string((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
 }
 
+std::filesystem::path repo_root() {
+    const std::filesystem::path source_path{__FILE__};
+    std::vector<std::filesystem::path> candidates;
+
+    if (source_path.is_absolute()) {
+        candidates.push_back(source_path);
+    } else {
+        const auto cwd = std::filesystem::current_path();
+        candidates.push_back(cwd / source_path);
+        candidates.push_back(cwd.parent_path() / source_path);
+    }
+
+    for (const auto& candidate : candidates) {
+        if (std::filesystem::exists(candidate)) {
+            return candidate.parent_path().parent_path();
+        }
+    }
+
+    throw std::runtime_error("unable to resolve repository root from test source path");
+}
+
+std::filesystem::path asset_path(std::string_view filename) {
+    return repo_root() / "assets" / std::string(filename);
+}
+
 loglens::ReportData make_report_data() {
     loglens::ReportData data;
     data.input_path = std::filesystem::path{"assets/sample_auth.log"};
@@ -39,6 +64,48 @@ loglens::ReportData make_report_data() {
     data.parser_quality.unparsed_lines = 1;
     data.parser_quality.top_unknown_patterns.push_back({"bad_pattern", 1});
     return data;
+}
+
+void test_noisy_auth_report_json_keeps_unsupported_lines_visible() {
+    const auto input_path = asset_path("noisy_auth_sample.log");
+    const loglens::AuthLogParser parser(loglens::ParserConfig{
+        loglens::InputMode::SyslogLegacy,
+        2026});
+    const auto parsed = parser.parse_file(input_path);
+
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(parsed.events);
+
+    loglens::ReportData data;
+    data.input_path = std::filesystem::path{"assets/noisy_auth_sample.log"};
+    data.parse_metadata = parsed.metadata;
+    data.parser_quality = parsed.quality;
+    data.events = parsed.events;
+    data.findings = findings;
+    data.warnings = parsed.warnings;
+    data.auth_signal_mappings = detector.config().auth_signal_mappings;
+
+    const auto json = loglens::render_json_report(data);
+
+    expect(findings.empty(), "expected noisy unsupported lines not to create findings");
+    expect(json.find("\"parse_success_rate\": 0.3333") != std::string::npos,
+           "expected noisy report json parse success rate");
+    expect(json.find("\"parsed_event_count\": 8") != std::string::npos,
+           "expected noisy report json parsed event count");
+    expect(json.find("\"warning_count\": 16") != std::string::npos,
+           "expected noisy report json warning count");
+    expect(json.find("\"finding_count\": 0") != std::string::npos,
+           "expected noisy report json finding count");
+    expect(json.find("\"pattern\": \"sshd_connection_closed_preauth\", \"count\": 2") != std::string::npos,
+           "expected noisy report json stable sshd preauth bucket");
+    expect(json.find("\"pattern\": \"pam_faillock_account_locked\", \"count\": 2") != std::string::npos,
+           "expected noisy report json stable pam_faillock account-lock bucket");
+    expect(json.find("\"line_number\": 13, \"category\": \"known_program_unknown_message\", \"reason\": \"unrecognized auth pattern: sshd_connection_closed_preauth\"")
+               != std::string::npos,
+           "expected noisy report json to keep unsupported sshd warning visible");
+    expect(json.find("\"line_number\": 24, \"category\": \"known_program_unknown_message\", \"reason\": \"unrecognized auth pattern: sudo_other\"")
+               != std::string::npos,
+           "expected noisy report json to keep unsupported partial sudo warning visible");
 }
 
 void test_markdown_table_cells_escape_user_controlled_values() {
@@ -63,7 +130,8 @@ void test_markdown_table_cells_escape_user_controlled_values() {
     expect(markdown.find("summary \\| &lt;raw&gt; &amp; more Usernames: ali\\|ce, bob&lt;root&gt;")
                != std::string::npos,
            "expected markdown finding notes to escape table and html-sensitive characters");
-    expect(markdown.find("| 1 | bad \\| value<br>next &lt;tag&gt; &amp; more |") != std::string::npos,
+    expect(markdown.find("| 1 | known_program_unknown_message | bad \\| value<br>next &lt;tag&gt; &amp; more |")
+               != std::string::npos,
            "expected markdown warning reason to escape table pipes and newlines");
 }
 
@@ -80,6 +148,52 @@ void test_json_escapes_generic_control_characters() {
     expect(json.find('\x01') == std::string::npos, "expected raw control character to be absent from json");
     expect(json.find("\"reason\": \"bad \\u0001 \\\"quote\\\"\"") != std::string::npos,
            "expected json warning reason to use valid escapes");
+}
+
+void test_json_finding_includes_explainability_fields() {
+    auto data = make_report_data();
+
+    loglens::Finding finding;
+    finding.type = loglens::FindingType::SudoBurst;
+    finding.rule_id = "sudo_burst";
+    finding.subject_kind = "username";
+    finding.subject = "alice";
+    finding.grouping_key = "username";
+    finding.threshold = 3;
+    finding.observed_count = 4;
+    finding.event_count = 4;
+    finding.first_seen = timestamp_at_minute(21);
+    finding.last_seen = timestamp_at_minute(24);
+    finding.evidence_event_ids = {"line:6", "line:7", "line:8", "line:9"};
+    finding.verdict_boundary = "triage_signal_not_maliciousness_or_authorization";
+    finding.summary = "alice ran 4 sudo commands within 5 minutes.";
+    data.findings.push_back(finding);
+
+    const auto json = loglens::render_json_report(data);
+
+    expect(json.find("\"rule_id\": \"sudo_burst\"") != std::string::npos,
+           "expected json finding to include rule id");
+    expect(json.find("\"grouping_key\": \"username\"") != std::string::npos,
+           "expected json finding to include grouping key");
+    expect(json.find("\"threshold\": 3") != std::string::npos,
+           "expected json finding to include threshold");
+    expect(json.find("\"observed_count\": 4") != std::string::npos,
+           "expected json finding to include observed count");
+    expect(json.find("\"evidence_event_ids\": [\"line:6\", \"line:7\", \"line:8\", \"line:9\"]")
+               != std::string::npos,
+           "expected json finding to include evidence event ids");
+    expect(json.find("\"verdict_boundary\": \"triage_signal_not_maliciousness_or_authorization\"")
+               != std::string::npos,
+           "expected json finding to include verdict boundary");
+}
+
+void test_json_report_includes_schema_identity() {
+    const auto json = loglens::render_json_report(make_report_data());
+
+    expect(json.find("\"schema\": \"loglens.report.v2\"") != std::string::npos,
+           "expected json report to include schema identifier");
+    expect(json.find("\"schema_version\": 2") != std::string::npos,
+           "expected json report to include schema version");
 }
 
 void test_reports_include_total_input_line_count() {
@@ -118,7 +232,7 @@ void test_csv_neutralizes_formula_like_fields() {
            "expected formula-like finding subject to be neutralized");
     expect(findings_csv.find(",'+bob;-carol;@dave,' @summary") != std::string::npos,
            "expected formula-like usernames and summary to be neutralized");
-    expect(warnings_csv.find("parse_warning,2,'=warning") != std::string::npos,
+    expect(warnings_csv.find("parse_warning,2,known_program_unknown_message,'=warning") != std::string::npos,
            "expected formula-like warning reason to be neutralized");
 }
 
@@ -244,8 +358,11 @@ void test_write_reports_reports_csv_write_failure() {
 }  // namespace
 
 int main() {
+    test_noisy_auth_report_json_keeps_unsupported_lines_visible();
     test_markdown_table_cells_escape_user_controlled_values();
     test_json_escapes_generic_control_characters();
+    test_json_finding_includes_explainability_fields();
+    test_json_report_includes_schema_identity();
     test_reports_include_total_input_line_count();
     test_csv_neutralizes_formula_like_fields();
     test_write_reports_fails_when_report_path_is_directory();

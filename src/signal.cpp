@@ -5,6 +5,10 @@
 namespace loglens {
 namespace {
 
+std::string event_id_for(const Event& event) {
+    return "line:" + std::to_string(event.line_number);
+}
+
 struct SignalMapping {
     AuthSignalKind signal_kind = AuthSignalKind::Unknown;
     bool counts_as_attempt_evidence = false;
@@ -97,7 +101,8 @@ std::vector<AuthSignal> build_auth_signals(const std::vector<Event>& events, con
             mapping->counts_as_attempt_evidence,
             mapping->counts_as_terminal_auth_failure,
             mapping->counts_as_sudo_burst_evidence,
-            event.line_number});
+            event.line_number,
+            event_id_for(event)});
     }
 
     return signals;

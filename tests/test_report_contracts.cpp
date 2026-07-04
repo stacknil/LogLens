@@ -138,6 +138,8 @@ std::vector<std::string> extract_json_contract_lines(const std::string& json) {
         }
 
         if (starts_with(line, "\"tool\": ")
+            || starts_with(line, "\"schema\": ")
+            || starts_with(line, "\"schema_version\": ")
             || starts_with(line, "\"input\": ")
             || starts_with(line, "\"input_mode\": ")
             || starts_with(line, "\"assume_year\": ")
@@ -148,19 +150,27 @@ std::vector<std::string> extract_json_contract_lines(const std::string& json) {
             || starts_with(line, "\"parsed_lines\": ")
             || starts_with(line, "\"unparsed_lines\": ")
             || starts_with(line, "\"parse_success_rate\": ")
+            || starts_with(line, "\"failure_categories\": ")
             || starts_with(line, "\"parsed_event_count\": ")
             || starts_with(line, "\"warning_count\": ")
             || starts_with(line, "\"finding_count\": ")
             || starts_with(line, "\"host_summaries\": ")
             || starts_with(line, "\"hostname\": ")
             || starts_with(line, "{\"pattern\": ")
+            || starts_with(line, "{\"category\": ")
             || starts_with(line, "{\"event_type\": ")
+            || starts_with(line, "\"rule_id\": ")
             || starts_with(line, "\"rule\": ")
             || starts_with(line, "\"subject_kind\": ")
             || starts_with(line, "\"subject\": ")
+            || starts_with(line, "\"grouping_key\": ")
+            || starts_with(line, "\"threshold\": ")
+            || starts_with(line, "\"observed_count\": ")
             || starts_with(line, "\"event_count\": ")
             || starts_with(line, "\"window_start\": ")
             || starts_with(line, "\"window_end\": ")
+            || starts_with(line, "\"evidence_event_ids\": ")
+            || starts_with(line, "\"verdict_boundary\": ")
             || starts_with(line, "\"usernames\": ")
             || starts_with(line, "\"summary\": ")
             || starts_with(line, "{\"line_number\": ")) {
@@ -241,6 +251,14 @@ void run_report_contract_case(const std::filesystem::path& loglens_exe,
     const auto golden_markdown = read_file(fixture_directory / "report.md");
     const auto golden_json = read_file(fixture_directory / "report.json");
 
+    expect_equal_lines(
+        split_lines(actual_markdown),
+        split_lines(golden_markdown),
+        "markdown snapshot mismatch for " + fixture_directory.filename().string());
+    expect_equal_lines(
+        split_lines(actual_json),
+        split_lines(golden_json),
+        "json snapshot mismatch for " + fixture_directory.filename().string());
     expect_equal_lines(
         extract_markdown_contract_lines(actual_markdown),
         extract_markdown_contract_lines(golden_markdown),
@@ -328,10 +346,24 @@ int main(int argc, char* argv[]) {
             true);
         run_report_contract_case(
             loglens_exe,
+            fixture_root / "journalctl_short_full",
+            output_root,
+            "journalctl-short-full",
+            "--csv",
+            true);
+        run_report_contract_case(
+            loglens_exe,
             fixture_root / "multi_host_syslog_legacy",
             output_root,
             "syslog",
             "--year 2026 --csv",
+            true);
+        run_report_contract_case(
+            loglens_exe,
+            fixture_root / "multi_host_journalctl_short_full",
+            output_root,
+            "journalctl-short-full",
+            "--csv",
             true);
     } catch (...) {
         std::filesystem::current_path(original_cwd);

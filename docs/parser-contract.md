@@ -6,6 +6,12 @@ The guiding rule is:
 
 > Parser observability > silent detection claims.
 
+For the v0.5 Evidence Explainability Release, this contract is part of the
+release-facing reviewer path. Start with [`docs/release-v0.5.0.md`](./release-v0.5.0.md)
+for the release checklist, then use this page to inspect supported inputs,
+unsupported-line handling, parser warning categories, and the detection signal
+boundary.
+
 ## Supported input modes
 
 | Mode | Typical source | Timestamp behavior | Review anchor |
@@ -26,7 +32,7 @@ The parser currently recognizes common authentication evidence from:
 - selected `pam_faillock(...)` variants
 - selected `pam_sss(...)` variants
 
-Recognized SSH failure families include failed password, invalid user, illegal user, failed publickey, failed keyboard-interactive/pam, failed-none invalid-user probing, `sshd`-owned PAM authentication-failure lines, and maximum-authentication-attempts-exceeded lines. `illegal user` is treated as an OpenSSH wording variant of `invalid user`. Maximum-authentication-attempts lines may include OpenSSH's leading `error:` marker and still normalize into the same event family. Invalid or illegal-user variants of failed-none probing, keyboard-interactive, `sshd`-owned PAM authentication failures, and maximum-authentication-attempts-exceeded lines are normalized into `ssh_invalid_user` events. Recognized SSH failures can become detection signals through the configured signal mapping.
+Recognized SSH failure families include failed password, invalid user, illegal user, failed publickey, failed keyboard-interactive/pam, failed-none invalid-user probing, `input_userauth_request` invalid/illegal-user preauth traces, `sshd`-owned PAM authentication-failure lines, and maximum-authentication-attempts-exceeded lines. `illegal user` is treated as an OpenSSH wording variant of `invalid user`. Maximum-authentication-attempts and `sshd`-owned PAM authentication-failure lines may include OpenSSH's leading `error:` marker and still normalize into the same event family. Invalid or illegal-user variants of failed-none probing, `input_userauth_request` preauth traces, keyboard-interactive, `sshd`-owned PAM authentication failures, and maximum-authentication-attempts-exceeded lines are normalized into `ssh_invalid_user` events. Recognized SSH failures can become detection signals through the configured signal mapping.
 
 Recognized success or audit families include accepted password, accepted publickey, accepted keyboard-interactive/pam, sudo command audit lines, sudo password failures, sudoers policy denials, su success/failure audit lines, and selected PAM session/auth lines.
 
@@ -36,16 +42,25 @@ Recognized success or audit families include accepted password, accepted publick
 | --- | --- | --- |
 | Recognized auth line | Emits a typed `Event` with timestamp, hostname, program, optional pid, message, source IP, username, event type, and line number | Can contribute to summaries, reports, and configured detection signals |
 | Blank line | Skips the line and increments `skipped_blank_lines` | Does not become a warning or parsed event |
-| Malformed header | Emits a parser warning with the original line number and structural reason | Counts toward `unparsed_lines` and `top_unknown_patterns` |
-| Well-formed but unsupported auth pattern | Emits a parser warning with an unknown-pattern bucket | Stays visible as telemetry instead of being silently ignored |
+| Malformed header | Emits a parser warning with the original line number, structural reason, and `unknown_timestamp` category | Counts toward `unparsed_lines`, `failure_categories`, and `top_unknown_patterns` |
+| Well-formed but unsupported auth pattern | Emits a parser warning with a failure category and unknown-pattern bucket | Stays visible as telemetry instead of being silently ignored |
 
 This is the main trust boundary: unsupported input should remain inspectable, even when it does not produce a finding.
 
+Parser failure categories are intentionally coarser than unknown-pattern
+buckets:
+
+- `unknown_timestamp`
+- `unknown_program`
+- `known_program_unknown_message`
+- `malformed_source_ip`
+- `unsupported_pam_variant`
+
 Stable unsupported-pattern buckets currently exercised by the fixture corpus include
 `sshd_connection_closed_preauth`, `sshd_timeout_or_disconnection`,
-`sshd_negotiation_failure`, and `pam_unix_session_closed`. They are parser
-telemetry and warnings only; detector signal mappings decide which parsed events
-can contribute to findings.
+`sshd_negotiation_failure`, `pam_faillock_account_locked`, and
+`pam_unix_session_closed`. They are parser telemetry and warnings only; detector
+signal mappings decide which parsed events can contribute to findings.
 
 ## Detection signal boundary
 
@@ -79,6 +94,8 @@ Parsed successes and audit-only events remain reportable but do not count as bru
 | [`assets/parser_fixture_matrix_journalctl_short_full.log`](../assets/parser_fixture_matrix_journalctl_short_full.log) | Journalctl short-full known/unknown parser matrix |
 | [`assets/parser_auth_families_syslog.log`](../assets/parser_auth_families_syslog.log) | Syslog PAM/auth-family parser coverage |
 | [`assets/parser_auth_families_journalctl_short_full.log`](../assets/parser_auth_families_journalctl_short_full.log) | Journalctl PAM/auth-family parser coverage |
+| [`assets/noisy_auth_sample.log`](../assets/noisy_auth_sample.log) and [`tests/fixtures/parser_matrix/noisy_auth_expected.json`](../tests/fixtures/parser_matrix/noisy_auth_expected.json) | Noisy syslog parser-coverage matrix for malformed, unsupported, blank, irrelevant, multi-host, and unusual-username input |
+| [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log) and [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json) | 150-line mixed auth corpus plus reviewer-facing parser coverage artifact for dirty syslog input |
 | [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp) | Stable report-shape expectations for generated artifacts |
 
 ## Non-goals
