@@ -14,6 +14,11 @@ All notable user-visible changes should be recorded here.
   input order and inclusive window-boundary behavior.
 - Added parser regression coverage for malformed source-IP token
   classification.
+- Added deterministic parser property tests for registry-order independence,
+  generated malformed tokens, failure taxonomy stability, and arbitrary-byte
+  result invariants.
+- Added an optional Clang libFuzzer parser target with a sanitized seed corpus
+  and bounded Ubuntu CI smoke campaign.
 
 ### Changed
 

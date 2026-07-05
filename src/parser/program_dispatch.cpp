@@ -7,18 +7,9 @@
 #include "parser/sudo_handlers.hpp"
 
 #include <array>
-#include <string_view>
 
 namespace loglens::parser_internal {
 namespace {
-
-using ProgramMatcher = bool (*)(std::string_view program);
-using ProgramHandler = HandlerResult (*)(const Event& source);
-
-struct HandlerRegistration {
-    ProgramMatcher matches;
-    ProgramHandler handle;
-};
 
 bool is_sshd(std::string_view program) {
     return program == "sshd";
@@ -44,7 +35,7 @@ bool is_su(std::string_view program) {
     return program == "su";
 }
 
-constexpr std::array<HandlerRegistration, 6> handler_registry{{
+constexpr std::array<ProgramHandlerRegistration, 6> handler_registry{{
     {is_sshd, handle_sshd_event},
     {is_pam_unix, handle_pam_unix_event},
     {is_pam_faillock, handle_pam_faillock_event},
@@ -55,14 +46,23 @@ constexpr std::array<HandlerRegistration, 6> handler_registry{{
 
 }  // namespace
 
-HandlerResult dispatch_program(const Event& source) {
-    for (const auto& registration : handler_registry) {
+std::span<const ProgramHandlerRegistration> program_handler_registry() {
+    return handler_registry;
+}
+
+HandlerResult dispatch_program(const Event& source,
+                               std::span<const ProgramHandlerRegistration> registry) {
+    for (const auto& registration : registry) {
         if (registration.matches(source.program)) {
             return registration.handle(source);
         }
     }
 
     return classify_unrecognized_event(source);
+}
+
+HandlerResult dispatch_program(const Event& source) {
+    return dispatch_program(source, program_handler_registry());
 }
 
 }  // namespace loglens::parser_internal
