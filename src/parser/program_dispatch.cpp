@@ -1,6 +1,7 @@
 #include "parser/program_dispatch.hpp"
 
 #include "parser/failure_classifier.hpp"
+#include "parser/login_handlers.hpp"
 #include "parser/pam_handlers.hpp"
 #include "parser/sshd_handlers.hpp"
 #include "parser/su_handlers.hpp"
@@ -35,13 +36,18 @@ bool is_su(std::string_view program) {
     return program == "su";
 }
 
-constexpr std::array<ProgramHandlerRegistration, 6> handler_registry{{
+bool is_login(std::string_view program) {
+    return program == "login";
+}
+
+constexpr std::array<ProgramHandlerRegistration, 7> handler_registry{{
     {is_sshd, handle_sshd_event},
     {is_pam_unix, handle_pam_unix_event},
     {is_pam_faillock, handle_pam_faillock_event},
     {is_pam_sss, handle_pam_sss_event},
     {is_sudo, handle_sudo_event},
     {is_su, handle_su_event},
+    {is_login, handle_login_event},
 }};
 
 }  // namespace

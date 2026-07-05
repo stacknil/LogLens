@@ -60,7 +60,7 @@ loglens::Event make_source_event(std::string program, std::string message) {
     return event;
 }
 
-std::array<loglens::Event, 6> representative_registry_events() {
+std::array<loglens::Event, 7> representative_registry_events() {
     return {
         make_source_event(
             "sshd",
@@ -80,6 +80,9 @@ std::array<loglens::Event, 6> representative_registry_events() {
         make_source_event(
             "su",
             "FAILED SU (to root) user-f on pts/2"),
+        make_source_event(
+            "login",
+            "FAILED LOGIN 1 FROM tty1 FOR user-g, Authentication failure"),
     };
 }
 
@@ -117,7 +120,7 @@ void test_registry_dispatch_is_order_independent() {
         ++permutation_count;
     } while (std::next_permutation(order.begin(), order.end()));
 
-    expect(permutation_count == 720, "expected all six-handler registry permutations to be checked");
+    expect(permutation_count == 5040, "expected all seven-handler registry permutations to be checked");
 }
 
 std::uint32_t next_random(std::uint32_t& state) {
@@ -175,7 +178,7 @@ void test_failure_classification_is_stable_across_envelope_variants() {
         std::string reason;
     };
 
-    const std::array<FailureCase, 7> cases{{
+    const std::array<FailureCase, 8> cases{{
         {"sshd", "Connection closed by 203.0.113.50 port 50100 [preauth]",
          loglens::ParserFailureCategory::KnownProgramUnknownMessage,
          "unrecognized auth pattern: sshd_connection_closed_preauth"},
@@ -194,6 +197,9 @@ void test_failure_classification_is_stable_across_envelope_variants() {
         {"su", "pam_authenticate: Authentication failure",
          loglens::ParserFailureCategory::KnownProgramUnknownMessage,
          "unrecognized auth pattern: su_other"},
+        {"login", "DIALUP AT ttyS0 BY user-d",
+         loglens::ParserFailureCategory::KnownProgramUnknownMessage,
+         "unrecognized auth pattern: login_other"},
         {"cron", "job completed",
          loglens::ParserFailureCategory::UnknownProgram,
          "unrecognized auth pattern: program_cron"},

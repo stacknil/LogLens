@@ -102,6 +102,8 @@ LogLens currently parses and reports these additional auth patterns beyond the c
 - `sshd`-owned `PAM: Authentication failure ...` lines, including OpenSSH's optional leading `error:` marker, with invalid/illegal-user variants normalized to `ssh_invalid_user`
 - `sudo` command, password-failure, and sudoers policy-denial audit lines
 - `su` success and failure audit lines
+- selected util-linux `login` failure, retry-exhaustion, session-failure,
+  local-login, and root-login audit lines
 - `pam_unix(...:auth): authentication failure`
 - `pam_unix(...:session): session opened`
 - selected `pam_faillock(...:auth)` failure variants

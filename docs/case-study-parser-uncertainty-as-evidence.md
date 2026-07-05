@@ -33,7 +33,7 @@ the narrower engineering question.
 
 The checked-in
 [`mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log) is a sanitized,
-150-line syslog-style fixture. Its paired
+160-line syslog-style fixture. Its paired
 [`mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json)
 records recognized events, warnings, blank lines, failure categories, pattern
 buckets, and source-line references.
