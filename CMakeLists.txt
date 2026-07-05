@@ -12,6 +12,7 @@ set(LOGLENS_LIBRARY_SOURCES
     src/config.cpp
     src/parser.cpp
     src/parser/failure_classifier.cpp
+    src/parser/login_handlers.cpp
     src/parser/pam_handlers.cpp
     src/parser/program_dispatch.cpp
     src/parser/source_envelope_parser.cpp

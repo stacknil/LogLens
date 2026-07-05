@@ -1263,14 +1263,14 @@ void test_mixed_auth_corpus_fixture_file() {
     const auto parser = make_syslog_parser();
     const auto result = parser.parse_file(asset_path("mixed_auth_corpus.log"));
 
-    expect(total_input_lines(result) == 150, "expected mixed auth corpus total input line count");
-    expect(result.quality.total_lines == 140, "expected mixed auth corpus nonblank line count");
+    expect(total_input_lines(result) == 160, "expected mixed auth corpus total input line count");
+    expect(result.quality.total_lines == 150, "expected mixed auth corpus nonblank line count");
     expect(result.quality.skipped_blank_lines == 10, "expected mixed auth corpus skipped blank line count");
-    expect(result.events.size() == 90, "expected ninety mixed auth corpus parsed events");
+    expect(result.events.size() == 100, "expected one hundred mixed auth corpus parsed events");
     expect(result.warnings.size() == 50, "expected fifty mixed auth corpus warnings");
-    expect(result.quality.parsed_lines == 90, "expected mixed auth corpus parsed line count");
+    expect(result.quality.parsed_lines == 100, "expected mixed auth corpus parsed line count");
     expect(result.quality.unparsed_lines == 50, "expected mixed auth corpus unparsed line count");
-    expect_close(result.quality.parse_success_rate, 90.0 / 140.0, 1e-9,
+    expect_close(result.quality.parse_success_rate, 100.0 / 150.0, 1e-9,
                  "expected mixed auth corpus parse success rate");
 
     expect(event_count(result.events, loglens::EventType::SshInvalidUser) == 10,
@@ -1283,8 +1283,10 @@ void test_mixed_auth_corpus_fixture_file() {
            "expected ten mixed corpus sudo command events");
     expect(event_count(result.events, loglens::EventType::SudoAuthFailure) == 10,
            "expected ten mixed corpus sudo auth-failure events");
-    expect(event_count(result.events, loglens::EventType::PamAuthFailure) == 30,
-           "expected thirty mixed corpus PAM auth-failure events");
+    expect(event_count(result.events, loglens::EventType::PamAuthFailure) == 36,
+           "expected thirty-six mixed corpus PAM auth-failure events");
+    expect(event_count(result.events, loglens::EventType::SessionOpened) == 4,
+           "expected four mixed corpus session-opened events");
     expect(event_count(result.events, loglens::EventType::SuAuthFailure) == 10,
            "expected ten mixed corpus su auth-failure events");
 
@@ -1315,6 +1317,94 @@ void test_mixed_auth_corpus_fixture_file() {
     expect(actual == expected, "expected mixed auth parser coverage artifact to match fixture");
 }
 
+void test_login_handler_normalizes_selected_util_linux_messages() {
+    struct LoginCase {
+        std::string message;
+        loglens::EventType event_type;
+        std::string username;
+    };
+
+    const std::vector<LoginCase> cases{
+        {"FAILED LOGIN 1 FROM tty1 FOR user-a, Authentication failure",
+         loglens::EventType::PamAuthFailure,
+         "user-a"},
+        {"TOO MANY LOGIN TRIES (3) FROM tty1 FOR user-b, Authentication failure",
+         loglens::EventType::PamAuthFailure,
+         "user-b"},
+        {"FAILED LOGIN SESSION FROM tty1 FOR user-c, Authentication failure",
+         loglens::EventType::PamAuthFailure,
+         "user-c"},
+        {"FAILED LOGIN 1 FROM tty1 FOR (unknown), Authentication failure",
+         loglens::EventType::PamAuthFailure,
+         ""},
+        {"LOGIN ON tty1 BY user-d", loglens::EventType::SessionOpened, "user-d"},
+        {"LOGIN ON tty1 BY user-e FROM example-console", loglens::EventType::SessionOpened, "user-e"},
+        {"ROOT LOGIN ON tty2", loglens::EventType::SessionOpened, "root"},
+    };
+
+    const auto parser = make_syslog_parser();
+    for (std::size_t index = 0; index < cases.size(); ++index) {
+        const auto line = "Mar 10 08:19:00 example-host login[4050]: " + cases[index].message;
+        const auto event = parser.parse_line(line, index + 1);
+
+        expect(event.has_value(), "expected selected util-linux login message to emit an event");
+        expect(event->program == "login", "expected login program to be preserved");
+        expect(event->event_type == cases[index].event_type, "expected login message event type");
+        expect(event->username == cases[index].username, "expected login message username");
+        expect(event->source_ip.empty(), "expected login message not to infer a network source IP");
+    }
+}
+
+void test_login_handler_keeps_unsupported_message_visible() {
+    const auto parser = make_syslog_parser();
+    const std::vector<std::string> messages{
+        "DIALUP AT ttyS0 BY user-a",
+        "FAILED LOGIN many FROM tty1 FOR user-a, Authentication failure",
+        "FAILED LOGIN 1 FROM  FOR user-a, Authentication failure",
+        "FAILED LOGIN 1 FROM tty1 FOR user-a,",
+        "LOGIN ON  BY user-a",
+        "LOGIN ON tty1 BY user-a FROM ",
+        "ROOT LOGIN ON  FROM example-console",
+        "ROOT LOGIN ON tty1 FROM ",
+    };
+
+    for (std::size_t index = 0; index < messages.size(); ++index) {
+        std::string reason;
+        auto category = loglens::ParserFailureCategory::UnknownProgram;
+        const auto event = parser.parse_line(
+            "Mar 10 08:19:10 example-host login[4051]: " + messages[index],
+            index + 1,
+            &reason,
+            &category);
+
+        expect(!event.has_value(), "expected unsupported login message not to emit an event");
+        expect(category == loglens::ParserFailureCategory::KnownProgramUnknownMessage,
+               "expected unsupported login message to remain a known-program failure");
+        expect(reason == "unrecognized auth pattern: login_other",
+               "expected stable unsupported login pattern bucket");
+    }
+}
+
+void test_journalctl_login_handler_variants() {
+    const auto parser = make_journalctl_parser();
+    const auto failure = parser.parse_line(
+        "Mon 2026-03-10 08:19:20 UTC example-host login[4052]: "
+        "FAILED LOGIN 1 FROM tty1 FOR user-a, Authentication failure",
+        1);
+    const auto success = parser.parse_line(
+        "Mon 2026-03-10 08:19:21 UTC example-host login[4053]: LOGIN ON tty1 BY user-b",
+        2);
+
+    expect(failure.has_value(), "expected journalctl login failure event");
+    expect(failure->event_type == loglens::EventType::PamAuthFailure,
+           "expected journalctl login failure normalization");
+    expect(failure->username == "user-a", "expected journalctl login failure username");
+    expect(success.has_value(), "expected journalctl login success event");
+    expect(success->event_type == loglens::EventType::SessionOpened,
+           "expected journalctl login success normalization");
+    expect(success->username == "user-b", "expected journalctl login success username");
+}
+
 void test_program_handler_registry_routes_supported_families() {
     struct RegistryCase {
         std::string line;
@@ -1341,6 +1431,9 @@ void test_program_handler_registry_routes_supported_families() {
         {"Mar 10 08:20:06 example-host su[4106]: FAILED SU (to root) user-f on pts/2",
          "su",
          loglens::EventType::SuAuthFailure},
+        {"Mar 10 08:20:07 example-host login[4107]: FAILED LOGIN 1 FROM tty1 FOR user-g, Authentication failure",
+         "login",
+         loglens::EventType::PamAuthFailure},
     };
 
     const auto parser = make_syslog_parser();
@@ -1417,6 +1510,9 @@ int main() {
     test_journalctl_fixture_matrix_file();
     test_noisy_auth_fixture_matrix_file();
     test_mixed_auth_corpus_fixture_file();
+    test_login_handler_normalizes_selected_util_linux_messages();
+    test_login_handler_keeps_unsupported_message_visible();
+    test_journalctl_login_handler_variants();
     test_program_handler_registry_routes_supported_families();
     test_parse_stream_accepts_crlf_line_terminator();
     return 0;

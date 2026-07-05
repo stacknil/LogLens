@@ -181,6 +181,10 @@ std::string classify_unknown_auth_pattern(const Event& event) {
         return "su_other";
     }
 
+    if (event.program == "login") {
+        return "login_other";
+    }
+
     return "program_" + sanitize_pattern_label(event.program);
 }
 
@@ -194,6 +198,7 @@ bool is_known_auth_program(std::string_view program) {
     return program == "sshd"
         || program == "sudo"
         || program == "su"
+        || program == "login"
         || is_pam_program(program);
 }
 

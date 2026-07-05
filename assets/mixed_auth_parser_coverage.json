@@ -5,12 +5,12 @@
   "input_mode": "syslog_legacy",
   "assume_year": 2026,
   "parser_quality": {
-    "total_input_lines": 150,
-    "total_lines": 140,
+    "total_input_lines": 160,
+    "total_lines": 150,
     "skipped_blank_lines": 10,
-    "parsed_lines": 90,
+    "parsed_lines": 100,
     "unparsed_lines": 50,
-    "parse_success_rate": 0.6428571429,
+    "parse_success_rate": 0.6666666667,
     "top_unknown_patterns": [
       {"pattern": "invalid_month_token", "count": 10},
       {"pattern": "malformed_source_ip", "count": 10},
@@ -26,13 +26,14 @@
       {"category": "unsupported_pam_variant", "count": 10}
     ]
   },
-  "parsed_event_count": 90,
+  "parsed_event_count": 100,
   "warning_count": 50,
   "event_type_counts": [
     {"event_type": "ssh_accepted_publickey", "count": 10},
     {"event_type": "ssh_invalid_user", "count": 10},
     {"event_type": "ssh_failed_publickey", "count": 10},
-    {"event_type": "pam_auth_failure", "count": 30},
+    {"event_type": "pam_auth_failure", "count": 36},
+    {"event_type": "session_opened", "count": 4},
     {"event_type": "sudo_command", "count": 10},
     {"event_type": "sudo_auth_failure", "count": 10},
     {"event_type": "su_auth_failure", "count": 10}

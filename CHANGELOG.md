@@ -19,6 +19,10 @@ All notable user-visible changes should be recorded here.
   result invariants.
 - Added an optional Clang libFuzzer parser target with a sanitized seed corpus
   and bounded Ubuntu CI smoke campaign.
+- Added a dedicated util-linux `login` handler for selected failed-login,
+  retry-exhaustion, session-failure, local-login, and root-login messages.
+- Expanded the sanitized mixed auth corpus from 150 to 160 lines with ten
+  fixture-backed `login` records and updated parser coverage telemetry.
 
 ### Changed
 

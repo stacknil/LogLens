@@ -28,13 +28,19 @@ The parser currently recognizes common authentication evidence from:
 - `sshd`
 - `sudo`
 - `su`
+- `login`
 - `pam_unix(...)`
 - selected `pam_faillock(...)` variants
 - selected `pam_sss(...)` variants
 
 Recognized SSH failure families include failed password, invalid user, illegal user, failed publickey, failed keyboard-interactive/pam, failed-none invalid-user probing, `input_userauth_request` invalid/illegal-user preauth traces, `sshd`-owned PAM authentication-failure lines, and maximum-authentication-attempts-exceeded lines. `illegal user` is treated as an OpenSSH wording variant of `invalid user`. Maximum-authentication-attempts and `sshd`-owned PAM authentication-failure lines may include OpenSSH's leading `error:` marker and still normalize into the same event family. Invalid or illegal-user variants of failed-none probing, `input_userauth_request` preauth traces, keyboard-interactive, `sshd`-owned PAM authentication failures, and maximum-authentication-attempts-exceeded lines are normalized into `ssh_invalid_user` events. Recognized SSH failures can become detection signals through the configured signal mapping.
 
-Recognized success or audit families include accepted password, accepted publickey, accepted keyboard-interactive/pam, sudo command audit lines, sudo password failures, sudoers policy denials, su success/failure audit lines, and selected PAM session/auth lines.
+Recognized success or audit families include accepted password, accepted publickey, accepted keyboard-interactive/pam, sudo command audit lines, sudo password failures, sudoers policy denials, su success/failure audit lines, selected util-linux `login` failures and session records, and selected PAM session/auth lines. `login` failures do not infer a network source IP and remain lower-confidence `pam_auth_failure` context.
+
+The selected `login` wording is anchored to the upstream
+[`login.c`](https://github.com/util-linux/util-linux/blob/9447bc4f72ac5634dcfd78ea877286279b050369/login-utils/login.c)
+syslog strings. Localized or otherwise unmodeled variants remain visible as
+`login_other` warnings.
 
 ## Line handling contract
 
@@ -115,7 +121,7 @@ Parsed successes and audit-only events remain reportable but do not count as bru
 | [`assets/parser_auth_families_syslog.log`](../assets/parser_auth_families_syslog.log) | Syslog PAM/auth-family parser coverage |
 | [`assets/parser_auth_families_journalctl_short_full.log`](../assets/parser_auth_families_journalctl_short_full.log) | Journalctl PAM/auth-family parser coverage |
 | [`assets/noisy_auth_sample.log`](../assets/noisy_auth_sample.log) and [`tests/fixtures/parser_matrix/noisy_auth_expected.json`](../tests/fixtures/parser_matrix/noisy_auth_expected.json) | Noisy syslog parser-coverage matrix for malformed, unsupported, blank, irrelevant, multi-host, and unusual-username input |
-| [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log) and [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json) | 150-line mixed auth corpus plus reviewer-facing parser coverage artifact for dirty syslog input |
+| [`assets/mixed_auth_corpus.log`](../assets/mixed_auth_corpus.log) and [`assets/mixed_auth_parser_coverage.json`](../assets/mixed_auth_parser_coverage.json) | 160-line mixed auth corpus plus reviewer-facing parser coverage artifact for dirty syslog input and selected util-linux `login` evidence |
 | [`tests/test_report_contracts.cpp`](../tests/test_report_contracts.cpp) | Stable report-shape expectations for generated artifacts |
 
 ## Non-goals

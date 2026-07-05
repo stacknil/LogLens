@@ -148,3 +148,13 @@ Mar 12 08:09:45 mixed-auth-10 cron[5008]: (root) CMD (/usr/bin/true)
 Mar 12 08:09:49 mixed-auth-10 sshd[5009]: Failed password for invalid user user010 from 999.0.113.106 port 51905 ssh2
 
 Foo 12 08:09:53 mixed-auth-10 sshd[5010]: Failed password for invalid user user010 from 203.0.113.107 port 51906 ssh2
+Mar 12 08:10:01 mixed-auth-11 login[5101]: FAILED LOGIN 1 FROM tty1 FOR user011, Authentication failure
+Mar 12 08:10:05 mixed-auth-11 login[5102]: TOO MANY LOGIN TRIES (3) FROM tty1 FOR user011, Authentication failure
+Mar 12 08:10:09 mixed-auth-11 login[5103]: FAILED LOGIN SESSION FROM tty1 FOR user011, Authentication failure
+Mar 12 08:10:13 mixed-auth-11 login[5104]: LOGIN ON tty1 BY user011
+Mar 12 08:10:17 mixed-auth-11 login[5105]: ROOT LOGIN ON tty2
+Mar 12 08:10:21 mixed-auth-12 login[5201]: FAILED LOGIN 1 FROM tty3 FOR user012, Authentication failure
+Mar 12 08:10:25 mixed-auth-12 login[5202]: TOO MANY LOGIN TRIES (3) FROM tty3 FOR user012, Authentication failure
+Mar 12 08:10:29 mixed-auth-12 login[5203]: FAILED LOGIN SESSION FROM tty3 FOR user012, Authentication failure
+Mar 12 08:10:33 mixed-auth-12 login[5204]: LOGIN ON tty3 BY user012 FROM example-console
+Mar 12 08:10:37 mixed-auth-13 login[5301]: LOGIN ON tty4 BY user013
