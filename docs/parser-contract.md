@@ -107,6 +107,8 @@ Parsed successes and audit-only events remain reportable but do not count as bru
 | Artifact | What it proves |
 | --- | --- |
 | [`tests/test_parser.cpp`](../tests/test_parser.cpp) | Unit-level parser expectations, malformed-line behavior, mode aliases, fixture-matrix counts, and unknown-pattern buckets |
+| [`tests/test_parser_properties.cpp`](../tests/test_parser_properties.cpp) | Deterministic generated checks for handler-registry order independence, malformed source tokens, failure taxonomy stability, and arbitrary-byte result invariants |
+| [`tests/fuzz/README.md`](../tests/fuzz/README.md) and [`tests/fuzz/corpus/parser`](../tests/fuzz/corpus/parser) | Optional Clang libFuzzer harness instructions plus a sanitized parser seed corpus used by the bounded CI fuzz smoke campaign |
 | [`tests/test_detector.cpp`](../tests/test_detector.cpp) | Detection signal mapping and default counting behavior after parsing |
 | [`assets/parser_fixture_matrix_syslog.log`](../assets/parser_fixture_matrix_syslog.log) | Syslog known/unknown parser matrix |
 | [`assets/parser_fixture_matrix_journalctl_short_full.log`](../assets/parser_fixture_matrix_journalctl_short_full.log) | Journalctl short-full known/unknown parser matrix |
