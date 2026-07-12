@@ -17,7 +17,10 @@ enum class AuthSignalKind {
     SshMaxAuthTries,
     PamAuthFailure,
     SudoCommand,
-    SudoSessionOpened
+    SudoSessionOpened,
+    SudoAuthFailure,
+    SudoPolicyDenied,
+    SuAuthFailure
 };
 
 struct AuthSignalBehavior {

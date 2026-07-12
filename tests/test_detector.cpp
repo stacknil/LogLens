@@ -570,6 +570,45 @@ void test_sudo_signals_include_command_and_session_opened() {
            "did not expect sudo session-opened to count as terminal auth failure");
 }
 
+void test_privilege_auth_failures_are_non_counting_signals() {
+    const auto events = parse_events(
+        make_syslog_config(),
+        "Mar 10 08:21:40 example-host sudo:    alice : 1 incorrect password attempt ; TTY=pts/0 ; "
+        "PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/id\n"
+        "Mar 10 08:21:45 example-host sudo:    bob : user NOT in sudoers ; TTY=pts/1 ; "
+        "PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/id\n"
+        "Mar 10 08:21:50 example-host su[1243]: FAILED SU (to root) carol on pts/2\n");
+    expect(events.size() == 3, "expected sudo and su auth failures to parse");
+    expect(events[0].event_type == loglens::EventType::SudoAuthFailure,
+           "expected sudo password failure event");
+    expect(events[1].event_type == loglens::EventType::SudoPolicyDenied,
+           "expected sudo policy denied event");
+    expect(events[2].event_type == loglens::EventType::SuAuthFailure,
+           "expected su auth failure event");
+
+    const auto signals = loglens::build_auth_signals(events, loglens::DetectorConfig{}.auth_signal_mappings);
+    expect(signals.size() == 3, "expected privilege auth failures to be visible as signals");
+    expect(count_signals(signals, loglens::AuthSignalKind::SudoAuthFailure) == 1,
+           "expected one sudo auth failure signal");
+    expect(count_signals(signals, loglens::AuthSignalKind::SudoPolicyDenied) == 1,
+           "expected one sudo policy denied signal");
+    expect(count_signals(signals, loglens::AuthSignalKind::SuAuthFailure) == 1,
+           "expected one su auth failure signal");
+
+    for (const auto& signal : signals) {
+        expect(!signal.counts_as_attempt_evidence,
+               "did not expect privilege auth signals to count as auth attempt evidence");
+        expect(!signal.counts_as_terminal_auth_failure,
+               "did not expect privilege auth signals to count as terminal auth failures");
+        expect(!signal.counts_as_sudo_burst_evidence,
+               "did not expect privilege auth signals to count toward sudo burst evidence");
+    }
+
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(events);
+    expect(findings.empty(), "expected privilege auth signals to stay out of detector findings by default");
+}
+
 void test_sudo_burst_behavior_is_preserved_with_signal_layer() {
     const auto events = build_sudo_burst_preservation_events();
     const loglens::Detector detector;
@@ -743,6 +782,7 @@ int main() {
     test_failed_publickey_contributes_to_bruteforce_by_default();
     test_accepted_publickey_success_stays_out_of_failure_signals();
     test_sudo_signals_include_command_and_session_opened();
+    test_privilege_auth_failures_are_non_counting_signals();
     test_sudo_burst_behavior_is_preserved_with_signal_layer();
     test_unsupported_pam_session_close_remains_telemetry_only();
     test_pam_auth_failure_does_not_trigger_bruteforce_by_default();
