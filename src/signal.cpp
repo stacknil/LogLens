@@ -69,13 +69,28 @@ std::optional<SignalMapping> signal_mapping_for_event(const Event& event, const 
                 false};
         }
         return std::nullopt;
+    case EventType::SudoAuthFailure:
+        return SignalMapping{
+            AuthSignalKind::SudoAuthFailure,
+            false,
+            false,
+            false};
+    case EventType::SudoPolicyDenied:
+        return SignalMapping{
+            AuthSignalKind::SudoPolicyDenied,
+            false,
+            false,
+            false};
+    case EventType::SuAuthFailure:
+        return SignalMapping{
+            AuthSignalKind::SuAuthFailure,
+            false,
+            false,
+            false};
     case EventType::Unknown:
     case EventType::SshAcceptedPassword:
     case EventType::SshAcceptedPublicKey:
     case EventType::SshAcceptedKeyboardInteractive:
-    case EventType::SudoAuthFailure:
-    case EventType::SudoPolicyDenied:
-    case EventType::SuAuthFailure:
     default:
         return std::nullopt;
     }
