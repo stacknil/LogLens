@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(LogLens VERSION 0.5.0 LANGUAGES CXX)
+project(LogLens VERSION 0.6.0 LANGUAGES CXX)
+
+set(
+    LOGLENS_VERSION_SUFFIX
+    "-dev"
+    CACHE STRING
+    "Prerelease suffix appended to the LogLens project version"
+)
+set(LOGLENS_VERSION "${PROJECT_VERSION}${LOGLENS_VERSION_SUFFIX}")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,7 +43,7 @@ target_include_directories(loglens_lib
 
 add_executable(loglens src/main.cpp)
 target_link_libraries(loglens PRIVATE loglens_lib)
-target_compile_definitions(loglens PRIVATE LOGLENS_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(loglens PRIVATE LOGLENS_VERSION="${LOGLENS_VERSION}")
 
 include(CTest)
 if(BUILD_TESTING)
