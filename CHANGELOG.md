@@ -6,35 +6,11 @@ All notable user-visible changes should be recorded here.
 
 ### Added
 
-- Added stable JSON finding identity fields: `finding_id` and
-  `episode_index`.
-- Added a separated-burst syslog report-contract fixture where one source IP
-  produces two time-separated brute-force findings.
-- Added detector regression coverage for stable episode identity under unsorted
-  input order and inclusive window-boundary behavior.
-- Added parser regression coverage for malformed source-IP token
-  classification.
-- Added deterministic parser property tests for registry-order independence,
-  generated malformed tokens, failure taxonomy stability, and arbitrary-byte
-  result invariants.
-- Added an optional Clang libFuzzer parser target with a sanitized seed corpus
-  and bounded Ubuntu CI smoke campaign.
-- Added a dedicated util-linux `login` handler for selected failed-login,
-  retry-exhaustion, session-failure, local-login, and root-login messages.
-- Expanded the sanitized mixed auth corpus from 150 to 160 lines with ten
-  fixture-backed `login` records and updated parser coverage telemetry.
+- None yet.
 
 ### Changed
 
-- Refactored parser internals into timestamp, source-envelope, program-dispatch,
-  program-handler, and failure-classifier modules behind the unchanged
-  `AuthLogParser` interface.
-- Detector rules now emit separate findings for time-separated detection
-  episodes within the same rule subject instead of collapsing each subject to a
-  single best window.
-- Bumped the JSON report artifact contract from `loglens.report.v2` /
-  `schema_version` 2 to `loglens.report.v3` / `schema_version` 3 for finding
-  identity fields.
+- None yet.
 
 ### Fixed
 
@@ -42,10 +18,35 @@ All notable user-visible changes should be recorded here.
 
 ### Docs
 
-- Documented detection episode semantics in the rule catalog and report artifact
-  contract notes.
-- Added the v0.6 Detection Episode Semantics release note and schema v2 to v3
-  migration guidance.
+- None yet.
+
+## v0.6.0
+
+### Added
+
+- Added multiple time-separated detector episodes for one rule subject.
+- Added stable finding identity fields: `finding_id` and `episode_index`.
+- Added a parser handler registry that keeps program-specific parsing modular.
+- Added deterministic parser property coverage and an optional libFuzzer smoke
+  target with a sanitized seed corpus.
+- Added a dedicated util-linux `login` handler for selected login failure and
+  session messages.
+- Added audit-only privilege authentication signals for sudo and su failures;
+  these remain visible without counting as detector evidence by default.
+
+### Changed
+
+- Bumped the JSON report artifact contract from `loglens.report.v2` /
+  `schema_version` 2 to `loglens.report.v3` / `schema_version` 3, including
+  `finding_id` and `episode_index`.
+
+### Fixed
+
+- None yet.
+
+### Docs
+
+- Added the v0.6 release note and schema v2 to v3 migration guidance.
 
 ## v0.5.0
 
