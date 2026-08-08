@@ -4,7 +4,7 @@ project(LogLens VERSION 0.6.0 LANGUAGES CXX)
 
 set(
     LOGLENS_VERSION_SUFFIX
-    "-dev"
+    ""
     CACHE STRING
     "Prerelease suffix appended to the LogLens project version"
 )

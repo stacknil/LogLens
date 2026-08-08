@@ -1,10 +1,9 @@
-# LogLens v0.6.0 - Detection Episode Semantics
+# LogLens v0.6.0 - Detection Episodes, Parser Coverage, and Audit Signals
 
-Theme: Detection Episode Semantics.
+Theme: Detection Episodes, Parser Coverage, and Audit Signals.
 
-This release note describes the v0.6 report and detector contract. It does not
-add new detection rules. It makes repeated time-separated findings for the same
-rule subject explicit and reviewable.
+This release note describes the fixed v0.6 report, parser, coverage, and audit
+signal contract. It does not add new detection rules.
 
 ## What Changed
 
@@ -15,6 +14,13 @@ rule subject explicit and reviewable.
 - JSON findings include stable finding identity fields:
   - `finding_id`
   - `episode_index`
+- Parser internals are organized behind a program handler registry.
+- Deterministic parser property coverage and an optional libFuzzer smoke target
+  cover malformed and arbitrary-byte input invariants.
+- A dedicated util-linux `login` handler normalizes selected login failure and
+  session messages while preserving unsupported variants as warnings.
+- Privilege authentication failures from `sudo` and `su` are exposed as
+  audit-only signals and do not count as detector evidence by default.
 - The separated-burst contract fixture demonstrates one source IP producing two
   distinct brute-force findings in one report.
 
@@ -96,6 +102,9 @@ v0.6 is covered by:
 - detector tests for stable episode identity under unsorted input order
 - detector tests for inclusive rule-window boundaries
 - parser tests for malformed source-IP token classification
+- parser handler registry and util-linux `login` coverage
+- deterministic parser property tests and bounded fuzz smoke coverage
+- audit-only privilege authentication signal behavior
 - report tests for `finding_id`, `episode_index`, and schema v3 output
 - golden report-contract fixtures for Markdown, JSON, and optional CSV reports
 
