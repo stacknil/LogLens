@@ -15,6 +15,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(LOGLENS_BUILD_FUZZERS "Build Clang libFuzzer targets" OFF)
+option(LOGLENS_ENABLE_WARNINGS "Enable compiler warnings for LogLens targets" ON)
+option(
+    LOGLENS_WARNINGS_AS_ERRORS
+    "Treat warnings as errors for LogLens targets"
+    OFF
+)
+
+function(loglens_enable_warnings target)
+    if(NOT LOGLENS_ENABLE_WARNINGS)
+        return()
+    endif()
+
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4)
+        if(LOGLENS_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE /WX)
+        endif()
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+        if(LOGLENS_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE -Werror)
+        endif()
+    endif()
+endfunction()
 
 set(LOGLENS_LIBRARY_SOURCES
     src/config.cpp
@@ -35,6 +59,7 @@ set(LOGLENS_LIBRARY_SOURCES
 )
 
 add_library(loglens_lib ${LOGLENS_LIBRARY_SOURCES})
+loglens_enable_warnings(loglens_lib)
 
 target_include_directories(loglens_lib
     PUBLIC
@@ -43,28 +68,34 @@ target_include_directories(loglens_lib
 
 add_executable(loglens src/main.cpp)
 target_link_libraries(loglens PRIVATE loglens_lib)
+loglens_enable_warnings(loglens)
 target_compile_definitions(loglens PRIVATE LOGLENS_VERSION="${LOGLENS_VERSION}")
 
 include(CTest)
 if(BUILD_TESTING)
     add_executable(test_parser tests/test_parser.cpp)
     target_link_libraries(test_parser PRIVATE loglens_lib)
+    loglens_enable_warnings(test_parser)
     add_test(NAME parser COMMAND test_parser)
 
     add_executable(test_parser_properties tests/test_parser_properties.cpp)
     target_link_libraries(test_parser_properties PRIVATE loglens_lib)
+    loglens_enable_warnings(test_parser_properties)
     add_test(NAME parser_properties COMMAND test_parser_properties)
 
     add_executable(test_detector tests/test_detector.cpp)
     target_link_libraries(test_detector PRIVATE loglens_lib)
+    loglens_enable_warnings(test_detector)
     add_test(NAME detector COMMAND test_detector)
 
     add_executable(test_report tests/test_report.cpp)
     target_link_libraries(test_report PRIVATE loglens_lib)
+    loglens_enable_warnings(test_report)
     add_test(NAME report COMMAND test_report)
 
     add_executable(test_cli tests/test_cli.cpp)
     target_link_libraries(test_cli PRIVATE loglens_lib)
+    loglens_enable_warnings(test_cli)
     add_test(
         NAME cli
         COMMAND test_cli
@@ -75,6 +106,7 @@ if(BUILD_TESTING)
     )
 
     add_executable(test_report_contracts tests/test_report_contracts.cpp)
+    loglens_enable_warnings(test_report_contracts)
     add_test(
         NAME report_contracts
         COMMAND test_report_contracts
@@ -90,6 +122,7 @@ if(LOGLENS_BUILD_FUZZERS)
 
     add_library(loglens_fuzz_lib STATIC ${LOGLENS_LIBRARY_SOURCES})
     target_include_directories(loglens_fuzz_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    loglens_enable_warnings(loglens_fuzz_lib)
     target_compile_options(
         loglens_fuzz_lib
         PRIVATE
@@ -99,6 +132,7 @@ if(LOGLENS_BUILD_FUZZERS)
 
     add_executable(fuzz_parser fuzz/parser_fuzz.cpp)
     target_link_libraries(fuzz_parser PRIVATE loglens_fuzz_lib)
+    loglens_enable_warnings(fuzz_parser)
     target_compile_options(
         fuzz_parser
         PRIVATE

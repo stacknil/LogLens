@@ -16,3 +16,7 @@ The CLI in `src/main.cpp` wires those layers together:
 - write `report.md` and `report.json`
 
 This keeps the MVP easy to test and extend without introducing heavy dependencies or unnecessary abstractions.
+
+## Architecture decisions
+
+- [ADR 0001: Episode Semantics Boundaries for v0.7 Research](adr/0001-episode-semantics-boundaries.md)

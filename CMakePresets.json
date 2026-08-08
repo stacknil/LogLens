@@ -24,7 +24,8 @@
       "binaryDir": "${sourceDir}/build/ci-release",
       "cacheVariables": {
         "BUILD_TESTING": "ON",
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "LOGLENS_WARNINGS_AS_ERRORS": "ON"
       }
     }
   ],
