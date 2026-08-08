@@ -28,7 +28,11 @@ jobs:
           languages: c-cpp
 
       - name: Configure
-        run: cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTING=ON
+        run: >-
+          cmake -S . -B build
+          -D CMAKE_BUILD_TYPE=Release
+          -D BUILD_TESTING=ON
+          -D LOGLENS_WARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build build --config Release
