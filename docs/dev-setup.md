@@ -34,6 +34,16 @@ cmake --build --preset ci-release
 ctest --preset ci-release
 ```
 
+Normal LogLens targets enable compiler warnings by default. GCC/Clang builds
+use `-Wall -Wextra -Wpedantic`; MSVC builds use `/W4`. Warnings are scoped to
+LogLens-owned targets rather than applied globally to a consumer's directory.
+
+Warnings-as-errors are disabled for ordinary local builds. CI enables
+`LOGLENS_WARNINGS_AS_ERRORS=ON`, which adds `-Werror` or `/WX` only to those
+LogLens-owned targets. A local toolchain can opt out of the warning flags with
+`-D LOGLENS_ENABLE_WARNINGS=OFF` when compiler or third-party integration
+differences require it.
+
 ## Manual Fallback
 
 If you do not want to use presets, or if your local CMake is 3.20 but not 3.21+, the equivalent manual flow is:
