@@ -1,0 +1,168 @@
+{
+  "format": "loglens.episode_baseline_expected.v1",
+  "fixture_id": "episode_semantics_v0.7.continuous_background_two_peaks",
+  "algorithm": {
+    "id": "v0.6.activity_segments_best_count_window",
+    "implementation": "src/detector.cpp",
+    "segment_boundary": "split when an adjacent event gap is greater than the rule window",
+    "selection_tie_break": "keep the first maximum encountered in chronological scan order"
+  },
+  "rule": {
+    "rule_id": "brute_force",
+    "grouping_key": "source_ip",
+    "subject": "203.0.113.77",
+    "threshold": 5,
+    "window_seconds": 600,
+    "window_boundary": "inclusive"
+  },
+  "derived_input": {
+    "event_count": 15,
+    "dense_peak_count": 2,
+    "activity_segment_count": 1,
+    "activity_segments": [
+      {
+        "segment_id": "segment:1",
+        "event_ids": [
+          "line:1",
+          "line:2",
+          "line:3",
+          "line:4",
+          "line:5",
+          "line:6",
+          "line:7",
+          "line:8",
+          "line:9",
+          "line:10",
+          "line:11",
+          "line:12",
+          "line:13",
+          "line:14",
+          "line:15"
+        ],
+        "first_seen": "2026-03-10T09:00:00Z",
+        "last_seen": "2026-03-10T09:58:00Z",
+        "max_adjacent_gap_seconds": 540,
+        "boundary_observation": "All adjacent gaps are at or below the inclusive 600-second window, so the bridge keeps both peaks in one segment."
+      }
+    ]
+  },
+  "candidate_windows": [
+    {
+      "candidate_id": "baseline:peak-a",
+      "threshold_crossing_event_id": "line:5",
+      "event_ids": [
+        "line:1",
+        "line:2",
+        "line:3",
+        "line:4",
+        "line:5"
+      ],
+      "first_seen": "2026-03-10T09:00:00Z",
+      "last_seen": "2026-03-10T09:02:00Z",
+      "event_count": 5,
+      "threshold_met": true,
+      "decision": "selected",
+      "decision_reason": "First maximum count in chronological scan order."
+    },
+    {
+      "candidate_id": "baseline:peak-b",
+      "threshold_crossing_event_id": "line:15",
+      "event_ids": [
+        "line:11",
+        "line:12",
+        "line:13",
+        "line:14",
+        "line:15"
+      ],
+      "first_seen": "2026-03-10T09:56:00Z",
+      "last_seen": "2026-03-10T09:58:00Z",
+      "event_count": 5,
+      "threshold_met": true,
+      "decision": "not_selected",
+      "decision_reason": "Equal score loses the stable first-maximum tie-break; the current implementation emits one best window per segment."
+    }
+  ],
+  "expected_output": {
+    "episode_count": 1,
+    "findings": [
+      {
+        "finding_id": "finding:brute_force:584fd14b544a7959",
+        "episode_index": 1,
+        "rule_id": "brute_force",
+        "subject_kind": "source_ip",
+        "subject": "203.0.113.77",
+        "grouping_key": "source_ip",
+        "threshold": 5,
+        "observed_count": 5,
+        "event_count": 5,
+        "window_start": "2026-03-10 09:00:00",
+        "window_end": "2026-03-10 09:02:00",
+        "evidence_event_ids": [
+          "line:1",
+          "line:2",
+          "line:3",
+          "line:4",
+          "line:5"
+        ],
+        "verdict_boundary": "triage_signal_not_compromise_or_attribution"
+      }
+    ],
+    "excluded_event_decisions": [
+      {
+        "event_id": "line:6",
+        "decision": "excluded",
+        "reason_code": "bridge_background_outside_selected_window"
+      },
+      {
+        "event_id": "line:7",
+        "decision": "excluded",
+        "reason_code": "bridge_background_outside_selected_window"
+      },
+      {
+        "event_id": "line:8",
+        "decision": "excluded",
+        "reason_code": "bridge_background_outside_selected_window"
+      },
+      {
+        "event_id": "line:9",
+        "decision": "excluded",
+        "reason_code": "bridge_background_outside_selected_window"
+      },
+      {
+        "event_id": "line:10",
+        "decision": "excluded",
+        "reason_code": "bridge_background_outside_selected_window"
+      },
+      {
+        "event_id": "line:11",
+        "decision": "excluded",
+        "reason_code": "equal_score_window_rejected_by_tie_break"
+      },
+      {
+        "event_id": "line:12",
+        "decision": "excluded",
+        "reason_code": "equal_score_window_rejected_by_tie_break"
+      },
+      {
+        "event_id": "line:13",
+        "decision": "excluded",
+        "reason_code": "equal_score_window_rejected_by_tie_break"
+      },
+      {
+        "event_id": "line:14",
+        "decision": "excluded",
+        "reason_code": "equal_score_window_rejected_by_tie_break"
+      },
+      {
+        "event_id": "line:15",
+        "decision": "excluded",
+        "reason_code": "equal_score_window_rejected_by_tie_break"
+      }
+    ]
+  },
+  "research_observation": {
+    "baseline_collapses_two_dense_peaks": true,
+    "candidate_should_make_separation_policy_explicit": true,
+    "not_a_v0.6_regression": true
+  }
+}

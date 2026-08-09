@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/stacknil/LogLens/blob/main/tests/fixtures/episode_semantics_v0.7/continuous_background_two_peaks/candidate-oracle.schema.json",
+  "title": "LogLens v0.7 episode candidate oracle",
+  "description": "A comparison-oriented result format for a future episode-segmentation candidate. It records candidate windows, selected episodes, event-level inclusion decisions, and the baseline comparison without changing the v0.6 report contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "fixture_id",
+    "algorithm",
+    "rule",
+    "segments",
+    "comparison"
+  ],
+  "properties": {
+    "format": {
+      "const": "loglens.episode_candidate_oracle.v1"
+    },
+    "fixture_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "algorithm": {
+      "$ref": "#/$defs/algorithm"
+    },
+    "rule": {
+      "$ref": "#/$defs/rule"
+    },
+    "segments": {
+      "type": "array",
+      "description": "Every baseline activity segment must be represented, including segments with no selected candidate.",
+      "items": {
+        "$ref": "#/$defs/segment"
+      }
+    },
+    "comparison": {
+      "$ref": "#/$defs/comparison"
+    }
+  },
+  "$defs": {
+    "algorithm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A reproducible version, commit SHA, or experiment identifier."
+        },
+        "status": {
+          "const": "candidate"
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "grouping_key",
+        "subject",
+        "threshold",
+        "window_seconds",
+        "window_boundary"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "grouping_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "threshold": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "window_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "window_boundary": {
+          "enum": ["inclusive", "exclusive"]
+        }
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "value"],
+      "properties": {
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "number"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    },
+    "candidate_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "event_ids",
+        "first_seen",
+        "last_seen",
+        "threshold_crossing_event_ids",
+        "score",
+        "decision"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "first_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "threshold_crossing_event_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "The event IDs at which this candidate first met the rule threshold. Empty means the candidate remained below threshold."
+        },
+        "overlap_event_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Optional shared evidence with another candidate; the oracle must state how it is resolved."
+        },
+        "score": {
+          "$ref": "#/$defs/score"
+        },
+        "decision": {
+          "$ref": "#/$defs/decision"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selected", "reason_code", "reason"],
+      "properties": {
+        "selected": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "enum": [
+            "selected",
+            "below_threshold",
+            "overlap_rejected",
+            "tie_break_rejected",
+            "background_excluded",
+            "not_selected"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "episode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "episode_index",
+        "finding_id",
+        "candidate_id",
+        "event_ids",
+        "first_seen",
+        "last_seen",
+        "inclusion_reason"
+      ],
+      "properties": {
+        "episode_index": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "finding_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The candidate's deterministic report identity when it is materialized."
+        },
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "first_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "inclusion_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "event_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "decision", "reason_code", "reason"],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "enum": ["included", "excluded"]
+        },
+        "reason_code": {
+          "enum": [
+            "selected_window",
+            "bridge_background",
+            "overlap_rejected",
+            "tie_break_rejected",
+            "below_threshold",
+            "not_selected"
+          ]
+        },
+        "candidate_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "segment_id",
+        "event_ids",
+        "first_seen",
+        "last_seen",
+        "candidate_windows",
+        "selected_episodes",
+        "event_decisions"
+      ],
+      "properties": {
+        "segment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "first_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "candidate_windows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/candidate_window"
+          }
+        },
+        "selected_episodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/episode"
+          }
+        },
+        "event_decisions": {
+          "type": "array",
+          "description": "Exactly one decision is required for every event ID in the segment; this cross-reference is checked by the fixture validator, not by JSON Schema alone.",
+          "items": {
+            "$ref": "#/$defs/event_decision"
+          }
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_reference",
+        "baseline_episode_count",
+        "candidate_episode_count",
+        "continuous_segment_split",
+        "notes"
+      ],
+      "properties": {
+        "baseline_reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseline_episode_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_episode_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "continuous_segment_split": {
+          "type": "boolean",
+          "description": "Whether the candidate separates dense peaks that the baseline kept in one activity segment."
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
