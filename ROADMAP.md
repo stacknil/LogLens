@@ -15,6 +15,14 @@ The current public review entry is intentionally small: trace one
 that unsupported auth evidence remains visible without becoming detector
 evidence.
 
+Pinned regression (issue #83): `assets/mixed_auth_corpus.log` line 11
+(`pam_unix(sshd:session): session closed for user user001`) is confirmed as
+parser telemetry only — `unsupported_pam_variant` /
+`unrecognized auth pattern: pam_unix_session_closed` in
+`assets/mixed_auth_parser_coverage.json`, with no parsed event and no detector
+finding. Covered by
+`test_mixed_auth_first_pam_unix_session_closed_is_unsupported_telemetry`.
+
 ## Parked Directions
 
 - Add parser coverage only when a sanitized fixture line and deterministic

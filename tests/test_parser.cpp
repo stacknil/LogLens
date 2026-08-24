@@ -1,3 +1,4 @@
+#include "detector.hpp"
 #include "parser.hpp"
 
 #include <algorithm>
@@ -1317,6 +1318,73 @@ void test_mixed_auth_corpus_fixture_file() {
     expect(actual == expected, "expected mixed auth parser coverage artifact to match fixture");
 }
 
+// Review pin for #83: the first pam_unix(sshd:session) session-close sample in
+// assets/mixed_auth_corpus.log (line 11) must stay parser telemetry only.
+//
+// Fixture line under review:
+//   Mar 12 08:00:41 ubuntu-auth-01 pam_unix(sshd:session): session closed for user user001
+//
+// Coverage artifact (assets/mixed_auth_parser_coverage.json) expects:
+//   category = unsupported_pam_variant
+//   reason   = unrecognized auth pattern: pam_unix_session_closed
+// and the line must not become a parsed event or detector finding.
+void test_mixed_auth_first_pam_unix_session_closed_is_unsupported_telemetry() {
+    constexpr std::string_view kFixtureLine =
+        "Mar 12 08:00:41 ubuntu-auth-01 pam_unix(sshd:session): session closed for user user001";
+    constexpr std::size_t kFixtureLineNumber = 11;
+    constexpr std::string_view kExpectedCategory = "unsupported_pam_variant";
+    constexpr std::string_view kExpectedReason =
+        "unrecognized auth pattern: pam_unix_session_closed";
+
+    const auto corpus = read_text_file(asset_path("mixed_auth_corpus.log"));
+    std::istringstream corpus_stream(corpus);
+    std::string line;
+    std::size_t line_number = 0;
+    bool found_fixture_line = false;
+    while (std::getline(corpus_stream, line)) {
+        ++line_number;
+        if (line_number == kFixtureLineNumber) {
+            expect(line == kFixtureLine,
+                   "expected mixed_auth_corpus.log line 11 to be the pam_unix_session_closed sample");
+            found_fixture_line = true;
+            break;
+        }
+    }
+    expect(found_fixture_line, "expected mixed_auth_corpus.log to contain line 11");
+
+    const auto parser = make_syslog_parser();
+    std::istringstream input{std::string(kFixtureLine) + "\n"};
+    const auto single = parser.parse_stream(input);
+    expect(single.events.empty(),
+           "expected pam_unix_session_closed sample to produce no parsed events");
+    expect(single.warnings.size() == 1,
+           "expected pam_unix_session_closed sample to produce exactly one warning");
+    expect(loglens::to_string(single.warnings[0].category) == kExpectedCategory,
+           "expected warning category unsupported_pam_variant");
+    expect(single.warnings[0].reason == kExpectedReason,
+           "expected warning reason unrecognized auth pattern: pam_unix_session_closed");
+    expect(unknown_pattern_count(single.quality, "pam_unix_session_closed") == 1,
+           "expected pam_unix_session_closed unknown-pattern telemetry");
+
+    const auto full = parser.parse_file(asset_path("mixed_auth_corpus.log"));
+    const auto warning_it = std::find_if(
+        full.warnings.begin(), full.warnings.end(),
+        [kFixtureLineNumber](const loglens::ParseWarning& warning) {
+            return warning.line_number == kFixtureLineNumber;
+        });
+    expect(warning_it != full.warnings.end(),
+           "expected mixed_auth coverage to include a warning for corpus line 11");
+    expect(loglens::to_string(warning_it->category) == kExpectedCategory,
+           "expected corpus line 11 category to match mixed_auth_parser_coverage.json");
+    expect(warning_it->reason == kExpectedReason,
+           "expected corpus line 11 reason to match mixed_auth_parser_coverage.json");
+
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(single.events);
+    expect(findings.empty(),
+           "expected pam_unix_session_closed telemetry not to change detector findings");
+}
+
 void test_login_handler_normalizes_selected_util_linux_messages() {
     struct LoginCase {
         std::string message;
@@ -1510,6 +1578,7 @@ int main() {
     test_journalctl_fixture_matrix_file();
     test_noisy_auth_fixture_matrix_file();
     test_mixed_auth_corpus_fixture_file();
+    test_mixed_auth_first_pam_unix_session_closed_is_unsupported_telemetry();
     test_login_handler_normalizes_selected_util_linux_messages();
     test_login_handler_keeps_unsupported_message_visible();
     test_journalctl_login_handler_variants();
