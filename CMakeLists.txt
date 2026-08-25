@@ -113,6 +113,25 @@ if(BUILD_TESTING)
             $<TARGET_FILE:loglens>
             ${CMAKE_CURRENT_BINARY_DIR}/report_contract_output
     )
+
+    find_package(Python3 3.9 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(
+            NAME episode_candidate_research
+            COMMAND
+                ${Python3_EXECUTABLE}
+                -B
+                -m
+                unittest
+                discover
+                -s
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests
+                -p
+                test_episode_candidate*.py
+        )
+    else()
+        message(STATUS "Python 3.9+ not found; skipping research fixture tests")
+    endif()
 endif()
 
 if(LOGLENS_BUILD_FUZZERS)
