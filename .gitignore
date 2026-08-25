@@ -4,5 +4,7 @@ out/
 report.md
 report.json
 *.exe
+__pycache__/
+*.py[cod]
 !tests/fixtures/report_contracts/**/report.md
 !tests/fixtures/report_contracts/**/report.json
