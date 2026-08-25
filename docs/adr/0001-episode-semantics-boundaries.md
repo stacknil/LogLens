@@ -110,10 +110,27 @@ rejects more than 200 fixture events or 1,000 candidates per segment. These
 limits make research execution bounded; they do not make the algorithm suitable
 for `Detector::analyze()`.
 
-A separate oracle slice must bind this core to the committed baseline, validate
-all candidate-to-episode evidence references, and record the measured fixture
-outcome before the hypothesis is accepted. The runtime and `loglens.report.v3`
-remain unchanged.
+The oracle slice binds the evaluator to the committed baseline and fails closed
+when fixture identity, rule configuration, inclusive boundary semantics, or the
+ordered activity-segment partition differs. It also requires candidate,
+episode, and event-decision references to agree before materializing output.
+
+On `continuous_background_two_peaks`, the v0.6 baseline emits one episode. The
+candidate emits two: `line:1` through `line:5` and `line:11` through `line:15`.
+It covers ten dense-peak events exactly once, excludes the five bridge events,
+and materializes these deterministic IDs:
+
+- `finding:brute_force:584fd14b544a7959`
+- `finding:brute_force:a885dcb623777120`
+
+Reversing the fixture input produces the same ordered oracle. Boundary tests
+also retain one episode at an exact 600-second cooldown gap and permit two at
+601 seconds.
+
+This accepts the hypothesis for the bounded fixture only. Isolated bursts,
+maximal-window ties, shared evidence, background calibration, and a production
+complexity design still require independent evidence. `Detector::analyze()` and
+`loglens.report.v3` remain unchanged.
 
 ## Alternatives considered
 
@@ -148,3 +165,6 @@ remain unchanged.
 - [`Detector tests`](../../tests/test_detector.cpp)
 - [`Candidate selection core`](../../scripts/episode_candidate_core.py)
 - [`Candidate core tests`](../../tests/test_episode_candidate_core.py)
+- [`Candidate evaluator`](../../scripts/evaluate_episode_candidate.py)
+- [`Candidate regression tests`](../../tests/test_episode_candidate.py)
+- [`Candidate oracle`](../../tests/fixtures/episode_semantics_v0.7/continuous_background_two_peaks/candidate.window-separated-v1.expected.json)
