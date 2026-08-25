@@ -85,6 +85,36 @@ candidate windows, selected windows, episode indexes, and the reason an event
 was included or excluded. The fixture must not claim compromise, intent,
 attribution, or an incident boundary.
 
+## Candidate experiment: window-separated weighted intervals
+
+The 2026-08-25 experiment tests one narrow hypothesis: after v0.6 activity
+segmentation, a deterministic global selection over dense windows can recover
+both peaks in the continuous-background fixture without reusing event evidence.
+It does not select the v0.7 production algorithm.
+
+The research evaluator enumerates every contiguous window that meets the
+threshold inside the inclusive rule window. It then selects a compatible set
+with these ordered objectives:
+
+1. A later selected window must start strictly more than one rule window after
+   the previous selected window ends. An exact-boundary gap remains one cooldown
+   episode.
+2. Maximize the total number of covered events.
+3. Minimize total selected-window span, then episode count.
+4. Resolve a remaining tie by the chronological window key.
+
+This first slice adds only the bounded selection core and boundary tests.
+Exhaustive window materialization copies many event-ID sequences, and selection
+scans candidate predecessors. Worst-case cost is super-quadratic, so the core
+rejects more than 200 fixture events or 1,000 candidates per segment. These
+limits make research execution bounded; they do not make the algorithm suitable
+for `Detector::analyze()`.
+
+A separate oracle slice must bind this core to the committed baseline, validate
+all candidate-to-episode evidence references, and record the measured fixture
+outcome before the hypothesis is accepted. The runtime and `loglens.report.v3`
+remain unchanged.
+
 ## Alternatives considered
 
 - **Keep adjacent-gap segmentation as the final model** - simple and
@@ -116,3 +146,5 @@ attribution, or an incident boundary.
 - [`v0.6 Episode Policy`](../release-v0.6.0.md#episode-policy)
 - [`Detector implementation`](../../src/detector.cpp)
 - [`Detector tests`](../../tests/test_detector.cpp)
+- [`Candidate selection core`](../../scripts/episode_candidate_core.py)
+- [`Candidate core tests`](../../tests/test_episode_candidate_core.py)
