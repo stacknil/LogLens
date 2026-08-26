@@ -2,6 +2,7 @@ import copy
 import json
 import sys
 import unittest
+from datetime import timedelta, timezone
 from pathlib import Path
 
 
@@ -12,6 +13,7 @@ from scripts.evaluate_episode_candidate import (  # noqa: E402
     evaluate_fixture,
     validate_oracle,
 )
+from scripts.episode_candidate_core import parse_timestamp  # noqa: E402
 
 
 FIXTURE_ROOT = (
@@ -75,7 +77,7 @@ class ContinuousBackgroundFixtureTests(unittest.TestCase):
             )
         )
 
-        validate_oracle(self.fixture, oracle)
+        validate_oracle(self.fixture, self.baseline, oracle)
         self.assertEqual(oracle, expected)
 
     def test_validator_rejects_duplicate_event_decisions(self) -> None:
@@ -85,8 +87,40 @@ class ContinuousBackgroundFixtureTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(ValueError, "exactly one event decision"):
-            validate_oracle(self.fixture, oracle)
+            validate_oracle(self.fixture, self.baseline, oracle)
 
+    def test_validator_rejects_fixture_inconsistent_derived_fields(self) -> None:
+        mutations = {
+            "segment identity": lambda oracle: oracle["segments"][0].__setitem__(
+                "segment_id", "segment:tampered"
+            ),
+            "candidate score": lambda oracle: oracle["segments"][0][
+                "candidate_windows"
+            ][0]["score"]["details"].__setitem__("span_seconds", 999),
+            "comparison": lambda oracle: oracle["comparison"].__setitem__(
+                "continuous_segment_split", False
+            ),
+        }
+
+        for label, mutate in mutations.items():
+            with self.subTest(label=label):
+                oracle = evaluate_fixture(self.fixture, self.baseline)
+                mutate(oracle)
+                with self.assertRaisesRegex(ValueError, "canonical fixture derivation"):
+                    validate_oracle(self.fixture, self.baseline, oracle)
+
+    def test_equivalent_timezone_offsets_produce_the_same_oracle(self) -> None:
+        offset_fixture = copy.deepcopy(self.fixture)
+        offset = timezone(timedelta(hours=1))
+        for event in offset_fixture["events"]:
+            event["timestamp"] = parse_timestamp(event["timestamp"]).astimezone(
+                offset
+            ).isoformat()
+
+        self.assertEqual(
+            evaluate_fixture(offset_fixture, self.baseline),
+            evaluate_fixture(self.fixture, self.baseline),
+        )
 
 if __name__ == "__main__":
     unittest.main()
