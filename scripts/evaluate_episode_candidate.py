@@ -8,82 +8,66 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Iterable, Sequence
 
 if __package__:
+    from .episode_baseline_contract import (
+        canonical_oracle_timestamp,
+        finding_id,
+        rule_projection,
+        validate_fixture_baseline,
+    )
     from .episode_candidate_core import (
         CandidateWindow,
-        activity_segments,
         enumerate_candidate_windows,
         ordered_events,
         parse_timestamp,
         select_window_separated_candidates,
     )
 else:
+    from episode_baseline_contract import (
+        canonical_oracle_timestamp,
+        finding_id,
+        rule_projection,
+        validate_fixture_baseline,
+    )
     from episode_candidate_core import (
         CandidateWindow,
-        activity_segments,
         enumerate_candidate_windows,
         ordered_events,
         parse_timestamp,
         select_window_separated_candidates,
     )
 
-RULE_FIELDS = (
-    "rule_id",
-    "grouping_key",
-    "subject",
-    "threshold",
-    "window_seconds",
-    "window_boundary",
-)
-
-
-def _hash_append(value: int, text: str) -> int:
-    for byte in text.encode("utf-8"):
-        value ^= byte
-        value = (value * 1099511628211) & ((1 << 64) - 1)
-    value ^= 0xFF
-    return (value * 1099511628211) & ((1 << 64) - 1)
-
-
-def _finding_id(rule: dict[str, Any], candidate: CandidateWindow) -> str:
-    value = 14695981039346656037
-    fields = [
-        str(rule["rule_id"]),
-        str(rule["grouping_key"]),
-        str(rule["subject"]),
-        candidate.first_seen.strftime("%Y-%m-%d %H:%M:%S"),
-        candidate.last_seen.strftime("%Y-%m-%d %H:%M:%S"),
-        str(rule["threshold"]),
-        str(candidate.event_count),
-        str(candidate.event_count),
-        *candidate.event_ids,
-    ]
-    for field in fields:
-        value = _hash_append(value, field)
-    return f"finding:{rule['rule_id']}:{value:016x}"
+def _candidate_membership_index(
+    records: Iterable[tuple[str, Sequence[str]]],
+) -> dict[str, tuple[str, ...]]:
+    memberships: dict[str, list[str]] = {}
+    for candidate_id, event_ids in records:
+        for event_id in event_ids:
+            memberships.setdefault(str(event_id), []).append(str(candidate_id))
+    return {
+        event_id: tuple(sorted(candidate_ids))
+        for event_id, candidate_ids in memberships.items()
+    }
 
 
 def _candidate_json(
     candidate: CandidateWindow,
-    candidates: Sequence[CandidateWindow],
+    memberships: dict[str, tuple[str, ...]],
     selected_ids: set[str],
 ) -> dict[str, Any]:
     overlaps = sorted(
-        {
-            event_id
-            for other in candidates
-            if other.candidate_id != candidate.candidate_id
-            for event_id in set(candidate.event_ids).intersection(other.event_ids)
-        }
+        event_id
+        for event_id in candidate.event_ids
+        if len(memberships.get(event_id, ())) > 1
     )
     selected = candidate.candidate_id in selected_ids
     return {
         "candidate_id": candidate.candidate_id,
         "event_ids": list(candidate.event_ids),
-        "first_seen": candidate.first_seen.isoformat().replace("+00:00", "Z"),
-        "last_seen": candidate.last_seen.isoformat().replace("+00:00", "Z"),
+        "first_seen": canonical_oracle_timestamp(candidate.first_seen),
+        "last_seen": canonical_oracle_timestamp(candidate.last_seen),
         "threshold_crossing_event_ids": [candidate.threshold_crossing_event_id],
         "overlap_event_ids": overlaps,
         "score": {
@@ -106,66 +90,24 @@ def _candidate_json(
     }
 
 
-def _rule_projection(rule: dict[str, Any]) -> dict[str, Any]:
-    return {key: rule[key] for key in RULE_FIELDS}
-
-
-def _validate_input_pair(
-    fixture: dict[str, Any],
-    baseline: dict[str, Any],
-    activity_segments: Sequence[Sequence[dict[str, Any]]],
-) -> int:
-    if fixture.get("format") != "loglens.episode_research_fixture.v1":
-        raise ValueError("unsupported research fixture format")
-    if baseline.get("format") != "loglens.episode_baseline_expected.v1":
-        raise ValueError("unsupported baseline format")
-    if baseline.get("fixture_id") != fixture.get("fixture_id"):
-        raise ValueError("baseline fixture_id does not match the research fixture")
-
-    rule = fixture["rule"]
-    if rule.get("window_boundary") != "inclusive":
-        raise ValueError(
-            "candidate algorithm v1 supports only inclusive window boundaries"
-        )
-    if _rule_projection(baseline["rule"]) != _rule_projection(rule):
-        raise ValueError("baseline rule does not match the research fixture")
-
-    baseline_segments = baseline["derived_input"]["activity_segments"]
-    if len(baseline_segments) != len(activity_segments):
-        raise ValueError("baseline activity segment count does not match derived input")
-    for index, (events, expected) in enumerate(
-        zip(activity_segments, baseline_segments), start=1
-    ):
-        event_ids = [str(event["event_id"]) for event in events]
-        if (
-            expected.get("segment_id") != f"segment:{index}"
-            or expected.get("event_ids") != event_ids
-        ):
-            raise ValueError(
-                f"derived segment segment:{index} does not match baseline.expected.json"
-            )
-    episode_count = int(baseline["expected_output"]["episode_count"])
-    if episode_count != len(baseline["expected_output"]["findings"]):
-        raise ValueError("baseline episode count does not match its findings")
-    return episode_count
-
-
-def evaluate_fixture(
-    fixture: dict[str, Any],
-    baseline: dict[str, Any],
-    baseline_reference: str = "baseline.expected.json",
-) -> dict[str, Any]:
-    rule = fixture["rule"]
-    window_seconds = int(rule["window_seconds"])
-    threshold = int(rule["threshold"])
+def _validate_baseline_reference(baseline_reference: str) -> None:
     if (
         not baseline_reference
         or "/" in baseline_reference
         or "\\" in baseline_reference
     ):
         raise ValueError("baseline_reference must be a privacy-safe file name")
-    segments = activity_segments(fixture["events"], window_seconds)
-    baseline_episode_count = _validate_input_pair(fixture, baseline, segments)
+
+
+def _build_oracle(
+    fixture: dict[str, Any],
+    segments: Sequence[Sequence[dict[str, Any]]],
+    baseline_episode_count: int,
+    baseline_reference: str,
+) -> dict[str, Any]:
+    rule = fixture["rule"]
+    window_seconds = int(rule["window_seconds"])
+    threshold = int(rule["threshold"])
     output_segments: list[dict[str, Any]] = []
     episode_index = 0
 
@@ -175,6 +117,9 @@ def evaluate_fixture(
         candidates = enumerate_candidate_windows(events, threshold, window_seconds)
         selected = select_window_separated_candidates(candidates, window_seconds)
         selected_ids = {candidate.candidate_id for candidate in selected}
+        memberships = _candidate_membership_index(
+            (candidate.candidate_id, candidate.event_ids) for candidate in candidates
+        )
         selected_event_ids = {
             event_id for candidate in selected for event_id in candidate.event_ids
         }
@@ -184,24 +129,18 @@ def evaluate_fixture(
             episodes.append(
                 {
                     "episode_index": episode_index,
-                    "finding_id": _finding_id(rule, candidate),
+                    "finding_id": finding_id(rule, candidate),
                     "candidate_id": candidate.candidate_id,
                     "event_ids": list(candidate.event_ids),
-                    "first_seen": candidate.first_seen.isoformat().replace(
-                        "+00:00", "Z"
-                    ),
-                    "last_seen": candidate.last_seen.isoformat().replace("+00:00", "Z"),
+                    "first_seen": canonical_oracle_timestamp(candidate.first_seen),
+                    "last_seen": canonical_oracle_timestamp(candidate.last_seen),
                     "inclusion_reason": "Window is part of the optimal window-separated evidence set.",
                 }
             )
         event_decisions = []
         for event in events:
             event_id = str(event["event_id"])
-            containing = sorted(
-                candidate.candidate_id
-                for candidate in candidates
-                if event_id in candidate.event_ids
-            )
+            containing = list(memberships.get(event_id, ()))
             included = event_id in selected_event_ids
             event_decisions.append(
                 {
@@ -226,10 +165,14 @@ def evaluate_fixture(
             {
                 "segment_id": segment_id,
                 "event_ids": event_ids,
-                "first_seen": str(events[0]["timestamp"]),
-                "last_seen": str(events[-1]["timestamp"]),
+                "first_seen": canonical_oracle_timestamp(
+                    parse_timestamp(str(events[0]["timestamp"]))
+                ),
+                "last_seen": canonical_oracle_timestamp(
+                    parse_timestamp(str(events[-1]["timestamp"]))
+                ),
                 "candidate_windows": [
-                    _candidate_json(candidate, candidates, selected_ids)
+                    _candidate_json(candidate, memberships, selected_ids)
                     for candidate in candidates
                 ],
                 "selected_episodes": episodes,
@@ -245,7 +188,7 @@ def evaluate_fixture(
             "version": "1",
             "status": "candidate",
         },
-        "rule": _rule_projection(rule),
+        "rule": rule_projection(rule),
         "segments": output_segments,
         "comparison": {
             "baseline_reference": baseline_reference,
@@ -260,14 +203,29 @@ def evaluate_fixture(
             ],
         },
     }
-    validate_oracle(fixture, oracle)
     return oracle
 
 
-def validate_oracle(fixture: dict[str, Any], oracle: dict[str, Any]) -> None:
+def evaluate_fixture(
+    fixture: dict[str, Any],
+    baseline: dict[str, Any],
+    baseline_reference: str = "baseline.expected.json",
+) -> dict[str, Any]:
+    _validate_baseline_reference(baseline_reference)
+    context = validate_fixture_baseline(fixture, baseline)
+    oracle = _build_oracle(
+        fixture, context.segments, context.episode_count, baseline_reference
+    )
+    _validate_oracle_cross_references(fixture, oracle)
+    return oracle
+
+
+def _validate_oracle_cross_references(
+    fixture: dict[str, Any], oracle: dict[str, Any]
+) -> None:
     if oracle.get("fixture_id") != fixture.get("fixture_id"):
         raise ValueError("oracle fixture_id must match the research fixture")
-    if oracle.get("rule") != _rule_projection(fixture["rule"]):
+    if oracle.get("rule") != rule_projection(fixture["rule"]):
         raise ValueError("oracle rule must match the research fixture")
 
     fixture_ids = [
@@ -291,6 +249,15 @@ def validate_oracle(fixture: dict[str, Any], oracle: dict[str, Any]) -> None:
         candidates = {
             candidate["candidate_id"]: candidate for candidate in candidate_records
         }
+        for candidate in candidate_records:
+            if not set(candidate["event_ids"]).issubset(events):
+                raise ValueError(
+                    "candidate evidence must stay inside its baseline segment"
+                )
+        memberships = _candidate_membership_index(
+            (candidate_id, candidate["event_ids"])
+            for candidate_id, candidate in candidates.items()
+        )
         selected_candidate_ids = {
             candidate_id
             for candidate_id, candidate in candidates.items()
@@ -319,7 +286,7 @@ def validate_oracle(fixture: dict[str, Any], oracle: dict[str, Any]) -> None:
                 last_seen=parse_timestamp(candidate["last_seen"]),
                 threshold_crossing_event_id="",
             )
-            if episode["finding_id"] != _finding_id(fixture["rule"], materialized):
+            if episode["finding_id"] != finding_id(fixture["rule"], materialized):
                 raise ValueError(
                     "selected episode finding_id must match its candidate evidence"
                 )
@@ -351,19 +318,10 @@ def validate_oracle(fixture: dict[str, Any], oracle: dict[str, Any]) -> None:
                 "included event decisions must equal selected episode evidence"
             )
         for decision in segment["event_decisions"]:
-            expected_candidates = sorted(
-                candidate_id
-                for candidate_id, candidate in candidates.items()
-                if decision["event_id"] in candidate["event_ids"]
-            )
+            expected_candidates = list(memberships.get(decision["event_id"], ()))
             if decision.get("candidate_ids", []) != expected_candidates:
                 raise ValueError(
                     "event decision candidate_ids must match candidate evidence"
-                )
-        for candidate in candidate_records:
-            if not set(candidate["event_ids"]).issubset(events):
-                raise ValueError(
-                    "candidate evidence must stay inside its baseline segment"
                 )
     if segment_ids != fixture_ids or len(segment_ids) != len(set(segment_ids)):
         raise ValueError("oracle segments must partition fixture events exactly once")
@@ -371,6 +329,22 @@ def validate_oracle(fixture: dict[str, Any], oracle: dict[str, Any]) -> None:
         raise ValueError("episode indexes must be chronological and contiguous")
     if oracle["comparison"]["candidate_episode_count"] != selected_count:
         raise ValueError("comparison candidate count must match selected episodes")
+
+
+def validate_oracle(
+    fixture: dict[str, Any],
+    baseline: dict[str, Any],
+    oracle: dict[str, Any],
+    baseline_reference: str = "baseline.expected.json",
+) -> None:
+    _validate_baseline_reference(baseline_reference)
+    context = validate_fixture_baseline(fixture, baseline)
+    _validate_oracle_cross_references(fixture, oracle)
+    expected = _build_oracle(
+        fixture, context.segments, context.episode_count, baseline_reference
+    )
+    if oracle != expected:
+        raise ValueError("oracle does not match the canonical fixture derivation")
 
 
 def _load(path: Path) -> dict[str, Any]:
