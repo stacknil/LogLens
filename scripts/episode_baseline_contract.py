@@ -94,18 +94,28 @@ def _validate_fixture(fixture: dict[str, Any]) -> None:
     if fixture.get("format") != "loglens.episode_research_fixture.v1":
         raise ValueError("unsupported research fixture format")
     rule = fixture["rule"]
+    subject = rule.get("subject")
+    threshold = rule.get("threshold")
+    window_seconds = rule.get("window_seconds")
+    terminal_failure = rule.get("counts_as_terminal_auth_failure")
+    if (
+        type(subject) is not str
+        or type(threshold) is not int
+        or type(window_seconds) is not int
+        or type(terminal_failure) is not bool
+    ):
+        raise ValueError("candidate v1 rule requires canonical scalar types")
     if any(rule.get(field) != value for field, value in SUPPORTED_RULE.items()):
         raise ValueError(
             "candidate v1 supports only brute_force source_ip terminal-failure rules"
         )
-    subject = str(rule.get("subject", ""))
     if not subject:
         raise ValueError("candidate v1 requires a non-empty source_ip subject")
-    if int(rule.get("threshold", 0)) < 1 or int(rule.get("window_seconds", 0)) < 1:
+    if threshold < 1 or window_seconds < 1:
         raise ValueError("candidate v1 threshold and window_seconds must be positive")
     if any(
         event.get("event_type") != SUPPORTED_RULE["signal_kind"]
-        or str(event.get("source_ip", "")) != subject
+        or event.get("source_ip") != subject
         for event in fixture["events"]
     ):
         raise ValueError(
