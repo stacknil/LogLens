@@ -110,6 +110,15 @@ rejects more than 200 fixture events or 1,000 candidates per segment. These
 limits make research execution bounded; they do not make the algorithm suitable
 for `Detector::analyze()`.
 
+A fail-closed baseline contract is a separate prerequisite for oracle
+materialization. Candidate v1 accepts only the `brute_force` / `source_ip` /
+inclusive-window fixture contract, replays the v0.6 best-count selection, and
+requires the declared segments, selected window, finding identity, and excluded
+event partition to match that replay. Timestamp comparison uses instants and
+finding identity uses canonical UTC, so equivalent offsets cannot create a new
+episode identity. Unsupported rules or semantically stale baselines are rejected
+before candidate selection.
+
 A separate oracle slice must bind this core to the committed baseline, validate
 all candidate-to-episode evidence references, and record the measured fixture
 outcome before the hypothesis is accepted. The runtime and `loglens.report.v3`
@@ -148,3 +157,5 @@ remain unchanged.
 - [`Detector tests`](../../tests/test_detector.cpp)
 - [`Candidate selection core`](../../scripts/episode_candidate_core.py)
 - [`Candidate core tests`](../../tests/test_episode_candidate_core.py)
+- [`Baseline contract`](../../scripts/episode_baseline_contract.py)
+- [`Baseline contract tests`](../../tests/test_episode_candidate_baseline_contract.py)
