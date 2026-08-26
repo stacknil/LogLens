@@ -65,26 +65,26 @@ class CandidateOracleValidationTests(unittest.TestCase):
         oracle["segments"][0]["selected_episodes"][0]["event_ids"].pop()
 
         with self.assertRaisesRegex(ValueError, "episode evidence"):
-            validate_oracle(self.fixture, oracle)
+            validate_oracle(self.fixture, self.baseline, oracle)
 
     def test_validator_rejects_selected_candidate_without_episode(self) -> None:
         oracle = evaluate_fixture(self.fixture, self.baseline)
         oracle["segments"][0]["selected_episodes"].pop()
 
         with self.assertRaisesRegex(ValueError, "selected candidates"):
-            validate_oracle(self.fixture, oracle)
+            validate_oracle(self.fixture, self.baseline, oracle)
 
     def test_validator_rejects_event_candidate_reference_drift(self) -> None:
         oracle = evaluate_fixture(self.fixture, self.baseline)
         oracle["segments"][0]["event_decisions"][0]["candidate_ids"] = []
 
         with self.assertRaisesRegex(ValueError, "candidate_ids"):
-            validate_oracle(self.fixture, oracle)
+            validate_oracle(self.fixture, self.baseline, oracle)
 
     def test_input_pair_fails_closed_on_boundary_or_baseline_drift(self) -> None:
         exclusive = copy.deepcopy(self.fixture)
         exclusive["rule"]["window_boundary"] = "exclusive"
-        with self.assertRaisesRegex(ValueError, "only inclusive"):
+        with self.assertRaisesRegex(ValueError, "candidate v1 supports only"):
             evaluate_fixture(exclusive, self.baseline)
 
         stale_baseline = copy.deepcopy(self.baseline)
