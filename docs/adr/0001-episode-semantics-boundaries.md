@@ -116,8 +116,10 @@ inclusive-window fixture contract, replays the v0.6 best-count selection, and
 requires the declared segments, selected window, finding identity, and excluded
 event partition to match that replay. Timestamp comparison uses instants and
 finding identity uses canonical UTC, so equivalent offsets cannot create a new
-episode identity. Unsupported rules or semantically stale baselines are rejected
-before candidate selection.
+episode identity. Rule scalars are type-strict: the subject is a string, threshold
+and window_seconds are integers, and the terminal-failure flag is a Boolean.
+Coercible strings and numeric Boolean equivalents fail closed. Unsupported rules
+or semantically stale baselines are rejected before candidate selection.
 
 A separate oracle slice must bind this core to the committed baseline, validate
 all candidate-to-episode evidence references, and record the measured fixture
