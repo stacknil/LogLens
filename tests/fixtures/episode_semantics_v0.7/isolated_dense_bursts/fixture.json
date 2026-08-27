@@ -1,0 +1,100 @@
+{
+  "format": "loglens.episode_research_fixture.v1",
+  "fixture_id": "episode_semantics_v0.7.isolated_dense_bursts",
+  "fixture_kind": "normalized_detector_signals",
+  "status": "research_only",
+  "purpose": "Verify that candidate v1 preserves v0.6 episodes when two dense bursts are already separated by more than one rule window.",
+  "safety_boundary": "Synthetic triage signals do not assert compromise, intent, attribution, authorization, or an incident boundary.",
+  "rule": {
+    "rule_id": "brute_force",
+    "grouping_key": "source_ip",
+    "subject": "203.0.113.78",
+    "threshold": 5,
+    "window_seconds": 600,
+    "window_boundary": "inclusive",
+    "signal_kind": "ssh_failed_password",
+    "counts_as_terminal_auth_failure": true
+  },
+  "events": [
+    {
+      "event_id": "line:1",
+      "line_number": 1,
+      "timestamp": "2026-03-11T09:00:00Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_a"
+    },
+    {
+      "event_id": "line:2",
+      "line_number": 2,
+      "timestamp": "2026-03-11T09:00:30Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_a"
+    },
+    {
+      "event_id": "line:3",
+      "line_number": 3,
+      "timestamp": "2026-03-11T09:01:00Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_a"
+    },
+    {
+      "event_id": "line:4",
+      "line_number": 4,
+      "timestamp": "2026-03-11T09:01:30Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_a"
+    },
+    {
+      "event_id": "line:5",
+      "line_number": 5,
+      "timestamp": "2026-03-11T09:02:00Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_a"
+    },
+    {
+      "event_id": "line:6",
+      "line_number": 6,
+      "timestamp": "2026-03-11T09:20:00Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_b"
+    },
+    {
+      "event_id": "line:7",
+      "line_number": 7,
+      "timestamp": "2026-03-11T09:20:30Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_b"
+    },
+    {
+      "event_id": "line:8",
+      "line_number": 8,
+      "timestamp": "2026-03-11T09:21:00Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_b"
+    },
+    {
+      "event_id": "line:9",
+      "line_number": 9,
+      "timestamp": "2026-03-11T09:21:30Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_b"
+    },
+    {
+      "event_id": "line:10",
+      "line_number": 10,
+      "timestamp": "2026-03-11T09:22:00Z",
+      "event_type": "ssh_failed_password",
+      "source_ip": "203.0.113.78",
+      "role": "isolated_burst_b"
+    }
+  ]
+}

@@ -23,6 +23,13 @@ FIXTURE_ROOT = (
     / "episode_semantics_v0.7"
     / "continuous_background_two_peaks"
 )
+ISOLATED_FIXTURE_ROOT = (
+    REPO_ROOT
+    / "tests"
+    / "fixtures"
+    / "episode_semantics_v0.7"
+    / "isolated_dense_bursts"
+)
 
 
 class ContinuousBackgroundFixtureTests(unittest.TestCase):
@@ -121,6 +128,74 @@ class ContinuousBackgroundFixtureTests(unittest.TestCase):
             evaluate_fixture(offset_fixture, self.baseline),
             evaluate_fixture(self.fixture, self.baseline),
         )
+
+
+class IsolatedDenseBurstsFixtureTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.fixture = json.loads(
+            (ISOLATED_FIXTURE_ROOT / "fixture.json").read_text(encoding="utf-8")
+        )
+        self.baseline = json.loads(
+            (ISOLATED_FIXTURE_ROOT / "baseline.expected.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+    def test_candidate_preserves_already_separated_baseline(self) -> None:
+        oracle = evaluate_fixture(self.fixture, self.baseline)
+        baseline_finding_ids = [
+            finding["finding_id"]
+            for finding in self.baseline["expected_output"]["findings"]
+        ]
+        candidate_finding_ids = [
+            episode["finding_id"]
+            for segment in oracle["segments"]
+            for episode in segment["selected_episodes"]
+        ]
+        included_event_ids = [
+            decision["event_id"]
+            for segment in oracle["segments"]
+            for decision in segment["event_decisions"]
+            if decision["decision"] == "included"
+        ]
+
+        self.assertEqual(oracle["comparison"]["baseline_episode_count"], 2)
+        self.assertEqual(oracle["comparison"]["candidate_episode_count"], 2)
+        self.assertFalse(oracle["comparison"]["continuous_segment_split"])
+        self.assertEqual(candidate_finding_ids, baseline_finding_ids)
+        self.assertEqual(included_event_ids, [f"line:{i}" for i in range(1, 11)])
+        self.assertEqual(len(included_event_ids), len(set(included_event_ids)))
+
+    def test_input_representation_does_not_change_control_oracle(self) -> None:
+        expected = evaluate_fixture(self.fixture, self.baseline)
+        variants = {
+            "reversed": copy.deepcopy(self.fixture),
+            "equivalent timezone": copy.deepcopy(self.fixture),
+        }
+        variants["reversed"]["events"].reverse()
+        offset = timezone(timedelta(hours=-5))
+        for event in variants["equivalent timezone"]["events"]:
+            event["timestamp"] = parse_timestamp(event["timestamp"]).astimezone(
+                offset
+            ).isoformat()
+
+        for label, fixture in variants.items():
+            with self.subTest(label=label):
+                self.assertEqual(evaluate_fixture(fixture, self.baseline), expected)
+
+    def test_generated_oracle_matches_committed_control_and_cross_references(
+        self,
+    ) -> None:
+        oracle = evaluate_fixture(self.fixture, self.baseline)
+        expected = json.loads(
+            (
+                ISOLATED_FIXTURE_ROOT
+                / "candidate.window-separated-v1.expected.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        validate_oracle(self.fixture, self.baseline, oracle)
+        self.assertEqual(oracle, expected)
 
 if __name__ == "__main__":
     unittest.main()

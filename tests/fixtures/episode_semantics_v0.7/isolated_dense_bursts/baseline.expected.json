@@ -1,0 +1,142 @@
+{
+  "format": "loglens.episode_baseline_expected.v1",
+  "fixture_id": "episode_semantics_v0.7.isolated_dense_bursts",
+  "algorithm": {
+    "id": "v0.6.activity_segments_best_count_window",
+    "implementation": "src/detector.cpp",
+    "segment_boundary": "split when an adjacent event gap is greater than the rule window",
+    "selection_tie_break": "keep the first maximum encountered in chronological scan order"
+  },
+  "rule": {
+    "rule_id": "brute_force",
+    "grouping_key": "source_ip",
+    "subject": "203.0.113.78",
+    "threshold": 5,
+    "window_seconds": 600,
+    "window_boundary": "inclusive"
+  },
+  "derived_input": {
+    "event_count": 10,
+    "dense_peak_count": 2,
+    "activity_segment_count": 2,
+    "activity_segments": [
+      {
+        "segment_id": "segment:1",
+        "event_ids": [
+          "line:1",
+          "line:2",
+          "line:3",
+          "line:4",
+          "line:5"
+        ],
+        "first_seen": "2026-03-11T09:00:00Z",
+        "last_seen": "2026-03-11T09:02:00Z",
+        "max_adjacent_gap_seconds": 30,
+        "boundary_observation": "Five dense events remain inside one inclusive 600-second activity segment."
+      },
+      {
+        "segment_id": "segment:2",
+        "event_ids": [
+          "line:6",
+          "line:7",
+          "line:8",
+          "line:9",
+          "line:10"
+        ],
+        "first_seen": "2026-03-11T09:20:00Z",
+        "last_seen": "2026-03-11T09:22:00Z",
+        "max_adjacent_gap_seconds": 30,
+        "boundary_observation": "The 1,080-second gap after segment 1 exceeds the rule window, so v0.6 starts a second activity segment."
+      }
+    ]
+  },
+  "candidate_windows": [
+    {
+      "candidate_id": "baseline:burst-a",
+      "threshold_crossing_event_id": "line:5",
+      "event_ids": [
+        "line:1",
+        "line:2",
+        "line:3",
+        "line:4",
+        "line:5"
+      ],
+      "first_seen": "2026-03-11T09:00:00Z",
+      "last_seen": "2026-03-11T09:02:00Z",
+      "event_count": 5,
+      "threshold_met": true,
+      "decision": "selected",
+      "decision_reason": "Only threshold-eligible window in the first activity segment."
+    },
+    {
+      "candidate_id": "baseline:burst-b",
+      "threshold_crossing_event_id": "line:10",
+      "event_ids": [
+        "line:6",
+        "line:7",
+        "line:8",
+        "line:9",
+        "line:10"
+      ],
+      "first_seen": "2026-03-11T09:20:00Z",
+      "last_seen": "2026-03-11T09:22:00Z",
+      "event_count": 5,
+      "threshold_met": true,
+      "decision": "selected",
+      "decision_reason": "Only threshold-eligible window in the second activity segment."
+    }
+  ],
+  "expected_output": {
+    "episode_count": 2,
+    "findings": [
+      {
+        "finding_id": "finding:brute_force:883357c5e7697574",
+        "episode_index": 1,
+        "rule_id": "brute_force",
+        "subject_kind": "source_ip",
+        "subject": "203.0.113.78",
+        "grouping_key": "source_ip",
+        "threshold": 5,
+        "observed_count": 5,
+        "event_count": 5,
+        "window_start": "2026-03-11 09:00:00",
+        "window_end": "2026-03-11 09:02:00",
+        "evidence_event_ids": [
+          "line:1",
+          "line:2",
+          "line:3",
+          "line:4",
+          "line:5"
+        ],
+        "verdict_boundary": "triage_signal_not_compromise_or_attribution"
+      },
+      {
+        "finding_id": "finding:brute_force:ba242483f59f6f4e",
+        "episode_index": 2,
+        "rule_id": "brute_force",
+        "subject_kind": "source_ip",
+        "subject": "203.0.113.78",
+        "grouping_key": "source_ip",
+        "threshold": 5,
+        "observed_count": 5,
+        "event_count": 5,
+        "window_start": "2026-03-11 09:20:00",
+        "window_end": "2026-03-11 09:22:00",
+        "evidence_event_ids": [
+          "line:6",
+          "line:7",
+          "line:8",
+          "line:9",
+          "line:10"
+        ],
+        "verdict_boundary": "triage_signal_not_compromise_or_attribution"
+      }
+    ],
+    "excluded_event_decisions": []
+  },
+  "research_observation": {
+    "baseline_already_separates_dense_bursts": true,
+    "candidate_should_preserve_episode_count_and_identity": true,
+    "not_a_v0.6_regression": true
+  }
+}

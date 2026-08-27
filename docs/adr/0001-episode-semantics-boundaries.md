@@ -136,10 +136,25 @@ Reversing the fixture input produces the same ordered oracle. Boundary tests
 also retain one episode at an exact 600-second cooldown gap and permit two at
 601 seconds.
 
-This accepts the hypothesis for the bounded fixture only. Isolated bursts,
-maximal-window ties, shared evidence, background calibration, and a production
-complexity design still require independent evidence. `Detector::analyze()` and
-`loglens.report.v3` remain unchanged.
+The `isolated_dense_bursts` null control uses the same threshold of five and
+inclusive 600-second rule window. Its two five-event bursts have a 1,080-second
+inter-segment gap. Both the replayed v0.6 baseline and the candidate emit two
+episodes, preserve all ten events exactly once, report no exclusions, and keep
+`continuous_segment_split` false. The candidate preserves these deterministic
+finding IDs:
+
+- `finding:brute_force:883357c5e7697574`
+- `finding:brute_force:ba242483f59f6f4e`
+
+Reversing the input or replacing timestamps with equivalent timezone offsets
+does not change the ordered oracle. This accepts the candidate as compatible
+with already-correct isolated segmentation for this bounded null control; it
+does not expand the candidate's production scope.
+
+Together, the two fixtures accept the recovery and null-control hypotheses for
+their bounded cases only. Maximal-window ties, shared evidence, background
+calibration, and a production complexity design still require independent
+evidence. `Detector::analyze()` and `loglens.report.v3` remain unchanged.
 
 ## Alternatives considered
 
@@ -178,4 +193,5 @@ complexity design still require independent evidence. `Detector::analyze()` and
 - [`Baseline contract tests`](../../tests/test_episode_candidate_baseline_contract.py)
 - [`Candidate evaluator`](../../scripts/evaluate_episode_candidate.py)
 - [`Candidate regression tests`](../../tests/test_episode_candidate.py)
-- [`Candidate oracle`](../../tests/fixtures/episode_semantics_v0.7/continuous_background_two_peaks/candidate.window-separated-v1.expected.json)
+- [`Continuous-background candidate oracle`](../../tests/fixtures/episode_semantics_v0.7/continuous_background_two_peaks/candidate.window-separated-v1.expected.json)
+- [`Isolated-burst candidate oracle`](../../tests/fixtures/episode_semantics_v0.7/isolated_dense_bursts/candidate.window-separated-v1.expected.json)

@@ -1,0 +1,245 @@
+{
+  "format": "loglens.episode_candidate_oracle.v1",
+  "fixture_id": "episode_semantics_v0.7.isolated_dense_bursts",
+  "algorithm": {
+    "id": "research.window_separated_weighted_intervals",
+    "version": "1",
+    "status": "candidate"
+  },
+  "rule": {
+    "rule_id": "brute_force",
+    "grouping_key": "source_ip",
+    "subject": "203.0.113.78",
+    "threshold": 5,
+    "window_seconds": 600,
+    "window_boundary": "inclusive"
+  },
+  "segments": [
+    {
+      "segment_id": "segment:1",
+      "event_ids": [
+        "line:1",
+        "line:2",
+        "line:3",
+        "line:4",
+        "line:5"
+      ],
+      "first_seen": "2026-03-11T09:00:00Z",
+      "last_seen": "2026-03-11T09:02:00Z",
+      "candidate_windows": [
+        {
+          "candidate_id": "candidate:line:1..line:5",
+          "event_ids": [
+            "line:1",
+            "line:2",
+            "line:3",
+            "line:4",
+            "line:5"
+          ],
+          "first_seen": "2026-03-11T09:00:00Z",
+          "last_seen": "2026-03-11T09:02:00Z",
+          "threshold_crossing_event_ids": [
+            "line:5"
+          ],
+          "overlap_event_ids": [],
+          "score": {
+            "metric": "event_count_then_compactness",
+            "value": 5,
+            "details": {
+              "event_count": 5,
+              "span_seconds": 120
+            }
+          },
+          "decision": {
+            "selected": true,
+            "reason_code": "selected",
+            "reason": "Selected by maximum covered events, then minimum total span and episode count."
+          }
+        }
+      ],
+      "selected_episodes": [
+        {
+          "episode_index": 1,
+          "finding_id": "finding:brute_force:883357c5e7697574",
+          "candidate_id": "candidate:line:1..line:5",
+          "event_ids": [
+            "line:1",
+            "line:2",
+            "line:3",
+            "line:4",
+            "line:5"
+          ],
+          "first_seen": "2026-03-11T09:00:00Z",
+          "last_seen": "2026-03-11T09:02:00Z",
+          "inclusion_reason": "Window is part of the optimal window-separated evidence set."
+        }
+      ],
+      "event_decisions": [
+        {
+          "event_id": "line:1",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:2",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:3",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:4",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:5",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        }
+      ]
+    },
+    {
+      "segment_id": "segment:2",
+      "event_ids": [
+        "line:6",
+        "line:7",
+        "line:8",
+        "line:9",
+        "line:10"
+      ],
+      "first_seen": "2026-03-11T09:20:00Z",
+      "last_seen": "2026-03-11T09:22:00Z",
+      "candidate_windows": [
+        {
+          "candidate_id": "candidate:line:6..line:10",
+          "event_ids": [
+            "line:6",
+            "line:7",
+            "line:8",
+            "line:9",
+            "line:10"
+          ],
+          "first_seen": "2026-03-11T09:20:00Z",
+          "last_seen": "2026-03-11T09:22:00Z",
+          "threshold_crossing_event_ids": [
+            "line:10"
+          ],
+          "overlap_event_ids": [],
+          "score": {
+            "metric": "event_count_then_compactness",
+            "value": 5,
+            "details": {
+              "event_count": 5,
+              "span_seconds": 120
+            }
+          },
+          "decision": {
+            "selected": true,
+            "reason_code": "selected",
+            "reason": "Selected by maximum covered events, then minimum total span and episode count."
+          }
+        }
+      ],
+      "selected_episodes": [
+        {
+          "episode_index": 2,
+          "finding_id": "finding:brute_force:ba242483f59f6f4e",
+          "candidate_id": "candidate:line:6..line:10",
+          "event_ids": [
+            "line:6",
+            "line:7",
+            "line:8",
+            "line:9",
+            "line:10"
+          ],
+          "first_seen": "2026-03-11T09:20:00Z",
+          "last_seen": "2026-03-11T09:22:00Z",
+          "inclusion_reason": "Window is part of the optimal window-separated evidence set."
+        }
+      ],
+      "event_decisions": [
+        {
+          "event_id": "line:6",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:6..line:10"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:7",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:6..line:10"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:8",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:6..line:10"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:9",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:6..line:10"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:10",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:6..line:10"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "baseline_reference": "baseline.expected.json",
+    "baseline_episode_count": 2,
+    "candidate_episode_count": 2,
+    "continuous_segment_split": false,
+    "notes": [
+      "Research-only candidate; Detector::analyze() and loglens.report.v3 are unchanged.",
+      "Selected windows require a gap strictly greater than one rule window; exact-boundary gaps remain one cooldown episode.",
+      "Selection maximizes covered evidence count, then minimizes total span and episode count, with a chronological final tie-break.",
+      "Exhaustive candidate materialization and overlap reporting have super-quadratic worst-case cost; hard limits keep this fixture tool bounded, not production-ready."
+    ]
+  }
+}
