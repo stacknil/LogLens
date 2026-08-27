@@ -90,6 +90,24 @@ class EpisodeBaselineContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fixture events"):
             validate_fixture_baseline(fixture, self.baseline)
 
+    def test_rule_scalar_types_fail_closed(self) -> None:
+        mutations = {
+            "string threshold": ("threshold", "5"),
+            "string window": ("window_seconds", "600"),
+            "numeric subject": ("subject", 77),
+            "numeric terminal flag": ("counts_as_terminal_auth_failure", 1),
+        }
+
+        for label, (field, value) in mutations.items():
+            with self.subTest(label=label):
+                fixture = copy.deepcopy(self.fixture)
+                baseline = copy.deepcopy(self.baseline)
+                fixture["rule"][field] = value
+                if field in baseline["rule"]:
+                    baseline["rule"][field] = value
+                with self.assertRaisesRegex(ValueError, "canonical scalar types"):
+                    validate_fixture_baseline(fixture, baseline)
+
     def test_semantically_stale_baseline_fails_closed(self) -> None:
         mutations = {
             "algorithm": lambda baseline: baseline["algorithm"].__setitem__(
