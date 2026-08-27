@@ -31,6 +31,14 @@ FIXTURE_ROOT = (
     / "episode_semantics_v0.7"
     / "continuous_background_two_peaks"
 )
+CANDIDATE_ORACLE_ROOTS = (
+    FIXTURE_ROOT,
+    REPO_ROOT
+    / "tests"
+    / "fixtures"
+    / "episode_semantics_v0.7"
+    / "isolated_dense_bursts",
+)
 
 
 class CandidateOracleValidationTests(unittest.TestCase):
@@ -46,19 +54,20 @@ class CandidateOracleValidationTests(unittest.TestCase):
         Draft202012Validator is None,
         "install requirements-test.txt to validate the JSON Schema",
     )
-    def test_committed_oracle_conforms_to_draft_2020_12_schema(self) -> None:
+    def test_committed_oracles_conform_to_draft_2020_12_schema(self) -> None:
         schema = json.loads(
             (FIXTURE_ROOT / "candidate-oracle.schema.json").read_text(encoding="utf-8")
         )
-        oracle = json.loads(
-            (FIXTURE_ROOT / "candidate.window-separated-v1.expected.json").read_text(
-                encoding="utf-8"
-            )
-        )
-
         Draft202012Validator.check_schema(schema)
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
-        self.assertEqual(list(validator.iter_errors(oracle)), [])
+        for root in CANDIDATE_ORACLE_ROOTS:
+            with self.subTest(fixture=root.name):
+                oracle = json.loads(
+                    (root / "candidate.window-separated-v1.expected.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(list(validator.iter_errors(oracle)), [])
 
     def test_validator_rejects_episode_evidence_drift(self) -> None:
         oracle = evaluate_fixture(self.fixture, self.baseline)
