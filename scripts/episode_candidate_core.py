@@ -332,10 +332,10 @@ def selection_has_minimum_core_gap_contrast(
     minimum_ratio: int | Fraction = 2,
 ) -> bool:
     """Evaluate exact mean-gap contrast on minimum-span threshold cores."""
-    _, contrasts = minimum_core_gap_contrasts(
+    cores, contrasts = minimum_core_gap_contrasts(
         events, selected, threshold, minimum_ratio
     )
-    return all(contrast.passes for contrast in contrasts)
+    return bool(cores) and all(contrast.passes for contrast in contrasts)
 
 
 def minimum_core_gap_contrasts(
