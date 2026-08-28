@@ -33,6 +33,22 @@ class CandidateWindow:
         return int((self.last_seen - self.first_seen).total_seconds())
 
 
+@dataclass(frozen=True)
+class CoreGapContrast:
+    bridge_event_ids: tuple[str, ...]
+    left_mean_gap_microseconds: Fraction
+    right_mean_gap_microseconds: Fraction
+    bridge_mean_gap_microseconds: Fraction
+    required_bridge_mean_gap_microseconds: Fraction
+
+    @property
+    def passes(self) -> bool:
+        return (
+            self.bridge_mean_gap_microseconds
+            >= self.required_bridge_mean_gap_microseconds
+        )
+
+
 def parse_timestamp(value: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -162,6 +178,16 @@ def _duration_microseconds(start: datetime, end: datetime) -> int:
     )
 
 
+def window_mean_gap_microseconds(candidate: CandidateWindow) -> Fraction:
+    """Return a candidate's exact mean inter-event gap in microseconds."""
+    if candidate.event_count < 2:
+        raise ValueError("candidate must contain at least two events")
+    return Fraction(
+        _duration_microseconds(candidate.first_seen, candidate.last_seen),
+        candidate.event_count - 1,
+    )
+
+
 def _validated_selection(
     events: Sequence[dict[str, Any]], selected: Sequence[CandidateWindow]
 ) -> tuple[
@@ -229,14 +255,8 @@ def _windows_have_minimum_gap_contrast(
     minimum_ratio: int | Fraction,
 ) -> bool:
     for left, right in zip(chronological, chronological[1:]):
-        left_mean_gap = Fraction(
-            _duration_microseconds(left.first_seen, left.last_seen),
-            left.event_count - 1,
-        )
-        right_mean_gap = Fraction(
-            _duration_microseconds(right.first_seen, right.last_seen),
-            right.event_count - 1,
-        )
+        left_mean_gap = window_mean_gap_microseconds(left)
+        right_mean_gap = window_mean_gap_microseconds(right)
         bridge_event_count = bisect_left(timestamps, right.first_seen) - bisect_right(
             timestamps, left.last_seen
         )
@@ -312,12 +332,47 @@ def selection_has_minimum_core_gap_contrast(
     minimum_ratio: int | Fraction = 2,
 ) -> bool:
     """Evaluate exact mean-gap contrast on minimum-span threshold cores."""
+    _, contrasts = minimum_core_gap_contrasts(
+        events, selected, threshold, minimum_ratio
+    )
+    return all(contrast.passes for contrast in contrasts)
+
+
+def minimum_core_gap_contrasts(
+    events: Sequence[dict[str, Any]],
+    selected: Sequence[CandidateWindow],
+    threshold: int,
+    minimum_ratio: int | Fraction = 2,
+) -> tuple[list[CandidateWindow], list[CoreGapContrast]]:
+    """Return minimum-span cores and exact adjacent contrast evidence."""
     ratio = _validated_minimum_ratio(minimum_ratio)
     cores = minimum_span_threshold_cores(events, selected, threshold)
-    timestamps = [
-        parse_timestamp(str(event["timestamp"])) for event in ordered_events(events)
-    ]
-    return _windows_have_minimum_gap_contrast(timestamps, cores, ratio)
+    ordered = ordered_events(events)
+    timestamps = [parse_timestamp(str(event["timestamp"])) for event in ordered]
+    contrasts: list[CoreGapContrast] = []
+    for left, right in zip(cores, cores[1:]):
+        bridge_start = bisect_right(timestamps, left.last_seen)
+        bridge_end = bisect_left(timestamps, right.first_seen)
+        left_mean_gap = window_mean_gap_microseconds(left)
+        right_mean_gap = window_mean_gap_microseconds(right)
+        bridge_mean_gap = Fraction(
+            _duration_microseconds(left.last_seen, right.first_seen),
+            bridge_end - bridge_start + 1,
+        )
+        contrasts.append(
+            CoreGapContrast(
+                bridge_event_ids=tuple(
+                    str(event["event_id"])
+                    for event in ordered[bridge_start:bridge_end]
+                ),
+                left_mean_gap_microseconds=left_mean_gap,
+                right_mean_gap_microseconds=right_mean_gap,
+                bridge_mean_gap_microseconds=bridge_mean_gap,
+                required_bridge_mean_gap_microseconds=ratio
+                * max(left_mean_gap, right_mean_gap),
+            )
+        )
+    return cores, contrasts
 
 
 def activity_segments(

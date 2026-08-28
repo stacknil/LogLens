@@ -7,6 +7,7 @@ import argparse
 import json
 import sys
 from datetime import datetime
+from fractions import Fraction
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
@@ -20,9 +21,11 @@ if __package__:
     from .episode_candidate_core import (
         CandidateWindow,
         enumerate_candidate_windows,
+        minimum_core_gap_contrasts,
         ordered_events,
         parse_timestamp,
         select_window_separated_candidates,
+        window_mean_gap_microseconds,
     )
 else:
     from episode_baseline_contract import (
@@ -34,10 +37,18 @@ else:
     from episode_candidate_core import (
         CandidateWindow,
         enumerate_candidate_windows,
+        minimum_core_gap_contrasts,
         ordered_events,
         parse_timestamp,
         select_window_separated_candidates,
+        window_mean_gap_microseconds,
     )
+
+
+ALGORITHM_V1 = "window-separated-v1"
+ALGORITHM_V2 = "window-separated-core-contrast-v2"
+SUPPORTED_ALGORITHMS = frozenset((ALGORITHM_V1, ALGORITHM_V2))
+
 
 def _candidate_membership_index(
     records: Iterable[tuple[str, Sequence[str]]],
@@ -99,12 +110,106 @@ def _validate_baseline_reference(baseline_reference: str) -> None:
         raise ValueError("baseline_reference must be a privacy-safe file name")
 
 
+def _validate_algorithm(algorithm: str) -> str:
+    if algorithm not in SUPPORTED_ALGORITHMS:
+        raise ValueError("unsupported candidate algorithm")
+    return algorithm
+
+
+def _fraction_json(value: Fraction | int) -> dict[str, int]:
+    fraction = Fraction(value)
+    return {
+        "numerator": fraction.numerator,
+        "denominator": fraction.denominator,
+    }
+
+
+def materialize_core_contrast_admission(
+    events: Sequence[dict[str, Any]],
+    selected: Sequence[CandidateWindow],
+    threshold: int,
+) -> dict[str, Any]:
+    chronological = sorted(
+        selected,
+        key=lambda candidate: (
+            candidate.first_seen,
+            candidate.last_seen,
+            candidate.event_ids,
+        ),
+    )
+    cores, contrasts = minimum_core_gap_contrasts(
+        events, chronological, threshold
+    )
+    threshold_cores = []
+    for candidate, core in zip(chronological, cores):
+        threshold_cores.append(
+            {
+                "candidate_id": candidate.candidate_id,
+                "event_ids": list(core.event_ids),
+                "first_seen": canonical_oracle_timestamp(core.first_seen),
+                "last_seen": canonical_oracle_timestamp(core.last_seen),
+                "mean_gap_microseconds": _fraction_json(
+                    window_mean_gap_microseconds(core)
+                ),
+            }
+        )
+
+    adjacent_contrasts = []
+    for left, right, contrast in zip(
+        chronological, chronological[1:], contrasts
+    ):
+        adjacent_contrasts.append(
+            {
+                "left_candidate_id": left.candidate_id,
+                "right_candidate_id": right.candidate_id,
+                "bridge_event_ids": list(contrast.bridge_event_ids),
+                "bridge_mean_gap_microseconds": _fraction_json(
+                    contrast.bridge_mean_gap_microseconds
+                ),
+                "required_bridge_mean_gap_microseconds": _fraction_json(
+                    contrast.required_bridge_mean_gap_microseconds
+                ),
+                "passes": contrast.passes,
+                "reason_code": (
+                    "minimum_core_gap_contrast_met"
+                    if contrast.passes
+                    else "minimum_core_gap_contrast_below_minimum"
+                ),
+            }
+        )
+
+    if not chronological:
+        admitted = False
+        reason_code = "no_selected_episode"
+    elif len(chronological) == 1:
+        admitted = True
+        reason_code = "single_selected_episode"
+    else:
+        admitted = all(contrast.passes for contrast in contrasts)
+        reason_code = (
+            "all_adjacent_core_contrasts_met"
+            if admitted
+            else "adjacent_core_contrast_below_minimum"
+        )
+
+    return {
+        "policy_id": "minimum_span_threshold_core_gap_contrast",
+        "minimum_ratio": {"numerator": 2, "denominator": 1},
+        "admitted": admitted,
+        "reason_code": reason_code,
+        "threshold_cores": threshold_cores,
+        "adjacent_contrasts": adjacent_contrasts,
+    }
+
+
 def _build_oracle(
     fixture: dict[str, Any],
     segments: Sequence[Sequence[dict[str, Any]]],
     baseline_episode_count: int,
     baseline_reference: str,
+    algorithm: str,
 ) -> dict[str, Any]:
+    algorithm = _validate_algorithm(algorithm)
     rule = fixture["rule"]
     window_seconds = int(rule["window_seconds"])
     threshold = int(rule["threshold"])
@@ -161,33 +266,59 @@ def _build_oracle(
                     ),
                 }
             )
-        output_segments.append(
-            {
-                "segment_id": segment_id,
-                "event_ids": event_ids,
-                "first_seen": canonical_oracle_timestamp(
-                    parse_timestamp(str(events[0]["timestamp"]))
-                ),
-                "last_seen": canonical_oracle_timestamp(
-                    parse_timestamp(str(events[-1]["timestamp"]))
-                ),
-                "candidate_windows": [
-                    _candidate_json(candidate, memberships, selected_ids)
-                    for candidate in candidates
-                ],
-                "selected_episodes": episodes,
-                "event_decisions": event_decisions,
-            }
-        )
+        output_segment = {
+            "segment_id": segment_id,
+            "event_ids": event_ids,
+            "first_seen": canonical_oracle_timestamp(
+                parse_timestamp(str(events[0]["timestamp"]))
+            ),
+            "last_seen": canonical_oracle_timestamp(
+                parse_timestamp(str(events[-1]["timestamp"]))
+            ),
+            "candidate_windows": [
+                _candidate_json(candidate, memberships, selected_ids)
+                for candidate in candidates
+            ],
+            "selected_episodes": episodes,
+            "event_decisions": event_decisions,
+        }
+        if algorithm == ALGORITHM_V2:
+            output_segment["admission"] = materialize_core_contrast_admission(
+                events, selected, threshold
+            )
+        output_segments.append(output_segment)
 
-    oracle = {
-        "format": "loglens.episode_candidate_oracle.v1",
-        "fixture_id": fixture["fixture_id"],
-        "algorithm": {
+    if algorithm == ALGORITHM_V1:
+        format_id = "loglens.episode_candidate_oracle.v1"
+        algorithm_metadata = {
             "id": "research.window_separated_weighted_intervals",
             "version": "1",
             "status": "candidate",
-        },
+        }
+        notes = [
+            "Research-only candidate; Detector::analyze() and loglens.report.v3 are unchanged.",
+            "Selected windows require a gap strictly greater than one rule window; exact-boundary gaps remain one cooldown episode.",
+            "Selection maximizes covered evidence count, then minimizes total span and episode count, with a chronological final tie-break.",
+            "Exhaustive candidate materialization and overlap reporting have super-quadratic worst-case cost; hard limits keep this fixture tool bounded, not production-ready.",
+        ]
+    else:
+        format_id = "loglens.episode_candidate_oracle.v2"
+        algorithm_metadata = {
+            "id": "research.window_separated_minimum_core_contrast",
+            "version": "2",
+            "status": "candidate",
+        }
+        notes = [
+            "Research-only candidate; Detector::analyze() and loglens.report.v3 are unchanged.",
+            "Candidate selection remains window-separated v1; admission is a separate policy projection and rejected selections stay visible for audit.",
+            "Admission uses exact mean-gap arithmetic on minimum-span threshold-sized cores while retaining intervening events as bridge evidence.",
+            "The fixed 2x research ratio is not production calibration, and this oracle does not change report-v3 or runtime findings.",
+        ]
+
+    oracle = {
+        "format": format_id,
+        "fixture_id": fixture["fixture_id"],
+        "algorithm": algorithm_metadata,
         "rule": rule_projection(rule),
         "segments": output_segments,
         "comparison": {
@@ -195,12 +326,7 @@ def _build_oracle(
             "baseline_episode_count": baseline_episode_count,
             "candidate_episode_count": episode_index,
             "continuous_segment_split": episode_index > baseline_episode_count,
-            "notes": [
-                "Research-only candidate; Detector::analyze() and loglens.report.v3 are unchanged.",
-                "Selected windows require a gap strictly greater than one rule window; exact-boundary gaps remain one cooldown episode.",
-                "Selection maximizes covered evidence count, then minimizes total span and episode count, with a chronological final tie-break.",
-                "Exhaustive candidate materialization and overlap reporting have super-quadratic worst-case cost; hard limits keep this fixture tool bounded, not production-ready.",
-            ],
+            "notes": notes,
         },
     }
     return oracle
@@ -210,19 +336,45 @@ def evaluate_fixture(
     fixture: dict[str, Any],
     baseline: dict[str, Any],
     baseline_reference: str = "baseline.expected.json",
+    algorithm: str = ALGORITHM_V1,
 ) -> dict[str, Any]:
     _validate_baseline_reference(baseline_reference)
+    algorithm = _validate_algorithm(algorithm)
     context = validate_fixture_baseline(fixture, baseline)
     oracle = _build_oracle(
-        fixture, context.segments, context.episode_count, baseline_reference
+        fixture,
+        context.segments,
+        context.episode_count,
+        baseline_reference,
+        algorithm,
     )
-    _validate_oracle_cross_references(fixture, oracle)
+    _validate_oracle_cross_references(fixture, oracle, algorithm)
     return oracle
 
 
 def _validate_oracle_cross_references(
-    fixture: dict[str, Any], oracle: dict[str, Any]
+    fixture: dict[str, Any], oracle: dict[str, Any], algorithm: str
 ) -> None:
+    expected_identity = {
+        ALGORITHM_V1: (
+            "loglens.episode_candidate_oracle.v1",
+            {
+                "id": "research.window_separated_weighted_intervals",
+                "version": "1",
+                "status": "candidate",
+            },
+        ),
+        ALGORITHM_V2: (
+            "loglens.episode_candidate_oracle.v2",
+            {
+                "id": "research.window_separated_minimum_core_contrast",
+                "version": "2",
+                "status": "candidate",
+            },
+        ),
+    }[algorithm]
+    if (oracle.get("format"), oracle.get("algorithm")) != expected_identity:
+        raise ValueError("oracle format and algorithm must match the selected version")
     if oracle.get("fixture_id") != fixture.get("fixture_id"):
         raise ValueError("oracle fixture_id must match the research fixture")
     if oracle.get("rule") != rule_projection(fixture["rule"]):
@@ -235,6 +387,8 @@ def _validate_oracle_cross_references(
     selected_count = 0
     episode_indexes: list[int] = []
     for segment in oracle["segments"]:
+        if ("admission" in segment) != (algorithm == ALGORITHM_V2):
+            raise ValueError("oracle admission must match the selected version")
         events = list(segment["event_ids"])
         segment_ids.extend(events)
         decisions = [decision["event_id"] for decision in segment["event_decisions"]]
@@ -336,12 +490,18 @@ def validate_oracle(
     baseline: dict[str, Any],
     oracle: dict[str, Any],
     baseline_reference: str = "baseline.expected.json",
+    algorithm: str = ALGORITHM_V1,
 ) -> None:
     _validate_baseline_reference(baseline_reference)
+    algorithm = _validate_algorithm(algorithm)
     context = validate_fixture_baseline(fixture, baseline)
-    _validate_oracle_cross_references(fixture, oracle)
+    _validate_oracle_cross_references(fixture, oracle, algorithm)
     expected = _build_oracle(
-        fixture, context.segments, context.episode_count, baseline_reference
+        fixture,
+        context.segments,
+        context.episode_count,
+        baseline_reference,
+        algorithm,
     )
     if oracle != expected:
         raise ValueError("oracle does not match the canonical fixture derivation")
@@ -355,6 +515,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True)
     parser.add_argument("--baseline", type=Path, required=True)
+    parser.add_argument("--algorithm", default=ALGORITHM_V1)
     parser.add_argument(
         "--check",
         type=Path,
@@ -370,6 +531,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _load(args.fixture),
             _load(args.baseline),
             baseline_reference=args.baseline.name,
+            algorithm=args.algorithm,
         )
         rendered = json.dumps(oracle, indent=2, ensure_ascii=False) + "\n"
         if (
