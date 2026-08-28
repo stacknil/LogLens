@@ -162,19 +162,14 @@ def _duration_microseconds(start: datetime, end: datetime) -> int:
     )
 
 
-def selection_has_minimum_gap_contrast(
-    events: Sequence[dict[str, Any]],
-    selected: Sequence[CandidateWindow],
-    minimum_ratio: int | Fraction = 2,
-) -> bool:
-    """Return whether every selected-window gap meets an exact mean-gap ratio."""
-    if (
-        isinstance(minimum_ratio, bool)
-        or not isinstance(minimum_ratio, (int, Fraction))
-        or minimum_ratio <= 0
-    ):
-        raise ValueError("minimum_ratio must be a positive integer or Fraction")
-
+def _validated_selection(
+    events: Sequence[dict[str, Any]], selected: Sequence[CandidateWindow]
+) -> tuple[
+    list[dict[str, Any]],
+    list[datetime],
+    dict[str, int],
+    list[CandidateWindow],
+]:
     ordered = ordered_events(events)
     timestamps = [parse_timestamp(str(event["timestamp"])) for event in ordered]
     event_positions = {
@@ -215,6 +210,25 @@ def selection_has_minimum_gap_contrast(
         if right.first_seen <= left.last_seen:
             raise ValueError("selected candidate windows must not overlap")
 
+    return ordered, timestamps, event_positions, chronological
+
+
+def _validated_minimum_ratio(minimum_ratio: int | Fraction) -> int | Fraction:
+    if (
+        isinstance(minimum_ratio, bool)
+        or not isinstance(minimum_ratio, (int, Fraction))
+        or minimum_ratio <= 0
+    ):
+        raise ValueError("minimum_ratio must be a positive integer or Fraction")
+    return minimum_ratio
+
+
+def _windows_have_minimum_gap_contrast(
+    timestamps: Sequence[datetime],
+    chronological: Sequence[CandidateWindow],
+    minimum_ratio: int | Fraction,
+) -> bool:
+    for left, right in zip(chronological, chronological[1:]):
         left_mean_gap = Fraction(
             _duration_microseconds(left.first_seen, left.last_seen),
             left.event_count - 1,
@@ -234,6 +248,76 @@ def selection_has_minimum_gap_contrast(
             return False
 
     return True
+
+
+def selection_has_minimum_gap_contrast(
+    events: Sequence[dict[str, Any]],
+    selected: Sequence[CandidateWindow],
+    minimum_ratio: int | Fraction = 2,
+) -> bool:
+    """Return whether every selected-window gap meets an exact mean-gap ratio."""
+    ratio = _validated_minimum_ratio(minimum_ratio)
+    _, timestamps, _, chronological = _validated_selection(events, selected)
+    return _windows_have_minimum_gap_contrast(timestamps, chronological, ratio)
+
+
+def minimum_span_threshold_cores(
+    events: Sequence[dict[str, Any]],
+    selected: Sequence[CandidateWindow],
+    threshold: int,
+) -> list[CandidateWindow]:
+    """Choose each selected window's shortest contiguous threshold-sized core."""
+    if isinstance(threshold, bool) or not isinstance(threshold, int) or threshold < 2:
+        raise ValueError("threshold must be an integer of at least two")
+
+    _, timestamps, event_positions, chronological = _validated_selection(
+        events, selected
+    )
+    cores: list[CandidateWindow] = []
+    for candidate in chronological:
+        if candidate.event_count < threshold:
+            raise ValueError("selected candidate contains fewer events than threshold")
+        positions = [event_positions[event_id] for event_id in candidate.event_ids]
+        core_start = min(
+            range(candidate.event_count - threshold + 1),
+            key=lambda start: (
+                _duration_microseconds(
+                    timestamps[positions[start]],
+                    timestamps[positions[start + threshold - 1]],
+                ),
+                timestamps[positions[start]],
+                timestamps[positions[start + threshold - 1]],
+                candidate.event_ids[start : start + threshold],
+            ),
+        )
+        core_positions = positions[core_start : core_start + threshold]
+        core_event_ids = candidate.event_ids[
+            core_start : core_start + threshold
+        ]
+        cores.append(
+            CandidateWindow(
+                event_ids=core_event_ids,
+                first_seen=timestamps[core_positions[0]],
+                last_seen=timestamps[core_positions[-1]],
+                threshold_crossing_event_id=core_event_ids[-1],
+            )
+        )
+    return cores
+
+
+def selection_has_minimum_core_gap_contrast(
+    events: Sequence[dict[str, Any]],
+    selected: Sequence[CandidateWindow],
+    threshold: int,
+    minimum_ratio: int | Fraction = 2,
+) -> bool:
+    """Evaluate exact mean-gap contrast on minimum-span threshold cores."""
+    ratio = _validated_minimum_ratio(minimum_ratio)
+    cores = minimum_span_threshold_cores(events, selected, threshold)
+    timestamps = [
+        parse_timestamp(str(event["timestamp"])) for event in ordered_events(events)
+    ]
+    return _windows_have_minimum_gap_contrast(timestamps, cores, ratio)
 
 
 def activity_segments(
