@@ -69,6 +69,26 @@ class WindowSeparatedSelectionTests(unittest.TestCase):
         self.assertEqual(len(selected), 1)
         self.assertEqual(selected[0].event_ids, tuple(f"line:{i}" for i in range(1, 7)))
 
+    def test_equal_score_windows_prefer_chronological_key(self) -> None:
+        candidates = enumerate_candidate_windows(
+            make_events([0, 1, 2, 3, 600, 601]), 5, 600
+        )
+        expected = [tuple(f"line:{i}" for i in range(1, 6))]
+
+        self.assertEqual(
+            [candidate.event_ids for candidate in candidates],
+            [
+                tuple(f"line:{i}" for i in range(1, 6)),
+                tuple(f"line:{i}" for i in range(2, 7)),
+            ],
+        )
+        for ordered_candidates in (candidates, list(reversed(candidates))):
+            selected = select_window_separated_candidates(ordered_candidates, 600)
+
+            self.assertEqual(
+                [candidate.event_ids for candidate in selected], expected
+            )
+
     def test_research_size_limits_fail_closed(self) -> None:
         with self.assertRaisesRegex(ValueError, "at most 200 events"):
             enumerate_candidate_windows(make_events(list(range(201))), 5, 600)
