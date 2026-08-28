@@ -10,6 +10,8 @@ sys.path.insert(0, str(REPO_ROOT))
 from scripts.episode_candidate_core import (  # noqa: E402
     activity_segments,
     enumerate_candidate_windows,
+    minimum_span_threshold_cores,
+    selection_has_minimum_core_gap_contrast,
     selection_has_minimum_gap_contrast,
     select_window_separated_candidates,
 )
@@ -184,6 +186,102 @@ class WindowSeparatedSelectionTests(unittest.TestCase):
         self.assertFalse(
             selection_has_minimum_gap_contrast(with_padding, padded_selected)
         )
+
+    def test_minimum_span_core_is_stable_under_maximal_window_padding(self) -> None:
+        without_padding = make_events(
+            [0, 30, 60, 90, 120, 650, 700, 1260, 1290, 1320, 1350, 1380]
+        )
+        with_padding = make_events(
+            [0, 30, 60, 90, 120, 600, 650, 700, 1260, 1290, 1320, 1350, 1380]
+        )
+        selected_without_padding = select_window_separated_candidates(
+            enumerate_candidate_windows(without_padding, 5, 600), 600
+        )
+        selected_with_padding = select_window_separated_candidates(
+            enumerate_candidate_windows(with_padding, 5, 600), 600
+        )
+
+        cores_without_padding = minimum_span_threshold_cores(
+            without_padding, selected_without_padding, 5
+        )
+        cores_with_padding = minimum_span_threshold_cores(
+            with_padding, selected_with_padding, 5
+        )
+
+        self.assertEqual(
+            [core.event_ids for core in cores_without_padding],
+            [
+                tuple(f"line:{index}" for index in range(1, 6)),
+                tuple(f"line:{index}" for index in range(8, 13)),
+            ],
+        )
+        self.assertEqual(
+            [core.event_ids for core in cores_with_padding],
+            [
+                tuple(f"line:{index}" for index in range(1, 6)),
+                tuple(f"line:{index}" for index in range(9, 14)),
+            ],
+        )
+        self.assertEqual([core.span_seconds for core in cores_with_padding], [120, 120])
+        self.assertTrue(
+            selection_has_minimum_core_gap_contrast(
+                without_padding, selected_without_padding, 5
+            )
+        )
+        self.assertTrue(
+            selection_has_minimum_core_gap_contrast(
+                with_padding, selected_with_padding, 5
+            )
+        )
+        self.assertEqual(
+            minimum_span_threshold_cores(
+                list(reversed(with_padding)),
+                list(reversed(selected_with_padding)),
+                5,
+            ),
+            cores_with_padding,
+        )
+
+    def test_minimum_span_core_preserves_positive_and_uniform_controls(self) -> None:
+        dense_peaks = make_events(
+            [0, 30, 60, 90, 120, 660, 1200, 1740, 2280, 2820, 3360, 3390, 3420, 3450, 3480]
+        )
+        uniform_background = make_events([150 * offset for offset in range(14)])
+
+        for events, expected_contrast in (
+            (dense_peaks, True),
+            (uniform_background, False),
+        ):
+            selected = select_window_separated_candidates(
+                enumerate_candidate_windows(events, 5, 600), 600
+            )
+
+            self.assertEqual(
+                selection_has_minimum_core_gap_contrast(events, selected, 5),
+                expected_contrast,
+            )
+            self.assertEqual(
+                selection_has_minimum_core_gap_contrast(
+                    list(reversed(events)), list(reversed(selected)), 5
+                ),
+                expected_contrast,
+            )
+
+    def test_minimum_span_core_breaks_ties_chronologically(self) -> None:
+        events = make_events([0, 1, 2, 3, 4, 5])
+        selected = select_window_separated_candidates(
+            enumerate_candidate_windows(events, 5, 600), 600
+        )
+
+        cores = minimum_span_threshold_cores(events, selected, 5)
+
+        self.assertEqual(
+            [core.event_ids for core in cores],
+            [tuple(f"line:{index}" for index in range(1, 6))],
+        )
+        for invalid_threshold in (True, 1, 7):
+            with self.assertRaisesRegex(ValueError, "threshold"):
+                minimum_span_threshold_cores(events, selected, invalid_threshold)
 
     def test_gap_contrast_requires_a_positive_ratio(self) -> None:
         with self.assertRaisesRegex(ValueError, "minimum_ratio"):
