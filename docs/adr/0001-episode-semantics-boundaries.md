@@ -183,6 +183,40 @@ multiple dense peaks. It blocks production adoption without a calibrated
 density-contrast rule or an explicit alert-volume budget; it does not estimate
 a real-world false-positive rate.
 
+A follow-up research diagnostic tests the minimum evidence needed for a density
+contrast decision without changing candidate selection. For each selected
+window, its internal mean gap is its exact timestamp span divided by one fewer
+than its event count. For each adjacent selected pair, the bridge mean gap is
+the span from the left window's last event to the right window's first event,
+divided by the number of strictly intervening events plus one. The pair passes
+when:
+
+```text
+bridge_mean_gap >= 2 * max(left_internal_mean_gap, right_internal_mean_gap)
+```
+
+All arithmetic uses integer microseconds and rational comparison. Event lookup
+and bridge counting use ordered indexes and binary search, so this diagnostic
+adds `O(E log E + S log E)` work after receiving `E` events and `S` selected
+windows. Invalid candidate references, boundaries, ordering, overlap, or reused
+event evidence fail closed. A single selected window passes because there is no
+split contrast to evaluate.
+
+On `continuous_background_two_peaks`, candidate v1 selects `line:1` through
+`line:5` and `line:11` through `line:15`. Each internal mean gap is 30 seconds;
+the five bridge events divide the 3,240-second boundary span into a 540-second
+bridge mean gap, giving an 18x contrast. The same calculation on the fourteen
+uniform events gives a 150-second bridge mean gap and 150-second internal means,
+so its contrast is 1x and it fails. Reversing both event and selection input
+does not change either result.
+
+This accepts the 2x mean-gap diagnostic only as a prerequisite for a candidate
+v2 research design: it separates the existing positive fixture from the known
+uniform false split while preserving the single-episode case. The stopping rule
+is therefore met, and no cadence sweep is warranted. The result does not
+calibrate a production threshold, estimate a false-positive rate, or authorize
+wiring the diagnostic into `Detector::analyze()`.
+
 Together, the two fixtures and focused tie/shared-evidence/background controls
 accept the recovery, null-control, deterministic tie-break, and publication
 single-consumption hypotheses for their bounded cases. The background control

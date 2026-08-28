@@ -10,6 +10,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from scripts.episode_candidate_core import (  # noqa: E402
     activity_segments,
     enumerate_candidate_windows,
+    selection_has_minimum_gap_contrast,
     select_window_separated_candidates,
 )
 
@@ -107,6 +108,49 @@ class WindowSeparatedSelectionTests(unittest.TestCase):
                 tuple(f"line:{i}" for i in range(10, 15)),
             ],
         )
+
+    def test_gap_contrast_separates_dense_peaks_from_uniform_background(self) -> None:
+        dense_peaks = make_events(
+            [0, 30, 60, 90, 120, 660, 1200, 1740, 2280, 2820, 3360, 3390, 3420, 3450, 3480]
+        )
+        uniform_background = make_events([150 * offset for offset in range(14)])
+
+        for events, expected_ids, expected_contrast in (
+            (dense_peaks, ((1, 5), (11, 15)), True),
+            (uniform_background, ((1, 5), (10, 14)), False),
+        ):
+            selected = select_window_separated_candidates(
+                enumerate_candidate_windows(events, 5, 600), 600
+            )
+
+            self.assertEqual(
+                [candidate.event_ids for candidate in selected],
+                [
+                    tuple(f"line:{index}" for index in range(start, end + 1))
+                    for start, end in expected_ids
+                ],
+            )
+            self.assertEqual(
+                selection_has_minimum_gap_contrast(events, selected), expected_contrast
+            )
+            self.assertEqual(
+                selection_has_minimum_gap_contrast(
+                    list(reversed(events)), list(reversed(selected))
+                ),
+                expected_contrast,
+            )
+
+    def test_gap_contrast_accepts_a_single_selected_episode(self) -> None:
+        events = make_events([0, 30, 60, 90, 120])
+        selected = select_window_separated_candidates(
+            enumerate_candidate_windows(events, 5, 600), 600
+        )
+
+        self.assertTrue(selection_has_minimum_gap_contrast(events, selected))
+
+    def test_gap_contrast_requires_a_positive_ratio(self) -> None:
+        with self.assertRaisesRegex(ValueError, "minimum_ratio"):
+            selection_has_minimum_gap_contrast([], [], minimum_ratio=0)
 
     def test_equal_score_windows_prefer_chronological_key(self) -> None:
         candidates = enumerate_candidate_windows(
