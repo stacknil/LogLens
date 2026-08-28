@@ -127,6 +127,41 @@ std::vector<loglens::Event> build_two_bruteforce_episode_events() {
         "Mar 10 15:04:00 example-host sshd[2010]: Failed password for user001 from 203.0.113.10 port 53005 ssh2\n");
 }
 
+std::vector<loglens::Event> build_continuous_background_two_peaks_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 10 09:00:00 example-host sshd[2401]: Failed password for user001 from 203.0.113.77 port 54001 ssh2\n"
+        "Mar 10 09:00:30 example-host sshd[2402]: Failed password for user001 from 203.0.113.77 port 54002 ssh2\n"
+        "Mar 10 09:01:00 example-host sshd[2403]: Failed password for user001 from 203.0.113.77 port 54003 ssh2\n"
+        "Mar 10 09:01:30 example-host sshd[2404]: Failed password for user001 from 203.0.113.77 port 54004 ssh2\n"
+        "Mar 10 09:02:00 example-host sshd[2405]: Failed password for user001 from 203.0.113.77 port 54005 ssh2\n"
+        "Mar 10 09:11:00 example-host sshd[2406]: Failed password for user001 from 203.0.113.77 port 54006 ssh2\n"
+        "Mar 10 09:20:00 example-host sshd[2407]: Failed password for user001 from 203.0.113.77 port 54007 ssh2\n"
+        "Mar 10 09:29:00 example-host sshd[2408]: Failed password for user001 from 203.0.113.77 port 54008 ssh2\n"
+        "Mar 10 09:38:00 example-host sshd[2409]: Failed password for user001 from 203.0.113.77 port 54009 ssh2\n"
+        "Mar 10 09:47:00 example-host sshd[2410]: Failed password for user001 from 203.0.113.77 port 54010 ssh2\n"
+        "Mar 10 09:56:00 example-host sshd[2411]: Failed password for user001 from 203.0.113.77 port 54011 ssh2\n"
+        "Mar 10 09:56:30 example-host sshd[2412]: Failed password for user001 from 203.0.113.77 port 54012 ssh2\n"
+        "Mar 10 09:57:00 example-host sshd[2413]: Failed password for user001 from 203.0.113.77 port 54013 ssh2\n"
+        "Mar 10 09:57:30 example-host sshd[2414]: Failed password for user001 from 203.0.113.77 port 54014 ssh2\n"
+        "Mar 10 09:58:00 example-host sshd[2415]: Failed password for user001 from 203.0.113.77 port 54015 ssh2\n");
+}
+
+std::vector<loglens::Event> build_isolated_dense_bursts_events() {
+    return parse_events(
+        make_syslog_config(),
+        "Mar 11 09:00:00 example-host sshd[2501]: Failed password for user001 from 203.0.113.78 port 55001 ssh2\n"
+        "Mar 11 09:00:30 example-host sshd[2502]: Failed password for user001 from 203.0.113.78 port 55002 ssh2\n"
+        "Mar 11 09:01:00 example-host sshd[2503]: Failed password for user001 from 203.0.113.78 port 55003 ssh2\n"
+        "Mar 11 09:01:30 example-host sshd[2504]: Failed password for user001 from 203.0.113.78 port 55004 ssh2\n"
+        "Mar 11 09:02:00 example-host sshd[2505]: Failed password for user001 from 203.0.113.78 port 55005 ssh2\n"
+        "Mar 11 09:20:00 example-host sshd[2506]: Failed password for user001 from 203.0.113.78 port 55006 ssh2\n"
+        "Mar 11 09:20:30 example-host sshd[2507]: Failed password for user001 from 203.0.113.78 port 55007 ssh2\n"
+        "Mar 11 09:21:00 example-host sshd[2508]: Failed password for user001 from 203.0.113.78 port 55008 ssh2\n"
+        "Mar 11 09:21:30 example-host sshd[2509]: Failed password for user001 from 203.0.113.78 port 55009 ssh2\n"
+        "Mar 11 09:22:00 example-host sshd[2510]: Failed password for user001 from 203.0.113.78 port 55010 ssh2\n");
+}
+
 std::vector<loglens::Event> build_two_multi_user_episode_events() {
     return parse_events(
         make_syslog_config(),
@@ -357,6 +392,48 @@ void test_bruteforce_emits_multiple_episodes_for_same_source() {
     expect((episodes[1]->evidence_event_ids == std::vector<std::string>{
                "line:6", "line:7", "line:8", "line:9", "line:10"}),
            "expected second brute-force episode evidence ids");
+}
+
+void test_production_detector_matches_continuous_background_baseline() {
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(build_continuous_background_two_peaks_events());
+    const auto episodes = find_findings(findings, loglens::FindingType::BruteForce, "203.0.113.77");
+
+    expect(episodes.size() == 1, "expected the v0.6 baseline to select one brute-force episode");
+    expect(episodes[0]->episode_index == 1, "expected the production baseline episode index");
+    expect(episodes[0]->observed_count == 5, "expected the production baseline observed count");
+    expect(episodes[0]->event_count == 5, "expected the production baseline evidence count");
+    expect(episodes[0]->finding_id == "finding:brute_force:584fd14b544a7959",
+           "expected production finding identity to match the committed research baseline");
+    expect(loglens::format_timestamp(episodes[0]->first_seen) == "2026-03-10 09:00:00",
+           "expected production baseline window start");
+    expect(loglens::format_timestamp(episodes[0]->last_seen) == "2026-03-10 09:02:00",
+           "expected production baseline window end");
+    expect((episodes[0]->evidence_event_ids == std::vector<std::string>{
+               "line:1", "line:2", "line:3", "line:4", "line:5"}),
+           "expected production baseline evidence ids");
+}
+
+void test_production_detector_matches_isolated_bursts_baseline() {
+    const loglens::Detector detector;
+    const auto findings = detector.analyze(build_isolated_dense_bursts_events());
+    const auto episodes = find_findings(findings, loglens::FindingType::BruteForce, "203.0.113.78");
+
+    expect(episodes.size() == 2, "expected the v0.6 baseline to retain two isolated episodes");
+    expect((std::vector<std::string>{episodes[0]->finding_id, episodes[1]->finding_id}
+            == std::vector<std::string>{
+                "finding:brute_force:883357c5e7697574",
+                "finding:brute_force:ba242483f59f6f4e"}),
+           "expected production finding identities to match the isolated-burst baseline");
+    expect((std::vector<std::size_t>{episodes[0]->episode_index, episodes[1]->episode_index}
+            == std::vector<std::size_t>{1, 2}),
+           "expected production baseline episode indexes");
+    expect((episodes[0]->evidence_event_ids == std::vector<std::string>{
+               "line:1", "line:2", "line:3", "line:4", "line:5"}),
+           "expected first production baseline evidence ids");
+    expect((episodes[1]->evidence_event_ids == std::vector<std::string>{
+               "line:6", "line:7", "line:8", "line:9", "line:10"}),
+           "expected second production baseline evidence ids");
 }
 
 void test_multi_user_emits_multiple_episodes_for_same_source() {
@@ -774,6 +851,8 @@ int main() {
     test_default_thresholds();
     test_custom_thresholds();
     test_bruteforce_emits_multiple_episodes_for_same_source();
+    test_production_detector_matches_continuous_background_baseline();
+    test_production_detector_matches_isolated_bursts_baseline();
     test_multi_user_emits_multiple_episodes_for_same_source();
     test_sudo_burst_emits_multiple_episodes_for_same_user();
     test_episode_identity_is_stable_for_unsorted_input_events();
