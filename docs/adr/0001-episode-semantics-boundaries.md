@@ -46,11 +46,12 @@ explicit for v0.7 research:
    distinct-username objective for multi-user probing), not the longest possible
    time span. Tie-breaking and whether a candidate may be extended without
    increasing its score are v0.7 research questions.
-3. **Non-overlapping episode** is currently enforced by segment construction
-   and one selection per segment. It does not yet describe a global candidate
-   ranking problem where two windows compete for shared events. v0.7 must state
-   whether exclusion is by event IDs, time intervals, or a rule-specific signal
-   budget.
+3. **Non-overlapping episode** has two candidate-v1 boundaries. Search windows
+   may share event IDs and time intervals. Selection compatibility separately
+   requires a later window to start more than one rule window after the prior
+   window ends. At publication, selected episodes inside a segment must have
+   disjoint event-ID sets; the oracle validator fails closed on reuse. This does
+   not define cross-rule evidence reuse or a future production signal budget.
 4. **Cooldown merge** currently means that adjacent signals with a gap less
    than or equal to the rule window remain in one candidate segment. A gap
    larger than the rule window starts another segment. This is an adjacency
@@ -76,7 +77,7 @@ that makes each boundary observable. At minimum it should cover:
 | Continuous bridge | Two dense bursts connected by background gaps at or below the rule window remain one baseline segment. |
 | Threshold edge | A candidate exactly at threshold is eligible; one event below threshold is not. |
 | Maximal-window tie | Equal-score windows have a documented deterministic tie-break. |
-| Shared evidence | Overlapping candidate windows make the non-overlap unit explicit. |
+| Shared evidence | Overlapping search candidates expose shared event IDs; selected episodes materialize each event ID at most once, and reuse fails closed. |
 | Cooldown boundary | A gap exactly at the rule window and one second beyond it test the inclusive boundary. |
 | Bimodal background | Two dense peaks are surrounded by lower-rate background, with expected baseline output recorded separately from the research candidate output. |
 
@@ -160,11 +161,23 @@ The earlier candidate wins for both forward and reversed candidate input. This
 accepts the final tie-break and candidate-order invariance for that bounded
 control; it does not settle the separate shared-evidence policy.
 
-Together, the two fixtures and focused tie control accept the recovery,
-null-control, and deterministic tie-break hypotheses for their bounded cases
-only. Shared evidence, background calibration, and a production complexity
-design still require independent evidence. `Detector::analyze()` and
-`loglens.report.v3` remain unchanged.
+A focused shared-evidence control uses six events at offsets 0 through 5
+seconds. With threshold five, enumeration produces `line:1` through `line:5`,
+`line:1` through `line:6`, and `line:2` through `line:6`; `line:2` through
+`line:5` belong to all three search candidates. Candidate v1 selects the
+six-event maximal window and materializes each event ID once. A separate
+negative control gives two distinct selected candidates the same event-ID set;
+oracle validation rejects it as `selected episodes reuse event evidence`.
+Mutation testing confirms that disabling this guard makes the focused test
+fail. This accepts event IDs as the candidate-v1 publication non-overlap unit,
+not as a cross-rule or production policy.
+
+Together, the two fixtures and focused tie/shared-evidence controls accept the
+recovery, null-control, deterministic tie-break, and publication
+single-consumption hypotheses for their bounded cases only. Background and
+alert-volume calibration plus a production complexity design still require
+independent evidence. `Detector::analyze()` and `loglens.report.v3` remain
+unchanged.
 
 ## Alternatives considered
 
