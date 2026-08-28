@@ -151,10 +151,20 @@ does not change the ordered oracle. This accepts the candidate as compatible
 with already-correct isolated segmentation for this bounded null control; it
 does not expand the candidate's production scope.
 
-Together, the two fixtures accept the recovery and null-control hypotheses for
-their bounded cases only. Maximal-window ties, shared evidence, background
-calibration, and a production complexity design still require independent
-evidence. `Detector::analyze()` and `loglens.report.v3` remain unchanged.
+A focused maximal-window tie control uses six events at offsets 0, 1, 2, 3,
+600, and 601 seconds. With threshold five and the inclusive 600-second window,
+the only candidates are `line:1` through `line:5` and `line:2` through
+`line:6`. Both cover five events, span 600 seconds, and require one episode, so
+the chronological window key is the first objective that can distinguish them.
+The earlier candidate wins for both forward and reversed candidate input. This
+accepts the final tie-break and candidate-order invariance for that bounded
+control; it does not settle the separate shared-evidence policy.
+
+Together, the two fixtures and focused tie control accept the recovery,
+null-control, and deterministic tie-break hypotheses for their bounded cases
+only. Shared evidence, background calibration, and a production complexity
+design still require independent evidence. `Detector::analyze()` and
+`loglens.report.v3` remain unchanged.
 
 ## Alternatives considered
 
