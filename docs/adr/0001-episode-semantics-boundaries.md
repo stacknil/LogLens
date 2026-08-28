@@ -217,13 +217,38 @@ is therefore met, and no cadence sweep is warranted. The result does not
 calibrate a production threshold, estimate a false-positive rate, or authorize
 wiring the diagnostic into `Detector::analyze()`.
 
+An adversarial maximal-window-padding control then tests whether that diagnostic
+is monotone when an already qualifying dense core gains evidence inside the
+inclusive rule window. The base stream keeps two five-event dense cores at
+offsets 0 through 120 and 1,260 through 1,380 seconds, with two bridge events at
+650 and 700 seconds. Candidate v1 selects both cores. Their internal mean gaps
+are 30 seconds and their 380-second bridge mean gives a `38/3x` contrast, so the
+diagnostic passes.
+
+Adding one event at offset 600 does not remove either dense core, split the
+activity segment, or reduce the two selected episodes. Candidate v1 instead
+extends the first maximal window from five to six events. Its internal mean gap
+becomes 120 seconds, while the bridge mean becomes 220 seconds; the contrast
+falls to `11/6x` and the same 2x diagnostic rejects the pair. The selection's
+maximize-coverage objective has therefore coupled one padding event to a lower
+density verdict even though both threshold-sized dense cores remain present.
+
+This falsifies the hypothesis that raw selected-window mean gap is sufficient as
+a standalone candidate-v2 admission rule. The stopping rule is met by the first
+padding counterexample, so no outlier-position or ratio sweep is warranted. It
+does not prove that the padding event belongs to a production episode or choose
+between a densest threshold-sized core, quantile, trimmed-gap, or other robust
+statistic. It only requires a future design to separate dense-core evidence from
+maximal-window coverage before production calibration.
+
 Together, the two fixtures and focused tie/shared-evidence/background controls
 accept the recovery, null-control, deterministic tie-break, and publication
 single-consumption hypotheses for their bounded cases. The background control
 also resolves one qualitative safety decision: candidate v1 must not move into
 production unchanged. Quantitative alert-volume calibration and a production
-complexity design still require independent evidence. `Detector::analyze()` and
-`loglens.report.v3` remain unchanged.
+complexity design still require independent evidence. The padding control also
+blocks raw mean-gap contrast as the sole candidate-v2 gate. `Detector::analyze()`
+and `loglens.report.v3` remain unchanged.
 
 ## Alternatives considered
 
