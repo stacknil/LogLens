@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.episode_candidate_core import (  # noqa: E402
+    activity_segments,
     enumerate_candidate_windows,
     select_window_separated_candidates,
 )
@@ -83,6 +84,29 @@ class WindowSeparatedSelectionTests(unittest.TestCase):
         )
         self.assertEqual(materialized_event_ids, [f"line:{i}" for i in range(1, 7)])
         self.assertEqual(len(materialized_event_ids), len(set(materialized_event_ids)))
+
+    def test_uniform_threshold_rate_can_multiply_episodes_in_one_segment(self) -> None:
+        thirteen_events = make_events([150 * offset for offset in range(13)])
+        fourteen_events = make_events([150 * offset for offset in range(14)])
+        thirteen_selected = select_window_separated_candidates(
+            enumerate_candidate_windows(thirteen_events, 5, 600), 600
+        )
+        fourteen_selected = select_window_separated_candidates(
+            enumerate_candidate_windows(fourteen_events, 5, 600), 600
+        )
+
+        self.assertEqual(len(activity_segments(fourteen_events, 600)), 1)
+        self.assertEqual(
+            [candidate.event_ids for candidate in thirteen_selected],
+            [tuple(f"line:{i}" for i in range(1, 6))],
+        )
+        self.assertEqual(
+            [candidate.event_ids for candidate in fourteen_selected],
+            [
+                tuple(f"line:{i}" for i in range(1, 6)),
+                tuple(f"line:{i}" for i in range(10, 15)),
+            ],
+        )
 
     def test_equal_score_windows_prefer_chronological_key(self) -> None:
         candidates = enumerate_candidate_windows(
