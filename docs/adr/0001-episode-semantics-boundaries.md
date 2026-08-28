@@ -172,12 +172,24 @@ Mutation testing confirms that disabling this guard makes the focused test
 fail. This accepts event IDs as the candidate-v1 publication non-overlap unit,
 not as a cross-rule or production policy.
 
-Together, the two fixtures and focused tie/shared-evidence controls accept the
-recovery, null-control, deterministic tie-break, and publication
-single-consumption hypotheses for their bounded cases only. Background and
-alert-volume calibration plus a production complexity design still require
-independent evidence. `Detector::analyze()` and `loglens.report.v3` remain
-unchanged.
+A focused uniform-background alert-volume control uses events exactly 150
+seconds apart with threshold five and the inclusive 600-second window. Thirteen
+events remain one activity segment and produce one selected candidate. Adding a
+fourteenth equally spaced event still leaves one baseline segment but makes
+candidate v1 select `line:1` through `line:5` and `line:10` through `line:14`.
+There is no density contrast or peak prominence separating these windows. This
+falsifies the hypothesis that candidate episode multiplication by itself proves
+multiple dense peaks. It blocks production adoption without a calibrated
+density-contrast rule or an explicit alert-volume budget; it does not estimate
+a real-world false-positive rate.
+
+Together, the two fixtures and focused tie/shared-evidence/background controls
+accept the recovery, null-control, deterministic tie-break, and publication
+single-consumption hypotheses for their bounded cases. The background control
+also resolves one qualitative safety decision: candidate v1 must not move into
+production unchanged. Quantitative alert-volume calibration and a production
+complexity design still require independent evidence. `Detector::analyze()` and
+`loglens.report.v3` remain unchanged.
 
 ## Alternatives considered
 
