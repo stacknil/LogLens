@@ -273,6 +273,42 @@ processes, change candidate-v1 selection, or authorize a detector, CLI, report,
 oracle-schema, or evaluator change. Any candidate-v2 materialization remains a
 separate compatibility decision.
 
+## Candidate-v2 materialization contract
+
+Candidate v2 is now available only through the evaluator's explicit
+`--algorithm window-separated-core-contrast-v2` option. Omitting the option, or
+selecting `window-separated-v1`, retains the canonical v1 serialization byte for
+byte. No existing v1 artifact is backfilled or rewritten.
+
+The v2 oracle deliberately separates two decisions:
+
+1. `selected_episodes` records the unchanged window-separated-v1 evidence
+   selection.
+2. Each segment's `admission` records whether the selected evidence passes the
+   fixed minimum-span threshold-core contrast policy.
+
+A failed admission therefore does not erase selected episodes, candidates, or
+event decisions. It emits `admitted: false`, a stable reason code, the selected
+threshold cores, and every adjacent contrast for inspection. This keeps a policy
+rejection auditable instead of turning it into missing evidence. A segment with
+one selected episode is admitted vacuously; a segment with no selected episode
+is rejected explicitly.
+
+All ratios and mean gaps use exact numerator/denominator objects. The v2 schema
+requires `admission` and pins the v2 algorithm identity, while the same combined
+Draft 2020-12 schema rejects admission fields in v1 and pins the v1 identity.
+The committed v2 golden covers the positive continuous-background control; a
+focused evaluator test covers the uniform-background rejection without adding a
+second large generated fixture.
+
+This is an additive research-artifact migration, not a runtime report migration.
+`Detector::analyze()`, the CLI finding path, and `loglens.report.v3` remain
+unchanged. The main risk is consumers treating the fixed 2x research admission
+as calibrated production policy. Compatibility is maintained by the opt-in
+algorithm and strict format-version binding. Rollback is removal of the v2
+algorithm branch, schema definitions, and v2 golden; the v1 writer and artifacts
+do not require migration.
+
 Together, the two fixtures and focused tie/shared-evidence/background controls
 accept the recovery, null-control, deterministic tie-break, and publication
 single-consumption hypotheses for their bounded cases. The background control
@@ -320,4 +356,5 @@ and `loglens.report.v3` remain unchanged.
 - [`Candidate evaluator`](../../scripts/evaluate_episode_candidate.py)
 - [`Candidate regression tests`](../../tests/test_episode_candidate.py)
 - [`Continuous-background candidate oracle`](../../tests/fixtures/episode_semantics_v0.7/continuous_background_two_peaks/candidate.window-separated-v1.expected.json)
+- [`Continuous-background candidate-v2 oracle`](../../tests/fixtures/episode_semantics_v0.7/continuous_background_two_peaks/candidate.window-separated-core-contrast-v2.expected.json)
 - [`Isolated-burst candidate oracle`](../../tests/fixtures/episode_semantics_v0.7/isolated_dense_bursts/candidate.window-separated-v1.expected.json)
