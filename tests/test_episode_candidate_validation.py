@@ -83,6 +83,26 @@ class CandidateOracleValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "selected candidates"):
             validate_oracle(self.fixture, self.baseline, oracle)
 
+    def test_validator_rejects_selected_episodes_that_reuse_event_evidence(
+        self,
+    ) -> None:
+        oracle = evaluate_fixture(self.fixture, self.baseline)
+        segment = oracle["segments"][0]
+        first_episode, second_episode = segment["selected_episodes"]
+        candidates = {
+            candidate["candidate_id"]: candidate
+            for candidate in segment["candidate_windows"]
+        }
+        first_candidate = candidates[first_episode["candidate_id"]]
+        second_candidate = candidates[second_episode["candidate_id"]]
+        for field in ("event_ids", "first_seen", "last_seen"):
+            second_candidate[field] = copy.deepcopy(first_candidate[field])
+            second_episode[field] = copy.deepcopy(first_episode[field])
+        second_episode["finding_id"] = first_episode["finding_id"]
+
+        with self.assertRaisesRegex(ValueError, "reuse event evidence"):
+            validate_oracle(self.fixture, self.baseline, oracle)
+
     def test_validator_rejects_event_candidate_reference_drift(self) -> None:
         oracle = evaluate_fixture(self.fixture, self.baseline)
         oracle["segments"][0]["event_decisions"][0]["candidate_ids"] = []

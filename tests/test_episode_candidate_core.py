@@ -60,14 +60,29 @@ class WindowSeparatedSelectionTests(unittest.TestCase):
             ],
         )
 
-    def test_overlapping_candidates_materialize_one_maximal_window(self) -> None:
+    def test_shared_evidence_is_search_membership_not_double_consumption(self) -> None:
         candidates = enumerate_candidate_windows(
             make_events([0, 1, 2, 3, 4, 5]), 5, 600
         )
         selected = select_window_separated_candidates(candidates, 600)
+        materialized_event_ids = [
+            event_id for candidate in selected for event_id in candidate.event_ids
+        ]
 
-        self.assertEqual(len(selected), 1)
-        self.assertEqual(selected[0].event_ids, tuple(f"line:{i}" for i in range(1, 7)))
+        self.assertEqual(
+            [candidate.event_ids for candidate in candidates],
+            [
+                tuple(f"line:{i}" for i in range(1, 6)),
+                tuple(f"line:{i}" for i in range(1, 7)),
+                tuple(f"line:{i}" for i in range(2, 7)),
+            ],
+        )
+        self.assertEqual(
+            set.intersection(*(set(candidate.event_ids) for candidate in candidates)),
+            {f"line:{i}" for i in range(2, 6)},
+        )
+        self.assertEqual(materialized_event_ids, [f"line:{i}" for i in range(1, 7)])
+        self.assertEqual(len(materialized_event_ids), len(set(materialized_event_ids)))
 
     def test_equal_score_windows_prefer_chronological_key(self) -> None:
         candidates = enumerate_candidate_windows(
