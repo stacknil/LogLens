@@ -148,6 +148,43 @@ class WindowSeparatedSelectionTests(unittest.TestCase):
 
         self.assertTrue(selection_has_minimum_gap_contrast(events, selected))
 
+    def test_gap_contrast_is_not_monotone_under_maximal_window_padding(self) -> None:
+        dense_cores = make_events(
+            [0, 30, 60, 90, 120, 650, 700, 1260, 1290, 1320, 1350, 1380]
+        )
+        with_padding = make_events(
+            [0, 30, 60, 90, 120, 600, 650, 700, 1260, 1290, 1320, 1350, 1380]
+        )
+        dense_selected = select_window_separated_candidates(
+            enumerate_candidate_windows(dense_cores, 5, 600), 600
+        )
+        padded_selected = select_window_separated_candidates(
+            enumerate_candidate_windows(with_padding, 5, 600), 600
+        )
+
+        self.assertEqual(len(activity_segments(dense_cores, 600)), 1)
+        self.assertEqual(len(activity_segments(with_padding, 600)), 1)
+        self.assertEqual(
+            [candidate.event_ids for candidate in dense_selected],
+            [
+                tuple(f"line:{index}" for index in range(1, 6)),
+                tuple(f"line:{index}" for index in range(8, 13)),
+            ],
+        )
+        self.assertEqual(
+            [candidate.event_ids for candidate in padded_selected],
+            [
+                tuple(f"line:{index}" for index in range(1, 7)),
+                tuple(f"line:{index}" for index in range(9, 14)),
+            ],
+        )
+        self.assertTrue(
+            selection_has_minimum_gap_contrast(dense_cores, dense_selected)
+        )
+        self.assertFalse(
+            selection_has_minimum_gap_contrast(with_padding, padded_selected)
+        )
+
     def test_gap_contrast_requires_a_positive_ratio(self) -> None:
         with self.assertRaisesRegex(ValueError, "minimum_ratio"):
             selection_has_minimum_gap_contrast([], [], minimum_ratio=0)
