@@ -241,6 +241,38 @@ between a densest threshold-sized core, quantile, trimmed-gap, or other robust
 statistic. It only requires a future design to separate dense-core evidence from
 maximal-window coverage before production calibration.
 
+A minimum-span threshold-core control tests the smallest follow-up hypothesis:
+inside each selected maximal window, choose the contiguous sequence of exactly
+`threshold` events with the shortest timestamp span, breaking equal-span ties by
+the chronological event key. The selected maximal windows still define candidate
+coverage, while these cores supply only the internal-density evidence used by the
+contrast diagnostic. All events strictly between adjacent core boundaries remain
+part of the bridge calculation, including maximal-window padding that the core
+does not retain.
+
+On the padding control, both the original and padded streams choose the same two
+120-second dense cores. The base stream retains its `38/3x` contrast. In the
+padded stream, the event at offset 600 is excluded from the first core but counts
+as a third bridge event; the bridge mean is therefore 285 seconds and the core
+contrast is `19/2x`. Both streams pass the 2x diagnostic. Replacing the minimum
+span with the maximum span makes the focused padding test fail, confirming that
+the control observes core selection rather than episode count alone.
+
+The same core calculation preserves the two independent controls: the existing
+continuous-background fixture remains an `18x` positive, while the fourteen-event
+uniform stream remains a `1x` negative. Reversing event and selection input does
+not change the ordered cores or verdict. When two threshold-sized cores have the
+same span, the earlier chronological core wins. Invalid thresholds and selected
+windows that cannot supply a threshold-sized core fail closed.
+
+This accepts the minimum-span threshold-sized core as the candidate-v2 evidence
+abstraction for these three bounded controls. The stopping rule is met, so there
+is no quantile, trimmed-gap, position, cadence, or ratio sweep in this slice. The
+result does not calibrate the 2x ratio, prove robustness to arbitrary background
+processes, change candidate-v1 selection, or authorize a detector, CLI, report,
+oracle-schema, or evaluator change. Any candidate-v2 materialization remains a
+separate compatibility decision.
+
 Together, the two fixtures and focused tie/shared-evidence/background controls
 accept the recovery, null-control, deterministic tie-break, and publication
 single-consumption hypotheses for their bounded cases. The background control
