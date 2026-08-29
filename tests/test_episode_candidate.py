@@ -10,10 +10,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.evaluate_episode_candidate import (  # noqa: E402
+    ALGORITHM_V2,
     evaluate_fixture,
+    materialize_core_contrast_admission,
     validate_oracle,
 )
-from scripts.episode_candidate_core import parse_timestamp  # noqa: E402
+from scripts.episode_candidate_core import (  # noqa: E402
+    enumerate_candidate_windows,
+    parse_timestamp,
+    select_window_separated_candidates,
+)
 
 
 FIXTURE_ROOT = (
@@ -128,6 +134,103 @@ class ContinuousBackgroundFixtureTests(unittest.TestCase):
             evaluate_fixture(offset_fixture, self.baseline),
             evaluate_fixture(self.fixture, self.baseline),
         )
+
+    def test_v2_materializes_core_contrast_admission_without_changing_selection(
+        self,
+    ) -> None:
+        v1 = evaluate_fixture(self.fixture, self.baseline)
+        v2 = evaluate_fixture(
+            self.fixture, self.baseline, algorithm=ALGORITHM_V2
+        )
+        admission = v2["segments"][0]["admission"]
+
+        self.assertEqual(v2["format"], "loglens.episode_candidate_oracle.v2")
+        self.assertEqual(
+            v2["algorithm"],
+            {
+                "id": "research.window_separated_minimum_core_contrast",
+                "version": "2",
+                "status": "candidate",
+            },
+        )
+        self.assertEqual(
+            v2["segments"][0]["selected_episodes"],
+            v1["segments"][0]["selected_episodes"],
+        )
+        self.assertEqual(
+            [core["event_ids"] for core in admission["threshold_cores"]],
+            [
+                [f"line:{index}" for index in range(1, 6)],
+                [f"line:{index}" for index in range(11, 16)],
+            ],
+        )
+        self.assertEqual(
+            [core["mean_gap_microseconds"] for core in admission["threshold_cores"]],
+            [
+                {"numerator": 30_000_000, "denominator": 1},
+                {"numerator": 30_000_000, "denominator": 1},
+            ],
+        )
+        self.assertEqual(
+            admission["adjacent_contrasts"],
+            [
+                {
+                    "left_candidate_id": "candidate:line:1..line:5",
+                    "right_candidate_id": "candidate:line:11..line:15",
+                    "bridge_event_ids": [f"line:{index}" for index in range(6, 11)],
+                    "bridge_mean_gap_microseconds": {
+                        "numerator": 540_000_000,
+                        "denominator": 1,
+                    },
+                    "required_bridge_mean_gap_microseconds": {
+                        "numerator": 60_000_000,
+                        "denominator": 1,
+                    },
+                    "passes": True,
+                    "reason_code": "minimum_core_gap_contrast_met",
+                }
+            ],
+        )
+        self.assertTrue(admission["admitted"])
+        self.assertEqual(
+            admission["reason_code"], "all_adjacent_core_contrasts_met"
+        )
+        validate_oracle(
+            self.fixture, self.baseline, v2, algorithm=ALGORITHM_V2
+        )
+
+    def test_v2_materializes_uniform_background_rejection_without_hiding_selection(
+        self,
+    ) -> None:
+        origin = parse_timestamp("2026-03-10T09:00:00Z")
+        events = [
+            {
+                "event_id": f"line:{index}",
+                "line_number": index,
+                "timestamp": (origin + timedelta(seconds=150 * (index - 1)))
+                .isoformat()
+                .replace("+00:00", "Z"),
+                "event_type": "ssh_failed_password",
+                "source_ip": "203.0.113.77",
+            }
+            for index in range(1, 15)
+        ]
+        selected = select_window_separated_candidates(
+            enumerate_candidate_windows(events, 5, 600), 600
+        )
+
+        admission = materialize_core_contrast_admission(events, selected, 5)
+
+        self.assertEqual(len(selected), 2)
+        self.assertFalse(admission["admitted"])
+        self.assertEqual(
+            admission["reason_code"], "adjacent_core_contrast_below_minimum"
+        )
+        self.assertEqual(
+            admission["adjacent_contrasts"][0]["reason_code"],
+            "minimum_core_gap_contrast_below_minimum",
+        )
+        self.assertFalse(admission["adjacent_contrasts"][0]["passes"])
 
 
 class IsolatedDenseBurstsFixtureTests(unittest.TestCase):

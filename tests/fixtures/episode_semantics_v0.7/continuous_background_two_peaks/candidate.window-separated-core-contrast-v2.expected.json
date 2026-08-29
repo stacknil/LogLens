@@ -1,0 +1,338 @@
+{
+  "format": "loglens.episode_candidate_oracle.v2",
+  "fixture_id": "episode_semantics_v0.7.continuous_background_two_peaks",
+  "algorithm": {
+    "id": "research.window_separated_minimum_core_contrast",
+    "version": "2",
+    "status": "candidate"
+  },
+  "rule": {
+    "rule_id": "brute_force",
+    "grouping_key": "source_ip",
+    "subject": "203.0.113.77",
+    "threshold": 5,
+    "window_seconds": 600,
+    "window_boundary": "inclusive"
+  },
+  "segments": [
+    {
+      "segment_id": "segment:1",
+      "event_ids": [
+        "line:1",
+        "line:2",
+        "line:3",
+        "line:4",
+        "line:5",
+        "line:6",
+        "line:7",
+        "line:8",
+        "line:9",
+        "line:10",
+        "line:11",
+        "line:12",
+        "line:13",
+        "line:14",
+        "line:15"
+      ],
+      "first_seen": "2026-03-10T09:00:00Z",
+      "last_seen": "2026-03-10T09:58:00Z",
+      "candidate_windows": [
+        {
+          "candidate_id": "candidate:line:1..line:5",
+          "event_ids": [
+            "line:1",
+            "line:2",
+            "line:3",
+            "line:4",
+            "line:5"
+          ],
+          "first_seen": "2026-03-10T09:00:00Z",
+          "last_seen": "2026-03-10T09:02:00Z",
+          "threshold_crossing_event_ids": [
+            "line:5"
+          ],
+          "overlap_event_ids": [],
+          "score": {
+            "metric": "event_count_then_compactness",
+            "value": 5,
+            "details": {
+              "event_count": 5,
+              "span_seconds": 120
+            }
+          },
+          "decision": {
+            "selected": true,
+            "reason_code": "selected",
+            "reason": "Selected by maximum covered events, then minimum total span and episode count."
+          }
+        },
+        {
+          "candidate_id": "candidate:line:11..line:15",
+          "event_ids": [
+            "line:11",
+            "line:12",
+            "line:13",
+            "line:14",
+            "line:15"
+          ],
+          "first_seen": "2026-03-10T09:56:00Z",
+          "last_seen": "2026-03-10T09:58:00Z",
+          "threshold_crossing_event_ids": [
+            "line:15"
+          ],
+          "overlap_event_ids": [],
+          "score": {
+            "metric": "event_count_then_compactness",
+            "value": 5,
+            "details": {
+              "event_count": 5,
+              "span_seconds": 120
+            }
+          },
+          "decision": {
+            "selected": true,
+            "reason_code": "selected",
+            "reason": "Selected by maximum covered events, then minimum total span and episode count."
+          }
+        }
+      ],
+      "selected_episodes": [
+        {
+          "episode_index": 1,
+          "finding_id": "finding:brute_force:584fd14b544a7959",
+          "candidate_id": "candidate:line:1..line:5",
+          "event_ids": [
+            "line:1",
+            "line:2",
+            "line:3",
+            "line:4",
+            "line:5"
+          ],
+          "first_seen": "2026-03-10T09:00:00Z",
+          "last_seen": "2026-03-10T09:02:00Z",
+          "inclusion_reason": "Window is part of the optimal window-separated evidence set."
+        },
+        {
+          "episode_index": 2,
+          "finding_id": "finding:brute_force:a885dcb623777120",
+          "candidate_id": "candidate:line:11..line:15",
+          "event_ids": [
+            "line:11",
+            "line:12",
+            "line:13",
+            "line:14",
+            "line:15"
+          ],
+          "first_seen": "2026-03-10T09:56:00Z",
+          "last_seen": "2026-03-10T09:58:00Z",
+          "inclusion_reason": "Window is part of the optimal window-separated evidence set."
+        }
+      ],
+      "event_decisions": [
+        {
+          "event_id": "line:1",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:2",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:3",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:4",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:5",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:1..line:5"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:6",
+          "decision": "excluded",
+          "reason_code": "bridge_background",
+          "candidate_ids": [],
+          "reason": "Retained as background evidence outside every selected dense window."
+        },
+        {
+          "event_id": "line:7",
+          "decision": "excluded",
+          "reason_code": "bridge_background",
+          "candidate_ids": [],
+          "reason": "Retained as background evidence outside every selected dense window."
+        },
+        {
+          "event_id": "line:8",
+          "decision": "excluded",
+          "reason_code": "bridge_background",
+          "candidate_ids": [],
+          "reason": "Retained as background evidence outside every selected dense window."
+        },
+        {
+          "event_id": "line:9",
+          "decision": "excluded",
+          "reason_code": "bridge_background",
+          "candidate_ids": [],
+          "reason": "Retained as background evidence outside every selected dense window."
+        },
+        {
+          "event_id": "line:10",
+          "decision": "excluded",
+          "reason_code": "bridge_background",
+          "candidate_ids": [],
+          "reason": "Retained as background evidence outside every selected dense window."
+        },
+        {
+          "event_id": "line:11",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:11..line:15"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:12",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:11..line:15"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:13",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:11..line:15"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:14",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:11..line:15"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        },
+        {
+          "event_id": "line:15",
+          "decision": "included",
+          "reason_code": "selected_window",
+          "candidate_ids": [
+            "candidate:line:11..line:15"
+          ],
+          "reason": "Included exactly once by a selected candidate window."
+        }
+      ],
+      "admission": {
+        "policy_id": "minimum_span_threshold_core_gap_contrast",
+        "minimum_ratio": {
+          "numerator": 2,
+          "denominator": 1
+        },
+        "admitted": true,
+        "reason_code": "all_adjacent_core_contrasts_met",
+        "threshold_cores": [
+          {
+            "candidate_id": "candidate:line:1..line:5",
+            "event_ids": [
+              "line:1",
+              "line:2",
+              "line:3",
+              "line:4",
+              "line:5"
+            ],
+            "first_seen": "2026-03-10T09:00:00Z",
+            "last_seen": "2026-03-10T09:02:00Z",
+            "mean_gap_microseconds": {
+              "numerator": 30000000,
+              "denominator": 1
+            }
+          },
+          {
+            "candidate_id": "candidate:line:11..line:15",
+            "event_ids": [
+              "line:11",
+              "line:12",
+              "line:13",
+              "line:14",
+              "line:15"
+            ],
+            "first_seen": "2026-03-10T09:56:00Z",
+            "last_seen": "2026-03-10T09:58:00Z",
+            "mean_gap_microseconds": {
+              "numerator": 30000000,
+              "denominator": 1
+            }
+          }
+        ],
+        "adjacent_contrasts": [
+          {
+            "left_candidate_id": "candidate:line:1..line:5",
+            "right_candidate_id": "candidate:line:11..line:15",
+            "bridge_event_ids": [
+              "line:6",
+              "line:7",
+              "line:8",
+              "line:9",
+              "line:10"
+            ],
+            "bridge_mean_gap_microseconds": {
+              "numerator": 540000000,
+              "denominator": 1
+            },
+            "required_bridge_mean_gap_microseconds": {
+              "numerator": 60000000,
+              "denominator": 1
+            },
+            "passes": true,
+            "reason_code": "minimum_core_gap_contrast_met"
+          }
+        ]
+      }
+    }
+  ],
+  "comparison": {
+    "baseline_reference": "baseline.expected.json",
+    "baseline_episode_count": 1,
+    "candidate_episode_count": 2,
+    "continuous_segment_split": true,
+    "notes": [
+      "Research-only candidate; Detector::analyze() and loglens.report.v3 are unchanged.",
+      "Candidate selection remains window-separated v1; admission is a separate policy projection and rejected selections stay visible for audit.",
+      "Admission uses exact mean-gap arithmetic on minimum-span threshold-sized cores while retaining intervening events as bridge evidence.",
+      "The fixed 2x research ratio is not production calibration, and this oracle does not change report-v3 or runtime findings."
+    ]
+  }
+}

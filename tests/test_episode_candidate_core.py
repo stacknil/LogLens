@@ -150,6 +150,13 @@ class WindowSeparatedSelectionTests(unittest.TestCase):
 
         self.assertTrue(selection_has_minimum_gap_contrast(events, selected))
 
+    def test_minimum_core_gap_contrast_rejects_no_selected_episode(self) -> None:
+        events = make_events([0, 30, 60, 90])
+
+        self.assertFalse(
+            selection_has_minimum_core_gap_contrast(events, [], threshold=5)
+        )
+
     def test_gap_contrast_is_not_monotone_under_maximal_window_padding(self) -> None:
         dense_cores = make_events(
             [0, 30, 60, 90, 120, 650, 700, 1260, 1290, 1320, 1350, 1380]

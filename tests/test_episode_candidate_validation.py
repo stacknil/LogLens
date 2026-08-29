@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.evaluate_episode_candidate import (  # noqa: E402
+    ALGORITHM_V2,
     evaluate_fixture,
     main,
     validate_oracle,
@@ -31,13 +32,15 @@ FIXTURE_ROOT = (
     / "episode_semantics_v0.7"
     / "continuous_background_two_peaks"
 )
-CANDIDATE_ORACLE_ROOTS = (
-    FIXTURE_ROOT,
+CANDIDATE_ORACLES = (
+    FIXTURE_ROOT / "candidate.window-separated-v1.expected.json",
+    FIXTURE_ROOT / "candidate.window-separated-core-contrast-v2.expected.json",
     REPO_ROOT
     / "tests"
     / "fixtures"
     / "episode_semantics_v0.7"
-    / "isolated_dense_bursts",
+    / "isolated_dense_bursts"
+    / "candidate.window-separated-v1.expected.json",
 )
 
 
@@ -60,14 +63,46 @@ class CandidateOracleValidationTests(unittest.TestCase):
         )
         Draft202012Validator.check_schema(schema)
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
-        for root in CANDIDATE_ORACLE_ROOTS:
-            with self.subTest(fixture=root.name):
-                oracle = json.loads(
-                    (root / "candidate.window-separated-v1.expected.json").read_text(
-                        encoding="utf-8"
-                    )
-                )
+        for path in CANDIDATE_ORACLES:
+            with self.subTest(oracle=path.name):
+                oracle = json.loads(path.read_text(encoding="utf-8"))
                 self.assertEqual(list(validator.iter_errors(oracle)), [])
+
+    @unittest.skipIf(
+        Draft202012Validator is None,
+        "install requirements-test.txt to validate the JSON Schema",
+    )
+    def test_schema_rejects_cross_version_algorithm_and_admission_shapes(
+        self,
+    ) -> None:
+        schema = json.loads(
+            (FIXTURE_ROOT / "candidate-oracle.schema.json").read_text(encoding="utf-8")
+        )
+        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        v1 = json.loads(CANDIDATE_ORACLES[0].read_text(encoding="utf-8"))
+        v2 = json.loads(CANDIDATE_ORACLES[1].read_text(encoding="utf-8"))
+        v1_with_admission = copy.deepcopy(v1)
+        v1_with_admission["segments"][0]["admission"] = copy.deepcopy(
+            v2["segments"][0]["admission"]
+        )
+        v2_without_admission = copy.deepcopy(v2)
+        del v2_without_admission["segments"][0]["admission"]
+        v2_with_v1_algorithm = copy.deepcopy(v2)
+        v2_with_v1_algorithm["algorithm"] = copy.deepcopy(v1["algorithm"])
+        v2_with_drifted_ratio = copy.deepcopy(v2)
+        v2_with_drifted_ratio["segments"][0]["admission"]["minimum_ratio"] = {
+            "numerator": 3,
+            "denominator": 1,
+        }
+
+        for label, oracle in (
+            ("v1 with admission", v1_with_admission),
+            ("v2 without admission", v2_without_admission),
+            ("v2 with v1 algorithm", v2_with_v1_algorithm),
+            ("v2 with drifted ratio", v2_with_drifted_ratio),
+        ):
+            with self.subTest(label=label):
+                self.assertNotEqual(list(validator.iter_errors(oracle)), [])
 
     def test_validator_rejects_episode_evidence_drift(self) -> None:
         oracle = evaluate_fixture(self.fixture, self.baseline)
@@ -139,6 +174,21 @@ class CandidateOracleValidationTests(unittest.TestCase):
             self.assertEqual(status, 2)
             self.assertIn("invalid JSON", stderr.getvalue())
             self.assertNotIn(directory, stderr.getvalue())
+
+    def test_unknown_algorithm_fails_closed(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unsupported candidate algorithm"):
+            evaluate_fixture(self.fixture, self.baseline, algorithm="unknown")
+
+    def test_v2_validator_rejects_admission_drift(self) -> None:
+        oracle = evaluate_fixture(
+            self.fixture, self.baseline, algorithm=ALGORITHM_V2
+        )
+        oracle["segments"][0]["admission"]["admitted"] = False
+
+        with self.assertRaisesRegex(ValueError, "canonical fixture derivation"):
+            validate_oracle(
+                self.fixture, self.baseline, oracle, algorithm=ALGORITHM_V2
+            )
 
 
 if __name__ == "__main__":

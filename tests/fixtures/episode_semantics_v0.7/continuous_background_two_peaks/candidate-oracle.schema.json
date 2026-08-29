@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/stacknil/LogLens/blob/main/tests/fixtures/episode_semantics_v0.7/continuous_background_two_peaks/candidate-oracle.schema.json",
   "title": "LogLens v0.7 episode candidate oracle",
-  "description": "A comparison-oriented result format for a future episode-segmentation candidate. It records candidate windows, selected episodes, event-level inclusion decisions, and the baseline comparison without changing the v0.6 report contract.",
+  "description": "A versioned comparison-oriented result format for future episode-segmentation candidates. V1 records selection; opt-in v2 adds a separate admission decision without changing the v0.6 report contract.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,10 @@
   ],
   "properties": {
     "format": {
-      "const": "loglens.episode_candidate_oracle.v1"
+      "enum": [
+        "loglens.episode_candidate_oracle.v1",
+        "loglens.episode_candidate_oracle.v2"
+      ]
     },
     "fixture_id": {
       "type": "string",
@@ -38,6 +41,52 @@
       "$ref": "#/$defs/comparison"
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": "loglens.episode_candidate_oracle.v1"
+          }
+        },
+        "required": ["format"]
+      },
+      "then": {
+        "properties": {
+          "algorithm": {
+            "const": {
+              "id": "research.window_separated_weighted_intervals",
+              "version": "1",
+              "status": "candidate"
+            }
+          },
+          "segments": {
+            "items": {
+              "not": {
+                "required": ["admission"]
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "algorithm": {
+            "const": {
+              "id": "research.window_separated_minimum_core_contrast",
+              "version": "2",
+              "status": "candidate"
+            }
+          },
+          "segments": {
+            "items": {
+              "required": ["admission"]
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "algorithm": {
       "type": "object",
@@ -281,6 +330,150 @@
         }
       }
     },
+    "rational": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "threshold_core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "event_ids",
+        "first_seen",
+        "last_seen",
+        "mean_gap_microseconds"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "first_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mean_gap_microseconds": {
+          "$ref": "#/$defs/rational"
+        }
+      }
+    },
+    "adjacent_contrast": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "left_candidate_id",
+        "right_candidate_id",
+        "bridge_event_ids",
+        "bridge_mean_gap_microseconds",
+        "required_bridge_mean_gap_microseconds",
+        "passes",
+        "reason_code"
+      ],
+      "properties": {
+        "left_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "right_candidate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bridge_event_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "bridge_mean_gap_microseconds": {
+          "$ref": "#/$defs/rational"
+        },
+        "required_bridge_mean_gap_microseconds": {
+          "$ref": "#/$defs/rational"
+        },
+        "passes": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "enum": [
+            "minimum_core_gap_contrast_met",
+            "minimum_core_gap_contrast_below_minimum"
+          ]
+        }
+      }
+    },
+    "admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "minimum_ratio",
+        "admitted",
+        "reason_code",
+        "threshold_cores",
+        "adjacent_contrasts"
+      ],
+      "properties": {
+        "policy_id": {
+          "const": "minimum_span_threshold_core_gap_contrast"
+        },
+        "minimum_ratio": {
+          "const": {
+            "numerator": 2,
+            "denominator": 1
+          }
+        },
+        "admitted": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "enum": [
+            "no_selected_episode",
+            "single_selected_episode",
+            "all_adjacent_core_contrasts_met",
+            "adjacent_core_contrast_below_minimum"
+          ]
+        },
+        "threshold_cores": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/threshold_core"
+          }
+        },
+        "adjacent_contrasts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/adjacent_contrast"
+          }
+        }
+      }
+    },
     "segment": {
       "type": "object",
       "additionalProperties": false,
@@ -332,6 +525,9 @@
           "items": {
             "$ref": "#/$defs/event_decision"
           }
+        },
+        "admission": {
+          "$ref": "#/$defs/admission"
         }
       }
     },
