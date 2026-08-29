@@ -38,6 +38,22 @@ ISOLATED_FIXTURE_ROOT = (
 )
 
 
+def make_events(offsets: list[int]) -> list[dict[str, object]]:
+    origin = parse_timestamp("2026-03-10T09:00:00Z")
+    return [
+        {
+            "event_id": f"line:{index}",
+            "line_number": index,
+            "timestamp": (origin + timedelta(seconds=offset))
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "event_type": "ssh_failed_password",
+            "source_ip": "203.0.113.77",
+        }
+        for index, offset in enumerate(offsets, start=1)
+    ]
+
+
 class ContinuousBackgroundFixtureTests(unittest.TestCase):
     def setUp(self) -> None:
         self.fixture = json.loads(
@@ -202,19 +218,7 @@ class ContinuousBackgroundFixtureTests(unittest.TestCase):
     def test_v2_materializes_uniform_background_rejection_without_hiding_selection(
         self,
     ) -> None:
-        origin = parse_timestamp("2026-03-10T09:00:00Z")
-        events = [
-            {
-                "event_id": f"line:{index}",
-                "line_number": index,
-                "timestamp": (origin + timedelta(seconds=150 * (index - 1)))
-                .isoformat()
-                .replace("+00:00", "Z"),
-                "event_type": "ssh_failed_password",
-                "source_ip": "203.0.113.77",
-            }
-            for index in range(1, 15)
-        ]
+        events = make_events([150 * offset for offset in range(14)])
         selected = select_window_separated_candidates(
             enumerate_candidate_windows(events, 5, 600), 600
         )
@@ -231,6 +235,100 @@ class ContinuousBackgroundFixtureTests(unittest.TestCase):
             "minimum_core_gap_contrast_below_minimum",
         )
         self.assertFalse(admission["adjacent_contrasts"][0]["passes"])
+
+    def test_v2_mixed_contrasts_reject_unchanged_selection_and_keep_boundaries(
+        self,
+    ) -> None:
+        events = make_events(
+            [
+                0,
+                30,
+                60,
+                90,
+                120,
+                660,
+                1200,
+                1740,
+                2280,
+                2820,
+                3360,
+                3390,
+                3420,
+                3450,
+                3480,
+                *range(3630, 5581, 150),
+            ]
+        )
+        selected = select_window_separated_candidates(
+            enumerate_candidate_windows(events, 5, 600), 600
+        )
+
+        admission = materialize_core_contrast_admission(events, selected, 5)
+
+        self.assertEqual(
+            [candidate.candidate_id for candidate in selected],
+            [
+                "candidate:line:1..line:5",
+                "candidate:line:11..line:18",
+                "candidate:line:23..line:27",
+            ],
+        )
+        self.assertFalse(admission["admitted"])
+        self.assertEqual(
+            admission["reason_code"], "adjacent_core_contrast_below_minimum"
+        )
+        self.assertEqual(
+            [core["event_ids"] for core in admission["threshold_cores"]],
+            [
+                [f"line:{index}" for index in range(1, 6)],
+                [f"line:{index}" for index in range(11, 16)],
+                [f"line:{index}" for index in range(23, 28)],
+            ],
+        )
+        self.assertEqual(
+            [
+                (
+                    contrast["left_candidate_id"],
+                    contrast["right_candidate_id"],
+                    contrast["passes"],
+                    contrast["reason_code"],
+                )
+                for contrast in admission["adjacent_contrasts"]
+            ],
+            [
+                (
+                    "candidate:line:1..line:5",
+                    "candidate:line:11..line:18",
+                    True,
+                    "minimum_core_gap_contrast_met",
+                ),
+                (
+                    "candidate:line:11..line:18",
+                    "candidate:line:23..line:27",
+                    False,
+                    "minimum_core_gap_contrast_below_minimum",
+                ),
+            ],
+        )
+        self.assertEqual(
+            [
+                (
+                    contrast["bridge_mean_gap_microseconds"],
+                    contrast["required_bridge_mean_gap_microseconds"],
+                )
+                for contrast in admission["adjacent_contrasts"]
+            ],
+            [
+                (
+                    {"numerator": 540_000_000, "denominator": 1},
+                    {"numerator": 60_000_000, "denominator": 1},
+                ),
+                (
+                    {"numerator": 150_000_000, "denominator": 1},
+                    {"numerator": 300_000_000, "denominator": 1},
+                ),
+            ],
+        )
 
 
 class IsolatedDenseBurstsFixtureTests(unittest.TestCase):
