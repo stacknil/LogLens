@@ -444,7 +444,10 @@
           "const": "minimum_span_threshold_core_gap_contrast"
         },
         "minimum_ratio": {
-          "$ref": "#/$defs/rational"
+          "const": {
+            "numerator": 2,
+            "denominator": 1
+          }
         },
         "admitted": {
           "type": "boolean"

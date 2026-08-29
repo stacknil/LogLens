@@ -89,11 +89,17 @@ class CandidateOracleValidationTests(unittest.TestCase):
         del v2_without_admission["segments"][0]["admission"]
         v2_with_v1_algorithm = copy.deepcopy(v2)
         v2_with_v1_algorithm["algorithm"] = copy.deepcopy(v1["algorithm"])
+        v2_with_drifted_ratio = copy.deepcopy(v2)
+        v2_with_drifted_ratio["segments"][0]["admission"]["minimum_ratio"] = {
+            "numerator": 3,
+            "denominator": 1,
+        }
 
         for label, oracle in (
             ("v1 with admission", v1_with_admission),
             ("v2 without admission", v2_without_admission),
             ("v2 with v1 algorithm", v2_with_v1_algorithm),
+            ("v2 with drifted ratio", v2_with_drifted_ratio),
         ):
             with self.subTest(label=label):
                 self.assertNotEqual(list(validator.iter_errors(oracle)), [])
