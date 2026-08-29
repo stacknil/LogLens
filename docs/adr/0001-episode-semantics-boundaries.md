@@ -309,6 +309,29 @@ algorithm and strict format-version binding. Rollback is removal of the v2
 algorithm branch, schema definitions, and v2 golden; the v1 writer and artifacts
 do not require migration.
 
+### Mixed contrast means whole-selection rejection, not missing evidence
+
+A focused three-candidate control resolves the first admission-atomicity
+question without changing the v2 schema. The first and second threshold cores
+have an `18x` bridge contrast, while the second and third have a `1x` contrast.
+All three candidates remain selected; the adjacent decisions are therefore
+`[pass, fail]` and the segment-level `admitted` value is false.
+
+The aggregate means only that the complete v1 selection cannot be adopted
+unchanged. It does not mean that every selected candidate or every boundary is
+invalid. V2 must retain both local contrast records, including the passing
+boundary, when the aggregate rejects the selection. Changing the aggregate from
+`all` to `any` makes this control fail, so the test observes whole-selection
+admission rather than merely counting contrasts.
+
+This accepts the conservative all-adjacencies gate for the current research
+oracle. It does not authorize dropping all findings in a runtime projection.
+Partial adoption would require a separate boundary-driven partition contract:
+how failed boundaries merge evidence, how an interior candidate with one pass
+and one fail is assigned, and how resulting finding identities remain stable.
+The first mixed control answers the aggregate-semantics question, so no cadence,
+ratio, or candidate-count sweep is warranted in this slice.
+
 Together, the two fixtures and focused tie/shared-evidence/background controls
 accept the recovery, null-control, deterministic tie-break, and publication
 single-consumption hypotheses for their bounded cases. The background control
