@@ -16,6 +16,7 @@ from scripts.evaluate_episode_candidate import (  # noqa: E402
     validate_oracle,
 )
 from scripts.episode_candidate_core import (  # noqa: E402
+    activity_segments,
     enumerate_candidate_windows,
     parse_timestamp,
     select_window_separated_candidates,
@@ -265,6 +266,7 @@ class ContinuousBackgroundFixtureTests(unittest.TestCase):
 
         admission = materialize_core_contrast_admission(events, selected, 5)
 
+        self.assertEqual(len(activity_segments(events, 600)), 1)
         self.assertEqual(
             [candidate.candidate_id for candidate in selected],
             [
