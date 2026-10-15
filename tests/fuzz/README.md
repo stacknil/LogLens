@@ -1,5 +1,11 @@
 # Parser fuzz harness
 
+For the focused day-token oracle, build the optional `fuzz_timestamp_day`
+target using the same configuration. Its three seeds are in
+`tests/fuzz/corpus/timestamp_day`; copy them into a writable build-directory
+corpus before running. See [the executed boundary/fuzz report](../../FUZZING-OR-BOUNDARY-TEST-REPORT.md)
+for exact commands, the confirmed day-narrowing regression, and coverage limits.
+
 The parser fuzz target is optional and requires Clang with libFuzzer support.
 It exercises both supported input modes and treats these result invariants as
 crash conditions:

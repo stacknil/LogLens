@@ -71,6 +71,11 @@ std::optional<std::chrono::sys_seconds> build_timestamp(int year_value,
                                                         std::chrono::minutes offset = std::chrono::minutes{0}) {
     using namespace std::chrono;
 
+    // Validate before chrono::day can narrow an out-of-range integer.
+    if (day_value < 1 || day_value > 31) {
+        return std::nullopt;
+    }
+
     const year_month_day date{year{year_value}, month{month_index}, day{static_cast<unsigned>(day_value)}};
     if (!date.ok()) {
         return std::nullopt;
