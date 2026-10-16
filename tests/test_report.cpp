@@ -1,11 +1,15 @@
 #include "report.hpp"
 
+#include <array>
+#include <charconv>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace {
 
@@ -359,9 +363,156 @@ void test_write_reports_reports_csv_write_failure() {
            "expected csv write failure to mention findings.csv");
 }
 
+void test_privilege_auth_events_remain_visible_without_findings() {
+    const std::array<std::string, 3> types{
+        "sudo_auth_failure", "sudo_policy_denied", "su_auth_failure"};
+    for (const bool journal : {false, true}) {
+        const std::string header = journal
+            ? "Tue 2026-03-10 08:21:40 UTC example-host "
+            : "Mar 10 08:21:40 example-host ";
+        std::istringstream input(
+            header + "sudo[4201]: user-a : 1 incorrect password attempt ; TTY=pts/0 ; "
+                     "PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/id\n"
+            + header + "sudo[4202]: user-a : user NOT in sudoers ; TTY=pts/0 ; "
+                       "PWD=/home/user/project ; USER=root ; COMMAND=/usr/bin/id\n"
+            + header + "su[4203]: FAILED SU (to root) user-a on pts/0\n");
+        const loglens::AuthLogParser parser({
+            journal ? loglens::InputMode::JournalctlShortFull : loglens::InputMode::SyslogLegacy,
+            2026});
+        const auto parsed = parser.parse_stream(input);
+        loglens::ReportData data;
+        data.input_path = "synthetic.log";
+        data.parse_metadata = parsed.metadata;
+        data.parser_quality = parsed.quality;
+        data.events = parsed.events;
+        data.warnings = parsed.warnings;
+        data.findings = loglens::Detector{}.analyze(data.events);
+        expect(data.events.size() == 3 && data.warnings.empty() && data.findings.empty(),
+               "expected three parsed audit events without warnings or findings");
+        const auto json = loglens::render_json_report(data);
+        const auto markdown = loglens::render_markdown_report(data);
+        expect(json.find("\"parsed_event_count\": 3") != std::string::npos,
+               "expected all three audit events in report total");
+        for (const auto& type : types) {
+            expect(json.find("\"event_type\": \"" + type + "\", \"count\": 1") != std::string::npos,
+                   "missing parsed audit event count in JSON: " + type);
+            expect(markdown.find("| " + type + " | 1 |") != std::string::npos,
+                   "missing parsed audit event count in Markdown: " + type);
+        }
+        expect(markdown.find("No configured detections matched") != std::string::npos,
+               "report visibility must not promote audit events into findings");
+    }
+}
+
+std::size_t reported_number(std::string_view json, std::string_view key) {
+    const auto position = json.find(key);
+    expect(position != std::string_view::npos, "missing report number: " + std::string(key));
+    const auto value = json.substr(position + key.size());
+    std::size_t number = 0;
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), number);
+    expect(result.ec == std::errc{}, "invalid report number");
+    return number;
+}
+
+void expect_event_count_total(std::string_view json, std::size_t expected) {
+    const auto key = json.find("\"event_counts\": [");
+    expect(key != std::string_view::npos, "missing event_counts");
+    const auto end = json.find(']', key);
+    expect(end != std::string_view::npos, "missing event_counts end");
+    auto counts = json.substr(key, end - key);
+    std::size_t total = 0;
+    while (true) {
+        const auto entry = counts.find("\"count\": ");
+        if (entry == std::string_view::npos) {
+            break;
+        }
+        counts.remove_prefix(entry);
+        total += reported_number(counts, "\"count\": ");
+        counts.remove_prefix(std::string_view{"\"count\": "}.size());
+    }
+    expect(total == expected, "event_counts must account for every normalized event");
+    expect(reported_number(json, "\"parsed_event_count\": ") == total,
+           "event_counts sum must equal parsed_event_count");
+}
+
+void test_ssh_report_counts_are_complete_globally_and_per_host() {
+    const std::array<std::string, 3> messages{
+        "Accepted keyboard-interactive/pam for user-a from 203.0.113.10 port 50101 ssh2",
+        "Failed keyboard-interactive/pam for user-a from 203.0.113.10 port 50101 ssh2",
+        "maximum authentication attempts exceeded for user-a from 203.0.113.10 port 50101 ssh2 [preauth]"};
+    const std::array<loglens::EventType, 3> types{
+        loglens::EventType::SshAcceptedKeyboardInteractive,
+        loglens::EventType::SshFailedKeyboardInteractive,
+        loglens::EventType::SshMaxAuthTries};
+    for (const bool journal : {false, true}) {
+        const std::string timestamp = journal
+            ? "Tue 2026-03-10 08:21:40 UTC " : "Mar 10 08:21:40 ";
+        const loglens::AuthLogParser parser({
+            journal ? loglens::InputMode::JournalctlShortFull : loglens::InputMode::SyslogLegacy,
+            2026});
+        for (const bool two_hosts : {false, true}) {
+            // Three SSH shapes, one repeated on host B: global 4, hosts A/B 2/2.
+            std::string text;
+            for (std::size_t index = 0; index < 4; ++index) {
+                const auto hostname = two_hosts && index >= 2 ? "example-host-b" : "example-host-a";
+                text += timestamp + hostname + " sshd[4200]: " + messages[index % 3] + '\n';
+            }
+            std::istringstream input(text);
+            const auto parsed = parser.parse_stream(input);
+            expect(parsed.events.size() == 4 && parsed.warnings.empty(),
+                   "expected four normalized SSH events without warnings");
+            for (std::size_t index = 0; index < parsed.events.size(); ++index) {
+                expect(parsed.events[index].event_type == types[index % 3],
+                       "expected the documented SSH event type before reporting");
+            }
+            loglens::ReportData data;
+            data.input_path = "synthetic.log";
+            data.parse_metadata = parsed.metadata;
+            data.parser_quality = parsed.quality;
+            data.events = parsed.events;
+            data.findings = loglens::Detector{}.analyze(data.events);
+            expect(data.findings.empty(), "fixture must remain below default detector thresholds");
+            const auto json = loglens::render_json_report(data);
+            const auto markdown = loglens::render_markdown_report(data);
+            expect_event_count_total(json, 4);
+            for (std::size_t index = 0; index < types.size(); ++index) {
+                const auto type = loglens::to_string(types[index]);
+                const auto count = std::to_string(index == 0 ? 2 : 1);
+                expect(json.find("\"event_type\": \"" + type + "\", \"count\": " + count)
+                           != std::string::npos, "missing SSH type count in JSON: " + type);
+                expect(markdown.find("| " + type + " | " + count + " |") != std::string::npos,
+                       "missing SSH type count in Markdown: " + type);
+            }
+            if (!two_hosts) {
+                expect(json.find("\"host_summaries\"") == std::string::npos,
+                       "single-host report shape must remain unchanged");
+                continue;
+            }
+            const auto hosts = json.find("\"host_summaries\": [");
+            expect(hosts != std::string::npos, "expected two-host summaries");
+            const auto first = json.find("\"hostname\": \"example-host-a\"", hosts);
+            const auto second = json.find("\"hostname\": \"example-host-b\"", hosts);
+            expect(first != std::string::npos && second != std::string::npos && first < second,
+                   "expected sorted summaries for both hosts");
+            const std::string_view first_host{json.data() + first, second - first};
+            const std::string_view second_host{json.data() + second, json.size() - second};
+            expect_event_count_total(first_host, 2);
+            expect_event_count_total(second_host, 2);
+            expect(first_host.find("ssh_failed_keyboard_interactive") != std::string_view::npos
+                   && first_host.find("ssh_max_auth_tries") == std::string_view::npos,
+                   "host A counts must use only host A events");
+            expect(second_host.find("ssh_max_auth_tries") != std::string_view::npos
+                   && second_host.find("ssh_failed_keyboard_interactive") == std::string_view::npos,
+                   "host B counts must use only host B events");
+        }
+    }
+}
+
 }  // namespace
 
 int main() {
+    test_ssh_report_counts_are_complete_globally_and_per_host();
+    test_privilege_auth_events_remain_visible_without_findings();
     test_noisy_auth_report_json_keeps_unsupported_lines_visible();
     test_markdown_table_cells_escape_user_controlled_values();
     test_json_escapes_generic_control_characters();
