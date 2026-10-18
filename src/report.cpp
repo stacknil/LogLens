@@ -249,11 +249,17 @@ std::vector<std::pair<EventType, std::size_t>> build_event_counts(const std::vec
         {EventType::SshFailedPassword, 0},
         {EventType::SshAcceptedPassword, 0},
         {EventType::SshAcceptedPublicKey, 0},
+        {EventType::SshAcceptedKeyboardInteractive, 0},
         {EventType::SshInvalidUser, 0},
         {EventType::SshFailedPublicKey, 0},
+        {EventType::SshFailedKeyboardInteractive, 0},
+        {EventType::SshMaxAuthTries, 0},
         {EventType::PamAuthFailure, 0},
         {EventType::SessionOpened, 0},
         {EventType::SudoCommand, 0},
+        {EventType::SudoAuthFailure, 0},
+        {EventType::SudoPolicyDenied, 0},
+        {EventType::SuAuthFailure, 0},
         {EventType::Unknown, 0}};
 
     for (const auto& event : events) {
