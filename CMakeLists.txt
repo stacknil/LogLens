@@ -83,6 +83,11 @@ if(BUILD_TESTING)
     loglens_enable_warnings(test_parser_properties)
     add_test(NAME parser_properties COMMAND test_parser_properties)
 
+    add_executable(test_timestamp_boundaries tests/test_timestamp_boundaries.cpp)
+    target_link_libraries(test_timestamp_boundaries PRIVATE loglens_lib)
+    loglens_enable_warnings(test_timestamp_boundaries)
+    add_test(NAME timestamp_boundaries COMMAND test_timestamp_boundaries)
+
     add_executable(test_detector tests/test_detector.cpp)
     target_link_libraries(test_detector PRIVATE loglens_lib)
     loglens_enable_warnings(test_detector)
@@ -159,4 +164,11 @@ if(LOGLENS_BUILD_FUZZERS)
             -fno-omit-frame-pointer
     )
     target_link_options(fuzz_parser PRIVATE -fsanitize=fuzzer,address,undefined)
+
+    add_executable(fuzz_timestamp_day fuzz/timestamp_day_fuzz.cpp)
+    target_link_libraries(fuzz_timestamp_day PRIVATE loglens_fuzz_lib)
+    loglens_enable_warnings(fuzz_timestamp_day)
+    target_compile_options(fuzz_timestamp_day PRIVATE
+        -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
+    target_link_options(fuzz_timestamp_day PRIVATE -fsanitize=fuzzer,address,undefined)
 endif()

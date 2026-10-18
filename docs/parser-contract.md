@@ -21,6 +21,11 @@ boundary.
 
 Supported timezone tokens for `journalctl_short_full` are intentionally narrow: `UTC`, `GMT`, `Z`, and numeric offsets such as `+0000` or `+00:00`.
 
+Day values must be within `1..31` before conversion to a calendar type;
+month length and leap-year validity are checked afterward. Out-of-range days
+produce `unknown_timestamp` / `invalid calendar date` warnings rather than
+wrapping into valid dates. See [the boundary test report](../FUZZING-OR-BOUNDARY-TEST-REPORT.md).
+
 ## Recognized event families
 
 The parser currently recognizes common authentication evidence from:
