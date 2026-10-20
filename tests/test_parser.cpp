@@ -1369,7 +1369,7 @@ void test_mixed_auth_first_pam_unix_session_closed_is_unsupported_telemetry() {
     const auto full = parser.parse_file(asset_path("mixed_auth_corpus.log"));
     const auto warning_it = std::find_if(
         full.warnings.begin(), full.warnings.end(),
-        [kFixtureLineNumber](const loglens::ParseWarning& warning) {
+        [](const loglens::ParseWarning& warning) {
             return warning.line_number == kFixtureLineNumber;
         });
     expect(warning_it != full.warnings.end(),

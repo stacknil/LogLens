@@ -83,6 +83,11 @@ if(BUILD_TESTING)
     loglens_enable_warnings(test_parser_properties)
     add_test(NAME parser_properties COMMAND test_parser_properties)
 
+    add_executable(test_parser_streams tests/test_parser_streams.cpp)
+    target_link_libraries(test_parser_streams PRIVATE loglens_lib)
+    loglens_enable_warnings(test_parser_streams)
+    add_test(NAME parser_streams COMMAND test_parser_streams)
+
     add_executable(test_timestamp_boundaries tests/test_timestamp_boundaries.cpp)
     target_link_libraries(test_timestamp_boundaries PRIVATE loglens_lib)
     loglens_enable_warnings(test_timestamp_boundaries)
