@@ -26,6 +26,57 @@ month length and leap-year validity are checked afterward. Out-of-range days
 produce `unknown_timestamp` / `invalid calendar date` warnings rather than
 wrapping into valid dates. See [the boundary test report](../FUZZING-OR-BOUNDARY-TEST-REPORT.md).
 
+## Stream completion and read failures (unreleased correction)
+
+`parse_stream` returns a `ParseReport` only after the input reaches ordinary EOF
+without a reported read failure. With the default stream exception mask, empty
+input, newline-terminated input and a valid final record without a newline all
+complete normally. The final record retains its event and original line number.
+Malformed or unsupported complete lines retain their existing warning taxonomy;
+they are content failures, separate from an underlying stream failure.
+
+The parser checks stream state before acquisition and after the `getline` loop:
+
+- `badbit` is an error, including when `eofbit` is also set.
+- `failbit` without `eofbit` is an error. The `fail()` predicate also includes
+  `badbit`; it does not identify `failbit` alone.
+- EOF without `badbit`, including the normal `eofbit | failbit` exhaustion state,
+  is accepted. A stream already exhausted by its caller returns an empty report;
+  the parser does not clear or rewind it.
+
+Reported non-EOF failures throw `std::ios_base::failure` rather than returning
+partial events or adding a parser warning. Caller-enabled stream exceptions
+propagate and the exception mask is unchanged: a buffer exception may be
+rethrown when `badbit` exceptions are enabled. Masks including `failbit` or
+`eofbit` can also throw on ordinary EOF, as before; callers requiring normal
+EOF reports should use the default exception mask. These distinctions follow
+the C++20 unformatted-input and string-`getline` rules
+([working draft](https://isocpp.org/files/papers/N4860.pdf),
+`[istream.unformatted]`, `[string.io]`).
+
+Counterexample: a buffer that throws after two complete valid records sets
+`badbit`; previously the loop ended and returned those two events as a successful
+report. A mid-record failure could similarly hide the remaining evidence.
+`tests/test_parser_streams.cpp` injects faults at exact character positions in
+both input modes and checks normal EOF, content warnings, initial state and
+exception masks. Its focused executable also accepts a case-name substring.
+Mutation controls must reject dropping the completion check, suppressing a read
+exception into partial success, and rejecting an ordinary unterminated last line.
+
+`parse_file` retains open-error handling and delegates read validation to this
+boundary. The CLI catches parsing exceptions before detection and report writing:
+it exits nonzero, emits an error diagnostic, prints no success summary and leaves
+existing reports unchanged. The CLI regression uses directory input: on the
+tested Linux file stream this opens but fails on read; other runtimes can reject
+it at open. Injected failures after a valid prefix are tested through the stream
+API rather than an operating-system-specific CLI interception hook.
+
+The parser trusts the stream's EOF/error signals; it cannot detect a buffer that
+reports false EOF. This does not authenticate log provenance, guarantee an atomic
+file snapshot or durable storage, impose resource limits, or make multi-file report
+writes transactional. Successful-input events, coverage counts, detector rules,
+finding identities and released report contracts are unchanged.
+
 ## Recognized event families
 
 The parser currently recognizes common authentication evidence from:
