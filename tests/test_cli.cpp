@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -249,6 +250,35 @@ int main(int argc, char* argv[]) {
            "did not expect journalctl findings.csv without explicit csv flag");
     expect(!std::filesystem::exists(journalctl_out / "warnings.csv"),
            "did not expect journalctl warnings.csv without explicit csv flag");
+
+    const auto directory_input = output_dir / "directory_input";
+    std::filesystem::create_directories(directory_input);
+    const std::array report_names{"report.md", "report.json", "findings.csv", "warnings.csv"};
+    for (const bool existing : {false, true}) {
+        const auto failed_output = output_dir / (existing ? "read_failure_existing" : "read_failure_new");
+        if (existing) {
+            std::filesystem::create_directories(failed_output);
+            for (const auto* name : report_names) {
+                std::filesystem::copy_file(csv_out / name, failed_output / name);
+            }
+        }
+        const auto failure_stdout = output_dir / "read_failure_stdout.txt";
+        const auto failure_stderr = output_dir / "read_failure_stderr.txt";
+        const int failure_exit = std::system(build_command(
+            quote_argument(loglens_exe) + " --mode syslog --year 2026 --csv "
+            + quote_argument(directory_input) + " " + quote_argument(failed_output),
+            &failure_stdout, &failure_stderr).c_str());
+        expect(failure_exit != 0, "expected directory input read/open failure");
+        expect(read_file(failure_stdout).empty(), "input failure printed a success summary");
+        expect(read_file(failure_stderr).find("LogLens failed:") != std::string::npos,
+               "expected input failure diagnostic");
+        for (const auto* name : report_names) {
+            expect(existing ? read_file(failed_output / name) == read_file(csv_out / name)
+                            : !std::filesystem::exists(failed_output / name),
+                   "input failure created or changed a report artifact");
+        }
+        expect(existing || !std::filesystem::exists(failed_output), "input failure created output directory");
+    }
 
     const auto missing_year_out = output_dir / "missing_year";
     std::filesystem::create_directories(missing_year_out);

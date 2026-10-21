@@ -101,6 +101,14 @@ std::optional<Event> AuthLogParser::parse_line(std::string_view line,
 }
 
 ParseReport AuthLogParser::parse_stream(std::istream& input) const {
+    const auto check_read_state = [&input] {
+        // EOF may set failbit after the last record; badbit is never clean EOF.
+        if (input.bad() || (input.fail() && !input.eof())) {
+            throw std::ios_base::failure("unable to read input log");
+        }
+    };
+    check_read_state();
+
     ParseReport result;
     result.metadata.input_mode = config_.input_mode;
     result.metadata.timezone_present = config_.input_mode == InputMode::JournalctlShortFull;
@@ -139,6 +147,8 @@ ParseReport AuthLogParser::parse_stream(std::istream& input) const {
         category_count.first = category;
         ++category_count.second;
     }
+
+    check_read_state();
 
     if (result.quality.total_lines != 0) {
         result.quality.parse_success_rate =
