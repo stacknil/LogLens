@@ -55,6 +55,15 @@ std::string extract_token_after(std::string_view input, std::string_view marker)
     return std::string(consume_token(remaining));
 }
 
+std::string extract_source_after_username(std::string_view remaining) {
+    remaining = trim_left(remaining);
+    if (remaining.starts_with("from ")) {
+        remaining.remove_prefix(5);
+        return std::string(consume_token(remaining));
+    }
+    return extract_token_after(remaining, " from ");
+}
+
 std::string extract_kv_value(std::string_view input, std::string_view key) {
     std::size_t search_position = 0;
     while (search_position < input.size()) {

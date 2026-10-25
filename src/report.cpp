@@ -36,11 +36,45 @@ void append_unicode_escape(std::string& output, unsigned char value) {
     output += escaped_code.str();
 }
 
+std::size_t valid_utf8_length(std::string_view value, std::size_t offset) {
+    const auto first = static_cast<unsigned char>(value[offset]);
+    const std::size_t length = first >= 0xc2 && first <= 0xdf ? 2
+        : first >= 0xe0 && first <= 0xef ? 3
+        : first >= 0xf0 && first <= 0xf4 ? 4 : 0;
+    if (length == 0 || length > value.size() - offset) {
+        return 0;
+    }
+    for (std::size_t index = 1; index < length; ++index) {
+        const auto byte = static_cast<unsigned char>(value[offset + index]);
+        if (byte < 0x80 || byte > 0xbf) {
+            return 0;
+        }
+    }
+    const auto second = static_cast<unsigned char>(value[offset + 1]);
+    if ((first == 0xe0 && second < 0xa0) || (first == 0xed && second >= 0xa0)
+        || (first == 0xf0 && second < 0x90) || (first == 0xf4 && second >= 0x90)) {
+        return 0;
+    }
+    return length;
+}
+
 std::string escape_json(std::string_view value) {
     std::string escaped;
     escaped.reserve(value.size());
 
-    for (const char character : value) {
+    for (std::size_t index = 0; index < value.size(); ++index) {
+        const char character = value[index];
+        if (static_cast<unsigned char>(character) >= 0x80) {
+            const auto length = valid_utf8_length(value, index);
+            if (length != 0) {
+                escaped.append(value.substr(index, length));
+                index += length - 1;
+            } else {
+                // Invalid input bytes must not invalidate the entire JSON document.
+                append_unicode_escape(escaped, static_cast<unsigned char>(character));
+            }
+            continue;
+        }
         switch (character) {
         case '\\':
             escaped += "\\\\";
@@ -175,8 +209,9 @@ std::string escape_csv(std::string_view value) {
     return escaped;
 }
 
-void write_text_file(const std::filesystem::path& path, std::string_view content) {
-    std::ofstream output(path);
+void write_text_file(const std::filesystem::path& path, std::string_view content,
+                     std::ios::openmode mode = std::ios::out) {
+    std::ofstream output(path, mode);
     if (!output) {
         throw std::runtime_error("unable to open report output: " + path.string());
     }
@@ -810,8 +845,9 @@ void write_reports(const ReportData& data, const std::filesystem::path& output_d
     if (!emit_csv) {
         return;
     }
-    write_text_file(findings_csv_path, render_findings_csv(data));
-    write_text_file(warnings_csv_path, render_warnings_csv(data));
+    // CSV field newlines are data; Windows text translation must not alter them.
+    write_text_file(findings_csv_path, render_findings_csv(data), std::ios::out | std::ios::binary);
+    write_text_file(warnings_csv_path, render_warnings_csv(data), std::ios::out | std::ios::binary);
 }
 
 }  // namespace loglens

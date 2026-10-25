@@ -85,10 +85,19 @@ std::optional<Event> AuthLogParser::parse_line(std::string_view line,
 
     auto result = parser_internal::parse_source_envelope(config_, line, line_number);
     if (result.matched && result.event.has_value()) {
-        if (auto source_ip_failure = parser_internal::classify_source_ip_failure(*result.event)) {
-            result = std::move(*source_ip_failure);
-        } else {
-            result = parser_internal::dispatch_program(*result.event);
+        const auto source = std::move(*result.event);
+        result = parser_internal::dispatch_program(source);
+        // Validate the field actually emitted by the selected handler. Opaque
+        // usernames and command arguments must not be scanned as IP metadata.
+        if (result.event.has_value()) {
+            if (!result.event->source_ip.empty()) {
+                if (auto failure = parser_internal::classify_source_ip_failure(*result.event)) {
+                    result = std::move(*failure);
+                }
+            }
+        } else if (auto failure = parser_internal::classify_source_ip_failure(source)) {
+            // Preserve malformed-source telemetry for unsupported messages.
+            result = std::move(*failure);
         }
     }
 

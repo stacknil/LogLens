@@ -8,12 +8,20 @@ namespace loglens::parser_internal {
 namespace {
 
 bool is_valid_ipv4_token(std::string_view token) {
+    if (token.empty() || token.back() == '.') {
+        return false;
+    }
     int parts = 0;
     while (!token.empty()) {
         const auto dot = token.find('.');
         const auto part = dot == std::string_view::npos ? token : token.substr(0, dot);
         if (part.empty()) {
             return false;
+        }
+        for (const char ch : part) {
+            if (ch < '0' || ch > '9') {
+                return false;
+            }
         }
 
         int value = 0;
@@ -33,23 +41,55 @@ bool is_valid_ipv4_token(std::string_view token) {
 }
 
 bool is_valid_ipv6_like_token(std::string_view token) {
-    if (token.find(':') == std::string_view::npos) {
+    // Preserve the existing exclusion of the bare "::" token.
+    if (token == "::") {
         return false;
     }
-
-    bool saw_hex = false;
-    for (const char character : token) {
-        if (std::isxdigit(static_cast<unsigned char>(character)) != 0) {
-            saw_hex = true;
-            continue;
-        }
-        if (character == ':' || character == '.') {
-            continue;
-        }
+    const auto compression = token.find("::");
+    const bool compressed = compression != std::string_view::npos;
+    if (token.find(':') == std::string_view::npos
+        || (compressed && token.find("::", compression + 2) != std::string_view::npos)) {
         return false;
     }
-
-    return saw_hex;
+    unsigned groups = 0;
+    const auto count_side = [&groups](std::string_view side, bool allow_ipv4) {
+        while (!side.empty()) {
+            const auto colon = side.find(':');
+            const auto part = side.substr(0, colon);
+            if (part.empty()) {
+                return false;
+            }
+            if (part.find('.') != std::string_view::npos) {
+                if (!allow_ipv4 || colon != std::string_view::npos || !is_valid_ipv4_token(part)) {
+                    return false;
+                }
+                groups += 2;
+            } else {
+                if (part.size() > 4) {
+                    return false;
+                }
+                for (const unsigned char ch : part) {
+                    if (std::isxdigit(ch) == 0) {
+                        return false;
+                    }
+                }
+                ++groups;
+            }
+            if (colon == std::string_view::npos) {
+                return true;
+            }
+            side.remove_prefix(colon + 1);
+            if (side.empty()) {
+                return false;
+            }
+        }
+        return true;
+    };
+    if (!compressed) {
+        return count_side(token, true) && groups == 8;
+    }
+    return count_side(token.substr(0, compression), false)
+        && count_side(token.substr(compression + 2), true) && groups < 8;
 }
 
 bool is_valid_source_ip_token(std::string_view token) {
@@ -215,7 +255,7 @@ ParserFailureCategory failure_category_for_unrecognized_event(const Event& event
 }  // namespace
 
 std::optional<HandlerResult> classify_source_ip_failure(const Event& event) {
-    const auto candidate = extract_source_ip_candidate(event);
+    const auto candidate = event.source_ip.empty() ? extract_source_ip_candidate(event) : event.source_ip;
     if (candidate.empty() || is_valid_source_ip_token(candidate)) {
         return std::nullopt;
     }
