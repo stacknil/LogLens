@@ -23,7 +23,7 @@ bool parse_pam_named_user_failure_message(std::string_view message,
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = EventType::PamAuthFailure;
     return true;
 }

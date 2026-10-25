@@ -5,6 +5,8 @@
 
 namespace loglens::parser_internal {
 
+std::string extract_source_after_username(std::string_view remaining);
+
 std::string_view trim_left(std::string_view value);
 std::string_view trim(std::string_view value);
 std::string_view consume_token(std::string_view& input);

@@ -3,11 +3,29 @@
 #include "parser/failure_classifier.hpp"
 #include "parser/text_utils.hpp"
 
+#include <algorithm>
 #include <string_view>
 #include <utility>
 
 namespace loglens::parser_internal {
 namespace {
+
+std::size_t find_command_field(std::string_view details) {
+    // Sudo audit fields are separated by " ; "; substrings inside values are opaque.
+    std::size_t offset = 0;
+    while (offset < details.size()) {
+        const auto field = trim_left(details.substr(offset));
+        if (field.starts_with("COMMAND=")) {
+            return details.size() - field.size();
+        }
+        const auto separator = details.find(" ; ", offset);
+        if (separator == std::string_view::npos) {
+            break;
+        }
+        offset = separator + 3;
+    }
+    return std::string_view::npos;
+}
 
 bool parse_sudo_message(std::string_view message, Event& event) {
     auto remaining = trim_left(message);
@@ -23,18 +41,25 @@ bool parse_sudo_message(std::string_view message, Event& event) {
 
     event.username.assign(username);
     const auto details = trim_left(remaining.substr(separator + 1));
-    if (details.find("incorrect password attempt") != std::string_view::npos) {
+    const auto command_position = find_command_field(details);
+    const auto metadata = details.substr(0, command_position);
+    const auto attempt_marker = metadata.find(" incorrect password attempt");
+    const auto attempt_count = metadata.substr(0, attempt_marker);
+    if (attempt_marker != std::string_view::npos && !attempt_count.empty()
+        && std::all_of(attempt_count.begin(), attempt_count.end(), [](char ch) {
+               return ch >= '0' && ch <= '9';
+           })) {
         event.event_type = EventType::SudoAuthFailure;
         return true;
     }
 
-    if (details.find("user NOT in sudoers") != std::string_view::npos
-        || details.find("command not allowed") != std::string_view::npos) {
+    if (metadata.starts_with("user NOT in sudoers")
+        || metadata.starts_with("command not allowed")) {
         event.event_type = EventType::SudoPolicyDenied;
         return true;
     }
 
-    if (details.find("COMMAND=") == std::string_view::npos) {
+    if (command_position == std::string_view::npos) {
         return false;
     }
 

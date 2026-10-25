@@ -73,6 +73,11 @@ target_compile_definitions(loglens PRIVATE LOGLENS_VERSION="${LOGLENS_VERSION}")
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(test_adversarial_semantics tests/test_adversarial_semantics.cpp)
+    target_link_libraries(test_adversarial_semantics PRIVATE loglens_lib)
+    loglens_enable_warnings(test_adversarial_semantics)
+    add_test(NAME adversarial_semantics COMMAND test_adversarial_semantics)
+
     add_executable(test_parser tests/test_parser.cpp)
     target_link_libraries(test_parser PRIVATE loglens_lib)
     loglens_enable_warnings(test_parser)
@@ -126,6 +131,13 @@ if(BUILD_TESTING)
 
     find_package(Python3 3.9 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
+        add_executable(report_adversarial_driver tests/report_adversarial_driver.cpp)
+        target_link_libraries(report_adversarial_driver PRIVATE loglens_lib)
+        loglens_enable_warnings(report_adversarial_driver)
+        add_test(NAME adversarial_reports COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_adversarial_reports.py
+            $<TARGET_FILE:report_adversarial_driver>
+            ${CMAKE_CURRENT_BINARY_DIR}/adversarial_report_output)
         add_test(
             NAME episode_candidate_research
             COMMAND
@@ -176,4 +188,11 @@ if(LOGLENS_BUILD_FUZZERS)
     target_compile_options(fuzz_timestamp_day PRIVATE
         -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
     target_link_options(fuzz_timestamp_day PRIVATE -fsanitize=fuzzer,address,undefined)
+
+    add_executable(fuzz_pipeline fuzz/pipeline_fuzz.cpp)
+    target_link_libraries(fuzz_pipeline PRIVATE loglens_fuzz_lib)
+    loglens_enable_warnings(fuzz_pipeline)
+    target_compile_options(fuzz_pipeline PRIVATE
+        -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
+    target_link_options(fuzz_pipeline PRIVATE -fsanitize=fuzzer,address,undefined)
 endif()

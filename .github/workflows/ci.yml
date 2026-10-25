@@ -63,7 +63,7 @@ jobs:
           -D LOGLENS_WARNINGS_AS_ERRORS=ON
 
       - name: Build fuzz target
-        run: cmake --build build-fuzz --target fuzz_parser --config RelWithDebInfo
+        run: cmake --build build-fuzz --target fuzz_parser fuzz_pipeline --config RelWithDebInfo
 
       - name: Run bounded parser fuzz smoke
         run: >-
@@ -72,3 +72,14 @@ jobs:
           -max_len=1024
           -timeout=2
           tests/fuzz/corpus/parser
+
+      - name: Generate synthetic sequence seeds
+        run: python3 scripts/generate-adversarial-corpus.py --output build-fuzz/corpus
+
+      - name: Run bounded semantic pipeline fuzz smoke
+        env:
+          ASAN_OPTIONS: detect_leaks=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: >-
+          ./build-fuzz/fuzz_pipeline -seed=129130 -runs=2000
+          -max_len=97 -timeout=3 -rss_limit_mb=1024 build-fuzz/corpus/pipeline

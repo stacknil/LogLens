@@ -52,7 +52,7 @@ bool parse_ssh_failed_message(std::string_view message, Event& event) {
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::SshFailedPassword;
     return true;
 }
@@ -70,7 +70,7 @@ bool parse_ssh_accepted_message(std::string_view message, Event& event) {
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = EventType::SshAcceptedPassword;
     return true;
 }
@@ -88,7 +88,7 @@ bool parse_ssh_accepted_publickey_message(std::string_view message, Event& event
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = EventType::SshAcceptedPublicKey;
     return true;
 }
@@ -106,7 +106,7 @@ bool parse_ssh_accepted_keyboard_interactive_message(std::string_view message, E
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = EventType::SshAcceptedKeyboardInteractive;
     return true;
 }
@@ -125,7 +125,7 @@ bool parse_ssh_failed_publickey_message(std::string_view message, Event& event) 
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = EventType::SshFailedPublicKey;
     return true;
 }
@@ -144,7 +144,7 @@ bool parse_ssh_failed_keyboard_interactive_message(std::string_view message, Eve
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::SshFailedKeyboardInteractive;
     return true;
 }
@@ -168,7 +168,7 @@ bool parse_ssh_max_auth_tries_message(std::string_view message, Event& event) {
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::SshMaxAuthTries;
     return true;
 }
@@ -192,7 +192,7 @@ bool parse_ssh_pam_auth_failure_message(std::string_view message, Event& event) 
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = invalid_user ? EventType::SshInvalidUser : EventType::PamAuthFailure;
     return true;
 }
@@ -234,7 +234,7 @@ bool parse_ssh_invalid_user_message(std::string_view message, Event& event) {
     }
 
     event.username.assign(username);
-    event.source_ip = extract_token_after(message, " from ");
+    event.source_ip = extract_source_after_username(remaining);
     event.event_type = EventType::SshInvalidUser;
     return true;
 }
