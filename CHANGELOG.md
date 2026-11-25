@@ -6,7 +6,7 @@ All notable user-visible changes should be recorded here.
 
 ### Added
 
-- None yet.
+- Parser qualification for stream completion, timestamp boundaries and adversarial report inputs. See the [reproduction case](docs/validation/adversarial-qualification.md).
 
 ### Changed
 
@@ -14,7 +14,7 @@ All notable user-visible changes should be recorded here.
 
 ### Fixed
 
-- None yet.
+- Tightened source-address and sudo-field parsing and preserved CSV newline bytes across platforms.
 
 ### Docs
 
