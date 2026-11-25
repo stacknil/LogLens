@@ -35,14 +35,12 @@ or attribution:
 }
 ```
 
-## Project Status
+## Review the results
 
-**Release posture:** Early reviewer-stable release with a narrow Linux authentication evidence contract. Parser and detection coverage remain intentionally narrow.
+- [Reviewer path](./docs/reviewer-path.md) and [project brief](./docs/reviewer-brief.md) for a first pass through the CLI and its evidence.
+- [Incident walkthrough](./docs/incident-style-case.md), [Linux auth case study](./docs/case-study-linux-auth-bruteforce.md), [rule catalog](./docs/rule-catalog.md) and [false-positive taxonomy](./docs/false-positive-taxonomy.md) for interpreting a finding.
+- [Parser uncertainty](./docs/case-study-parser-uncertainty-as-evidence.md), [quality gates](./docs/quality-gates.md) and [performance envelope](./docs/performance-envelope.md) for checking what the tests and measurements establish.
 
-Reviewing the project quickly? Start with [`docs/reviewer-path.md`](./docs/reviewer-path.md), [`docs/reviewer-brief.md`](./docs/reviewer-brief.md), the [`v0.5 Evidence Explainability release note`](./docs/release-v0.5.0.md), and the [`v0.6 Detection Episode Semantics release note`](./docs/release-v0.6.0.md). The [`quality gates map`](./docs/quality-gates.md) links claims to tests and fixtures. For detection reasoning, follow the [`one-page incident-style case`](./docs/incident-style-case.md), then use the full [`Linux auth brute-force case study`](./docs/case-study-linux-auth-bruteforce.md), [`rule catalog`](./docs/rule-catalog.md), and [`false-positive taxonomy`](./docs/false-positive-taxonomy.md) for depth. For local scale expectations, see the [`performance envelope`](./docs/performance-envelope.md).
-
-For a shorter external review entry point focused on uncertainty handling, read
-[How LogLens Treats Parser Uncertainty as Evidence](./docs/case-study-parser-uncertainty-as-evidence.md).
 Near-term review boundaries are tracked in the [roadmap](./ROADMAP.md).
 
 ## Why This Project Exists
