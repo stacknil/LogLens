@@ -2,23 +2,12 @@
 
 All notable user-visible changes should be recorded here.
 
-## Unreleased
+## v0.7.0 candidate
 
-### Added
-
-- Parser qualification for stream completion, timestamp boundaries and adversarial report inputs. See the [reproduction case](docs/validation/adversarial-qualification.md).
-
-### Changed
-
-- None yet.
-
-### Fixed
-
-- Tightened source-address and sudo-field parsing and preserved CSV newline bytes across platforms.
-
-### Docs
-
-- None yet.
+- Stream read failures now produce an error. Calendar day overflow and malformed source addresses are rejected, and sudo command text is distinguished from log metadata.
+- Reports count all normalized authentication event types. CSV exports preserve newline bytes across platforms.
+- The [parser qualification case](docs/validation/adversarial-qualification.md) covers malformed inputs, report consumers and whole-CLI memory measurements.
+- The optional episode candidate and its evaluation tools are documented under the research materials. The default detector continues to use the released episode rules.
 
 ## v0.6.0
 
