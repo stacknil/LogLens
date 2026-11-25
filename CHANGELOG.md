@@ -2,7 +2,7 @@
 
 All notable user-visible changes should be recorded here.
 
-## v0.7.0 candidate
+## v0.7.0
 
 - Stream read failures now produce an error. Calendar day overflow and malformed source addresses are rejected, and sudo command text is distinguished from log metadata.
 - Reports count all normalized authentication event types. CSV exports preserve newline bytes across platforms.
