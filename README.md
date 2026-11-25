@@ -7,6 +7,10 @@ C++20 defensive log analysis CLI for Linux authentication logs, with parser cove
 
 It parses `auth.log` / `secure`-style syslog input and `journalctl --output=short-full`-style input, normalizes authentication evidence, applies configurable rule-based detections, and emits deterministic Markdown and JSON reports, with optional CSV exports for findings and warnings.
 
+## Parser qualification
+
+[Reproduce the #132 release candidate](docs/validation/adversarial-qualification.md) to check malformed input, stream completion, normalized records and downstream reports. The case includes a full-CLI memory measurement at three input sizes.
+
 ## Example Finding
 
 A compact finding summary is a bounded triage signal, not a compromise verdict

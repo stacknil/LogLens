@@ -4,7 +4,29 @@ Status: QUALIFICATION_READY for the bounded local campaign; SDK blocker resolved
 GCC, Clang ASan/UBSan and MSVC CTest each passed 11/11. This is
 local qualification evidence, not a claim of complete memory safety.
 
-## Baseline and isolation
+## Release candidate from PR #132
+
+Check out [the merged revision](https://github.com/stacknil/LogLens/commit/ff4c3e67a6caddc3fda09f948964b9f631a67405). From the root, run `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release`, `cmake --build build -j2` and `ctest --test-dir build --output-on-failure`. Clean GCC Release and Clang ASan/UBSan Debug runs each passed 11/11, including injected stream errors and report contracts.
+
+For a small end-to-end memory check, repeat one accepted synthetic SSH record on a native Linux filesystem. Run with GNU time after building in `build`:
+
+```sh
+out=$(mktemp -d)
+for n in 1000 10000 50000; do
+  awk -v n="$n" 'BEGIN {for(i=0;i<n;i++) print "Mar 10 08:11:22 example-host sshd[123]: Accepted password for user_a from 203.0.113.10 port 4242 ssh2"}' > "$out/input.log"
+  /usr/bin/time -f '%e s, %M KiB' build/loglens --mode syslog --year 2026 "$out/input.log" "$out/$n"
+done
+```
+
+| Input lines | Parsed | Warnings / findings | Peak RSS (KiB) |
+| ---: | ---: | ---: | ---: |
+| 1,000 | 1,000 | 0 / 0 | 4,996 |
+| 10,000 | 10,000 | 0 / 0 | 9,636 |
+| 50,000 | 50,000 | 0 / 0 | 30,716 |
+
+These are single-run WSL2 observations for the whole CLI. Memory increased with input size even with a single repeated subject. The stream completion tests cover EOF and input errors; a deployment memory budget also needs workloads with different record lengths, subject cardinality and warning rates.
+
+## Historical baseline and isolation
 
 The local qualification baseline is `6aef72ea5c6eb2657e6e01fe558d257e04997ca8`,
 including the existing stream-completion correction. It descends from the local
